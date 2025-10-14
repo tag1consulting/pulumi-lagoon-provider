@@ -1,0 +1,3 @@
+name: simple-project
+runtime: python
+description: Simple example of using the Pulumi Lagoon provider
