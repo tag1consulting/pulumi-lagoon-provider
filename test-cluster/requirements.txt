@@ -1,0 +1,12 @@
+# Pulumi core
+pulumi>=3.0.0,<4.0.0
+
+# Pulumi providers
+pulumi-kubernetes>=4.0.0,<5.0.0
+pulumi-command>=1.0.0,<2.0.0
+
+# For YAML processing
+pyyaml>=6.0.0
+
+# Optional: for better CLI output
+rich>=13.0.0

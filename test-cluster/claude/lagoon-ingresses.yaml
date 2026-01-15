@@ -1,0 +1,57 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lagoon-core-api
+  namespace: lagoon
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: api.lagoon.test
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: lagoon-core-api
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lagoon-core-ui
+  namespace: lagoon
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: ui.lagoon.test
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: lagoon-core-ui
+            port:
+              number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lagoon-core-keycloak
+  namespace: lagoon
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: keycloak.lagoon.test
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: lagoon-core-keycloak
+            port:
+              number: 8080

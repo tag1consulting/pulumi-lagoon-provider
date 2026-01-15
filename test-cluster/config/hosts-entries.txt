@@ -1,0 +1,5 @@
+# Lagoon test cluster domains
+127.0.0.1 api.lagoon.test
+127.0.0.1 keycloak.lagoon.test
+127.0.0.1 ui.lagoon.test
+127.0.0.1 harbor.lagoon.test
