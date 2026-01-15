@@ -6,6 +6,13 @@ from typing import Optional
 from dataclasses import dataclass
 
 from .config import LagoonConfig
+from .client import LagoonAPIError, LagoonConnectionError
+from .validators import (
+    validate_variable_name,
+    validate_required,
+    validate_positive_int,
+    validate_scope,
+)
 
 
 @dataclass
@@ -46,13 +53,19 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
 
     def create(self, inputs):
         """Create a new Lagoon variable."""
-        client = self._get_client()
+        # Input validation (fail fast)
+        validate_variable_name(inputs.get("name"))
+        validate_required(inputs.get("value"), "value")
+        project_id = validate_positive_int(inputs.get("project_id"), "project_id")
+        validate_scope(inputs.get("scope"))
 
-        # Ensure IDs are integers (Pulumi may pass them as strings)
-        project_id = int(inputs["project_id"])
-        environment_id = (
-            int(inputs["environment_id"]) if inputs.get("environment_id") else None
-        )
+        environment_id = None
+        if inputs.get("environment_id"):
+            environment_id = validate_positive_int(
+                inputs["environment_id"], "environment_id"
+            )
+
+        client = self._get_client()
 
         # Prepare input data
         create_args = {
@@ -88,19 +101,27 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
 
     def update(self, id, old_inputs, new_inputs):
         """Update an existing Lagoon variable."""
+        # Input validation for new values (fail fast)
+        validate_variable_name(new_inputs.get("name"))
+        validate_required(new_inputs.get("value"), "value")
+        new_project_id = validate_positive_int(
+            new_inputs.get("project_id"), "project_id"
+        )
+        validate_scope(new_inputs.get("scope"))
+
+        new_environment_id = None
+        if new_inputs.get("environment_id"):
+            new_environment_id = validate_positive_int(
+                new_inputs["environment_id"], "environment_id"
+            )
+
         client = self._get_client()
 
-        # Ensure IDs are integers (Pulumi may pass them as strings)
+        # Parse old IDs (these should be valid since they were previously created)
         old_project_id = int(old_inputs["project_id"])
         old_environment_id = (
             int(old_inputs["environment_id"])
             if old_inputs.get("environment_id")
-            else None
-        )
-        new_project_id = int(new_inputs["project_id"])
-        new_environment_id = (
-            int(new_inputs["environment_id"])
-            if new_inputs.get("environment_id")
             else None
         )
 
@@ -115,9 +136,13 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
 
         try:
             client.delete_env_variable(**delete_args)
-        except Exception:
-            # If delete fails, variable might not exist - continue with create
+        except LagoonAPIError:
+            # Variable might not exist or might be already deleted
+            # This is acceptable during update - continue with recreation
             pass
+        except LagoonConnectionError:
+            # Connection errors should propagate - can't safely continue
+            raise
 
         # Create new variable with updated values
         create_args = {

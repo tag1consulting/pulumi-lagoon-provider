@@ -11,7 +11,16 @@ from .environment import LagoonEnvironment, LagoonEnvironmentArgs
 from .variable import LagoonVariable, LagoonVariableArgs
 
 # Client (for advanced use cases)
-from .client import LagoonClient, LagoonAPIError, LagoonConnectionError
+from .client import LagoonClient
+
+# Exceptions (centralized)
+from .exceptions import (
+    LagoonAPIError,
+    LagoonConnectionError,
+    LagoonProviderError,
+    LagoonValidationError,
+    LagoonResourceNotFoundError,
+)
 
 __all__ = [
     # Configuration
@@ -25,6 +34,10 @@ __all__ = [
     "LagoonVariableArgs",
     # Client
     "LagoonClient",
+    # Exceptions
     "LagoonAPIError",
     "LagoonConnectionError",
+    "LagoonProviderError",
+    "LagoonValidationError",
+    "LagoonResourceNotFoundError",
 ]

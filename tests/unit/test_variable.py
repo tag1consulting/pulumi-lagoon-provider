@@ -1,6 +1,10 @@
 """Unit tests for LagoonVariable provider."""
 
+import pytest
 from unittest.mock import Mock, patch
+
+from pulumi_lagoon.exceptions import LagoonValidationError
+from pulumi_lagoon.client import LagoonAPIError, LagoonConnectionError
 
 
 class TestLagoonVariableProviderCreate:
@@ -167,11 +171,14 @@ class TestLagoonVariableProviderUpdate:
 
     @patch("pulumi_lagoon.variable.LagoonConfig")
     def test_update_handles_delete_failure(self, mock_config_class, sample_variable):
-        """Test update continues if delete fails."""
+        """Test update continues if delete fails with API error."""
         from pulumi_lagoon.variable import LagoonVariableProvider
 
         mock_client = Mock()
-        mock_client.delete_env_variable.side_effect = Exception("Variable not found")
+        # Use LagoonAPIError - this is the type of error that should be caught and ignored
+        mock_client.delete_env_variable.side_effect = LagoonAPIError(
+            "Variable not found"
+        )
         mock_client.add_env_variable.return_value = sample_variable
         mock_config = Mock()
         mock_config.get_client.return_value = mock_client
@@ -193,7 +200,7 @@ class TestLagoonVariableProviderUpdate:
             "scope": "runtime",
         }
 
-        # Should not raise, should continue with create
+        # Should not raise - LagoonAPIError is caught and ignored
         provider.update("p1_VAR", old_inputs, new_inputs)
 
         mock_client.add_env_variable.assert_called_once()
@@ -349,3 +356,166 @@ class TestLagoonVariableArgs:
                 scope=scope,
             )
             assert args.scope == scope
+
+
+class TestLagoonVariableProviderValidation:
+    """Tests for input validation in LagoonVariableProvider."""
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_create_invalid_variable_name(self, mock_config_class):
+        """Test that invalid variable names are rejected."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        provider = LagoonVariableProvider()
+
+        inputs = {
+            "name": "123-invalid",  # Starts with number, has hyphen
+            "value": "test",
+            "project_id": 1,
+            "scope": "runtime",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "name" in str(exc.value).lower()
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_create_empty_value_rejected(self, mock_config_class):
+        """Test that empty values are rejected."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        provider = LagoonVariableProvider()
+
+        inputs = {
+            "name": "VALID_NAME",
+            "value": "",
+            "project_id": 1,
+            "scope": "runtime",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "value" in str(exc.value)
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_create_invalid_project_id(self, mock_config_class):
+        """Test that invalid project_id is rejected."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        provider = LagoonVariableProvider()
+
+        inputs = {
+            "name": "VALID_NAME",
+            "value": "test",
+            "project_id": -1,
+            "scope": "runtime",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "project_id" in str(exc.value)
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_create_invalid_scope(self, mock_config_class):
+        """Test that invalid scope is rejected."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        provider = LagoonVariableProvider()
+
+        inputs = {
+            "name": "VALID_NAME",
+            "value": "test",
+            "project_id": 1,
+            "scope": "invalid_scope",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "scope" in str(exc.value)
+        assert "build" in str(exc.value)  # Suggestions should include valid values
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_create_invalid_environment_id(self, mock_config_class):
+        """Test that invalid environment_id is rejected."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        provider = LagoonVariableProvider()
+
+        inputs = {
+            "name": "VALID_NAME",
+            "value": "test",
+            "project_id": 1,
+            "scope": "runtime",
+            "environment_id": -1,
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "environment_id" in str(exc.value)
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_update_api_error_continues(self, mock_config_class, sample_variable):
+        """Test that LagoonAPIError during delete is handled gracefully."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        mock_client = Mock()
+        mock_client.delete_env_variable.side_effect = LagoonAPIError(
+            "Variable not found"
+        )
+        mock_client.add_env_variable.return_value = sample_variable
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonVariableProvider()
+
+        old_inputs = {
+            "name": "VAR",
+            "value": "old",
+            "project_id": 1,
+            "scope": "runtime",
+        }
+
+        new_inputs = {
+            "name": "VAR",
+            "value": "new",
+            "project_id": 1,
+            "scope": "runtime",
+        }
+
+        # Should not raise - LagoonAPIError is caught and ignored
+        provider.update("p1_VAR", old_inputs, new_inputs)
+        mock_client.add_env_variable.assert_called_once()
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_update_connection_error_propagates(self, mock_config_class):
+        """Test that LagoonConnectionError during delete propagates."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        mock_client = Mock()
+        mock_client.delete_env_variable.side_effect = LagoonConnectionError(
+            "Network error"
+        )
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonVariableProvider()
+
+        old_inputs = {
+            "name": "VAR",
+            "value": "old",
+            "project_id": 1,
+            "scope": "runtime",
+        }
+
+        new_inputs = {
+            "name": "VAR",
+            "value": "new",
+            "project_id": 1,
+            "scope": "runtime",
+        }
+
+        # Should raise - connection errors should propagate
+        with pytest.raises(LagoonConnectionError):
+            provider.update("p1_VAR", old_inputs, new_inputs)

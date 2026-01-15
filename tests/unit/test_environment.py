@@ -1,6 +1,9 @@
 """Unit tests for LagoonEnvironment provider."""
 
+import pytest
 from unittest.mock import Mock, patch
+
+from pulumi_lagoon.exceptions import LagoonValidationError
 
 
 class TestLagoonEnvironmentProviderCreate:
@@ -282,3 +285,105 @@ class TestLagoonEnvironmentArgs:
         assert args.deploy_base_ref == "main"
         assert args.deploy_head_ref == "feature"
         assert args.deploy_title == "New feature"
+
+
+class TestLagoonEnvironmentProviderValidation:
+    """Tests for input validation in LagoonEnvironmentProvider."""
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_create_invalid_environment_name(self, mock_config_class):
+        """Test that invalid environment names are rejected."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        provider = LagoonEnvironmentProvider()
+
+        inputs = {
+            "name": "-invalid-name",
+            "project_id": 1,
+            "deploy_type": "branch",
+            "environment_type": "production",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "name" in str(exc.value).lower()
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_create_invalid_project_id(self, mock_config_class):
+        """Test that invalid project_id is rejected."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        provider = LagoonEnvironmentProvider()
+
+        inputs = {
+            "name": "main",
+            "project_id": -1,
+            "deploy_type": "branch",
+            "environment_type": "production",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "project_id" in str(exc.value)
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_create_invalid_deploy_type(self, mock_config_class):
+        """Test that invalid deploy_type is rejected."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        provider = LagoonEnvironmentProvider()
+
+        inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "invalid_type",
+            "environment_type": "production",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "deploy_type" in str(exc.value)
+        assert "branch" in str(exc.value)
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_create_invalid_environment_type(self, mock_config_class):
+        """Test that invalid environment_type is rejected."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        provider = LagoonEnvironmentProvider()
+
+        inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "branch",
+            "environment_type": "staging",  # Invalid - should be production/development/standby
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "environment_type" in str(exc.value)
+        assert "production" in str(exc.value)
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_update_invalid_deploy_type(self, mock_config_class):
+        """Test that invalid deploy_type in update is rejected."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        provider = LagoonEnvironmentProvider()
+
+        old_inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "branch",
+            "environment_type": "production",
+        }
+        new_inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "invalid",
+            "environment_type": "production",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.update("1", old_inputs, new_inputs)
+        assert "deploy_type" in str(exc.value)
