@@ -94,10 +94,7 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
             "created": result.get("created"),
         }
 
-        return dynamic.CreateResult(
-            id_=str(result["id"]),
-            outs=outs
-        )
+        return dynamic.CreateResult(id_=str(result["id"]), outs=outs)
 
     def update(self, id, old_inputs, new_inputs):
         """Update an existing Lagoon environment."""
@@ -155,11 +152,7 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
 
         # Delete via API
         # Note: execute=True is required to actually delete (safety feature)
-        client.delete_environment(
-            name=props["name"],
-            project=project_id,
-            execute=True
-        )
+        client.delete_environment(name=props["name"], project=project_id, execute=True)
 
     def read(self, id, props):
         """Read/refresh a Lagoon environment from API."""
@@ -170,8 +163,7 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
 
         # Query current state
         result = client.get_environment_by_name(
-            name=props["name"],
-            project_id=project_id
+            name=props["name"], project_id=project_id
         )
 
         if not result:
@@ -190,10 +182,7 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
             "created": result.get("created"),
         }
 
-        return dynamic.ReadResult(
-            id_=str(result["id"]),
-            outs=outs
-        )
+        return dynamic.ReadResult(id_=str(result["id"]), outs=outs)
 
 
 class LagoonEnvironment(dynamic.Resource):
@@ -233,8 +222,7 @@ class LagoonEnvironment(dynamic.Resource):
     """
 
     # Output properties
-    id: pulumi.Output[int]
-    """The Lagoon environment ID."""
+    # Note: id is inherited from base class as Output[str]
 
     name: pulumi.Output[str]
     """The environment name."""
@@ -270,7 +258,7 @@ class LagoonEnvironment(dynamic.Resource):
         self,
         resource_name: str,
         args: LagoonEnvironmentArgs,
-        opts: Optional[pulumi.ResourceOptions] = None
+        opts: Optional[pulumi.ResourceOptions] = None,
     ):
         """
         Create a LagoonEnvironment resource.
@@ -298,9 +286,4 @@ class LagoonEnvironment(dynamic.Resource):
             "created": None,
         }
 
-        super().__init__(
-            LagoonEnvironmentProvider(),
-            resource_name,
-            inputs,
-            opts
-        )
+        super().__init__(LagoonEnvironmentProvider(), resource_name, inputs, opts)

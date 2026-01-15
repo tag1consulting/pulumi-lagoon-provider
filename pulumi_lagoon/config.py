@@ -14,18 +14,11 @@ class LagoonConfig:
 
         # API endpoint configuration
         self.api_url = self._get_config_value(
-            config,
-            "apiUrl",
-            "LAGOON_API_URL",
-            default="https://api.lagoon.sh/graphql"
+            config, "apiUrl", "LAGOON_API_URL", default="https://api.lagoon.sh/graphql"
         )
 
         # Authentication token
-        self.token = self._get_secret_value(
-            config,
-            "token",
-            "LAGOON_TOKEN"
-        )
+        self.token = self._get_secret_value(config, "token", "LAGOON_TOKEN")
 
         if not self.token:
             raise ValueError(
@@ -36,11 +29,7 @@ class LagoonConfig:
 
         # Optional SSH key path for alternative authentication
         self.ssh_key_path = self._get_config_value(
-            config,
-            "sshKeyPath",
-            "LAGOON_SSH_KEY_PATH",
-            default=None,
-            required=False
+            config, "sshKeyPath", "LAGOON_SSH_KEY_PATH", default=None, required=False
         )
 
     def _get_config_value(
@@ -49,7 +38,7 @@ class LagoonConfig:
         config_key: str,
         env_var: str,
         default: Optional[str] = None,
-        required: bool = True
+        required: bool = True,
     ) -> Optional[str]:
         """Get configuration value from Pulumi config or environment variable."""
         # Try Pulumi config first
@@ -73,14 +62,12 @@ class LagoonConfig:
         )
 
     def _get_secret_value(
-        self,
-        config: pulumi.Config,
-        config_key: str,
-        env_var: str
+        self, config: pulumi.Config, config_key: str, env_var: str
     ) -> Optional[str]:
         """Get secret configuration value from Pulumi config or environment variable."""
-        # Try Pulumi config (secret) first
-        value = config.get_secret(config_key)
+        # Try Pulumi config first (use get() since get_secret() returns Output[str])
+        # The secret nature is preserved by how Pulumi stores the config value
+        value = config.get(config_key)
         if value:
             return value
 
@@ -94,6 +81,7 @@ class LagoonConfig:
     def get_client(self):
         """Create a configured Lagoon client instance."""
         from .client import LagoonClient
+
         return LagoonClient(self.api_url, self.token)
 
     def __repr__(self) -> str:

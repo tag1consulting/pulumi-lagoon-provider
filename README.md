@@ -1,5 +1,10 @@
 # Pulumi Lagoon Provider
 
+[![Tests](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/tag1consulting/pulumi-lagoon-provider/graph/badge.svg?branch=main)](https://codecov.io/gh/tag1consulting/pulumi-lagoon-provider)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
 A Pulumi dynamic provider for managing [Lagoon](https://www.lagoon.sh/) resources as infrastructure-as-code.
 
 ## Overview
@@ -34,7 +39,7 @@ Set up a complete local development environment with Kind cluster, Lagoon, and t
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pulumi-lagoon-provider.git
+git clone https://github.com/tag1consulting/pulumi-lagoon-provider.git
 cd pulumi-lagoon-provider
 
 # Option 1: Use the setup script (recommended)
@@ -61,7 +66,7 @@ make example-up
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pulumi-lagoon-provider.git
+git clone https://github.com/tag1consulting/pulumi-lagoon-provider.git
 cd pulumi-lagoon-provider
 
 # Create virtual environment
@@ -298,7 +303,7 @@ Apache License 2.0 - See [LICENSE](LICENSE) for details.
 ## Support
 
 For issues and questions:
-- GitHub Issues: [Create an issue](https://github.com/yourusername/pulumi-lagoon-provider/issues)
+- GitHub Issues: [Create an issue](https://github.com/tag1consulting/pulumi-lagoon-provider/issues)
 - Lagoon Community: [Slack](https://amazeeio.rocket.chat/)
 
 ## Acknowledgments

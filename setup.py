@@ -13,7 +13,7 @@ setup(
     description="A Pulumi dynamic provider for managing Lagoon resources",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/pulumi-lagoon-provider",
+    url="https://github.com/tag1consulting/pulumi-lagoon-provider",
     packages=find_packages(exclude=["tests", "examples"]),
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -38,15 +38,15 @@ setup(
             "pytest>=7.0.0",
             "pytest-cov>=4.0.0",
             "pytest-mock>=3.10.0",
-            "black>=23.0.0",
+            "ruff>=0.1.0",
             "mypy>=1.0.0",
             "types-requests>=2.28.0",
         ],
     },
     keywords="pulumi lagoon infrastructure-as-code iac devops kubernetes",
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/pulumi-lagoon-provider/issues",
-        "Source": "https://github.com/yourusername/pulumi-lagoon-provider",
-        "Documentation": "https://github.com/yourusername/pulumi-lagoon-provider/blob/main/README.md",
+        "Bug Reports": "https://github.com/tag1consulting/pulumi-lagoon-provider/issues",
+        "Source": "https://github.com/tag1consulting/pulumi-lagoon-provider",
+        "Documentation": "https://github.com/tag1consulting/pulumi-lagoon-provider/blob/main/README.md",
     },
 )

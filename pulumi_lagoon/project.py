@@ -88,10 +88,7 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
             "created": result.get("created"),
         }
 
-        return dynamic.CreateResult(
-            id_=str(result["id"]),
-            outs=outs
-        )
+        return dynamic.CreateResult(id_=str(result["id"]), outs=outs)
 
     def update(self, id, old_inputs, new_inputs):
         """Update an existing Lagoon project."""
@@ -107,14 +104,22 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
             update_args["gitUrl"] = new_inputs["git_url"]
         if new_inputs.get("deploytarget_id") != old_inputs.get("deploytarget_id"):
             update_args["openshift"] = new_inputs["deploytarget_id"]
-        if new_inputs.get("production_environment") != old_inputs.get("production_environment"):
-            update_args["productionEnvironment"] = new_inputs.get("production_environment")
+        if new_inputs.get("production_environment") != old_inputs.get(
+            "production_environment"
+        ):
+            update_args["productionEnvironment"] = new_inputs.get(
+                "production_environment"
+            )
         if new_inputs.get("branches") != old_inputs.get("branches"):
             update_args["branches"] = new_inputs.get("branches")
         if new_inputs.get("pullrequests") != old_inputs.get("pullrequests"):
             update_args["pullrequests"] = new_inputs.get("pullrequests")
-        if new_inputs.get("openshift_project_pattern") != old_inputs.get("openshift_project_pattern"):
-            update_args["openshiftProjectPattern"] = new_inputs.get("openshift_project_pattern")
+        if new_inputs.get("openshift_project_pattern") != old_inputs.get(
+            "openshift_project_pattern"
+        ):
+            update_args["openshiftProjectPattern"] = new_inputs.get(
+                "openshift_project_pattern"
+            )
         if new_inputs.get("auto_idle") != old_inputs.get("auto_idle"):
             update_args["autoIdle"] = new_inputs.get("auto_idle")
         if new_inputs.get("storage_calc") != old_inputs.get("storage_calc"):
@@ -133,7 +138,9 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
                 "production_environment": result.get("productionEnvironment"),
                 "branches": result.get("branches"),
                 "pullrequests": result.get("pullrequests"),
-                "created": old_inputs.get("created"),  # Created timestamp doesn't change
+                "created": old_inputs.get(
+                    "created"
+                ),  # Created timestamp doesn't change
             }
         else:
             # No changes, return old inputs
@@ -172,10 +179,7 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
             "created": result.get("created"),
         }
 
-        return dynamic.ReadResult(
-            id_=str(result["id"]),
-            outs=outs
-        )
+        return dynamic.ReadResult(id_=str(result["id"]), outs=outs)
 
 
 class LagoonProject(dynamic.Resource):
@@ -205,8 +209,7 @@ class LagoonProject(dynamic.Resource):
     """
 
     # Output properties
-    id: pulumi.Output[int]
-    """The Lagoon project ID."""
+    # Note: id is inherited from base class as Output[str]
 
     name: pulumi.Output[str]
     """The project name."""
@@ -233,7 +236,7 @@ class LagoonProject(dynamic.Resource):
         self,
         resource_name: str,
         args: LagoonProjectArgs,
-        opts: Optional[pulumi.ResourceOptions] = None
+        opts: Optional[pulumi.ResourceOptions] = None,
     ):
         """
         Create a LagoonProject resource.
@@ -259,9 +262,4 @@ class LagoonProject(dynamic.Resource):
             "created": None,
         }
 
-        super().__init__(
-            LagoonProjectProvider(),
-            resource_name,
-            inputs,
-            opts
-        )
+        super().__init__(LagoonProjectProvider(), resource_name, inputs, opts)

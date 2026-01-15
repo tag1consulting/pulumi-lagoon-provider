@@ -1,6 +1,6 @@
 """GraphQL client for Lagoon API."""
 
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 import requests
 import json
 import os
@@ -8,18 +8,20 @@ import os
 
 class LagoonAPIError(Exception):
     """Exception raised for Lagoon API errors."""
+
     pass
 
 
 class LagoonConnectionError(Exception):
     """Exception raised for connection errors."""
+
     pass
 
 
 class LagoonClient:
     """GraphQL API client for Lagoon."""
 
-    def __init__(self, api_url: str, token: str, verify_ssl: bool = None):
+    def __init__(self, api_url: str, token: str, verify_ssl: Optional[bool] = None):
         """
         Initialize Lagoon API client.
 
@@ -41,17 +43,22 @@ class LagoonClient:
             self.verify_ssl = verify_ssl
 
         self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        })
+        self.session.headers.update(
+            {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            }
+        )
 
         # Disable SSL verification warnings if insecure mode
         if not self.verify_ssl:
             import urllib3
+
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    def _execute(self, query: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _execute(
+        self, query: str, variables: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Execute a GraphQL query or mutation.
 
@@ -66,7 +73,7 @@ class LagoonClient:
             LagoonAPIError: If the API returns an error
             LagoonConnectionError: If there's a connection issue
         """
-        payload = {
+        payload: Dict[str, Any] = {
             "query": query,
         }
 
@@ -75,10 +82,7 @@ class LagoonClient:
 
         try:
             response = self.session.post(
-                self.api_url,
-                json=payload,
-                timeout=30,
-                verify=self.verify_ssl
+                self.api_url, json=payload, timeout=30, verify=self.verify_ssl
             )
             response.raise_for_status()
 
@@ -86,7 +90,9 @@ class LagoonClient:
 
             # Check for GraphQL errors
             if "errors" in data:
-                error_messages = [error.get("message", str(error)) for error in data["errors"]]
+                error_messages = [
+                    error.get("message", str(error)) for error in data["errors"]
+                ]
                 raise LagoonAPIError(f"GraphQL errors: {'; '.join(error_messages)}")
 
             # Return the data portion
@@ -101,11 +107,7 @@ class LagoonClient:
 
     # Project operations
     def create_project(
-        self,
-        name: str,
-        git_url: str,
-        openshift: int,
-        **kwargs
+        self, name: str, git_url: str, openshift: int, **kwargs
     ) -> Dict[str, Any]:
         """
         Create a new Lagoon project.
@@ -137,12 +139,7 @@ class LagoonClient:
         }
         """
 
-        input_data = {
-            "name": name,
-            "gitUrl": git_url,
-            "openshift": openshift,
-            **kwargs
-        }
+        input_data = {"name": name, "gitUrl": git_url, "openshift": openshift, **kwargs}
 
         result = self._execute(mutation, {"input": input_data})
         project = result.get("addProject", {})
@@ -185,7 +182,11 @@ class LagoonClient:
         project = result.get("projectByName")
 
         # Normalize openshift to just the ID for consistency
-        if project and project.get("openshift") and isinstance(project["openshift"], dict):
+        if (
+            project
+            and project.get("openshift")
+            and isinstance(project["openshift"], dict)
+        ):
             project["openshift"] = project["openshift"].get("id")
 
         return project
@@ -222,16 +223,16 @@ class LagoonClient:
         project = result.get("projectById")
 
         # Normalize openshift to just the ID for consistency
-        if project and project.get("openshift") and isinstance(project["openshift"], dict):
+        if (
+            project
+            and project.get("openshift")
+            and isinstance(project["openshift"], dict)
+        ):
             project["openshift"] = project["openshift"].get("id")
 
         return project
 
-    def update_project(
-        self,
-        project_id: int,
-        **kwargs
-    ) -> Dict[str, Any]:
+    def update_project(self, project_id: int, **kwargs) -> Dict[str, Any]:
         """
         Update an existing project.
 
@@ -259,10 +260,7 @@ class LagoonClient:
         }
         """
 
-        input_data = {
-            "id": project_id,
-            **kwargs
-        }
+        input_data = {"id": project_id, **kwargs}
 
         result = self._execute(mutation, {"input": input_data})
         project = result.get("updateProject", {})
@@ -294,12 +292,7 @@ class LagoonClient:
 
     # Environment operations
     def add_or_update_environment(
-        self,
-        name: str,
-        project: int,
-        deploy_type: str,
-        environment_type: str,
-        **kwargs
+        self, name: str, project: int, deploy_type: str, environment_type: str, **kwargs
     ) -> Dict[str, Any]:
         """
         Add or update an environment.
@@ -341,16 +334,14 @@ class LagoonClient:
             "project": project,
             "deployType": deploy_type.upper(),  # Lagoon expects uppercase enum
             "environmentType": environment_type.upper(),  # Lagoon expects uppercase enum
-            **kwargs
+            **kwargs,
         }
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("addOrUpdateEnvironment", {})
 
     def get_environment_by_name(
-        self,
-        name: str,
-        project_id: int
+        self, name: str, project_id: int
     ) -> Optional[Dict[str, Any]]:
         """
         Get environment by name and project.
@@ -383,12 +374,7 @@ class LagoonClient:
         result = self._execute(query, {"name": name, "project": project_id})
         return result.get("environmentByName")
 
-    def delete_environment(
-        self,
-        name: str,
-        project: int,
-        execute: bool = False
-    ) -> str:
+    def delete_environment(self, name: str, project: int, execute: bool = False) -> str:
         """
         Delete an environment.
 
@@ -406,11 +392,7 @@ class LagoonClient:
         }
         """
 
-        input_data = {
-            "name": name,
-            "project": project,
-            "execute": execute
-        }
+        input_data = {"name": name, "project": project, "execute": execute}
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("deleteEnvironment", "")
@@ -423,7 +405,7 @@ class LagoonClient:
         project: int,
         scope: str,
         environment: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Add an environment variable.
@@ -458,7 +440,7 @@ class LagoonClient:
                 "type": "ENVIRONMENT",
                 "typeId": environment,
                 "scope": scope.upper(),  # Lagoon expects uppercase
-                **kwargs
+                **kwargs,
             }
         else:
             input_data = {
@@ -467,17 +449,14 @@ class LagoonClient:
                 "type": "PROJECT",
                 "typeId": project,
                 "scope": scope.upper(),  # Lagoon expects uppercase
-                **kwargs
+                **kwargs,
             }
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("addEnvVariable", {})
 
     def get_env_variable_by_name(
-        self,
-        name: str,
-        project: int,
-        environment: Optional[int] = None
+        self, name: str, project: int, environment: Optional[int] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Get an environment variable by name.
@@ -526,10 +505,7 @@ class LagoonClient:
         return None
 
     def delete_env_variable(
-        self,
-        name: str,
-        project: int,
-        environment: Optional[int] = None
+        self, name: str, project: int, environment: Optional[int] = None
     ) -> str:
         """
         Delete an environment variable.
@@ -548,10 +524,7 @@ class LagoonClient:
         }
         """
 
-        input_data = {
-            "name": name,
-            "project": project
-        }
+        input_data = {"name": name, "project": project}
 
         if environment is not None:
             input_data["environment"] = environment

@@ -36,7 +36,9 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
         config = LagoonConfig()
         return config.get_client()
 
-    def _create_variable_id(self, project_id: int, env_id: Optional[int], name: str) -> str:
+    def _create_variable_id(
+        self, project_id: int, env_id: Optional[int], name: str
+    ) -> str:
         """Create a unique ID for the variable."""
         if env_id:
             return f"p{project_id}e{env_id}_{name}"
@@ -48,7 +50,9 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
 
         # Ensure IDs are integers (Pulumi may pass them as strings)
         project_id = int(inputs["project_id"])
-        environment_id = int(inputs["environment_id"]) if inputs.get("environment_id") else None
+        environment_id = (
+            int(inputs["environment_id"]) if inputs.get("environment_id") else None
+        )
 
         # Prepare input data
         create_args = {
@@ -66,15 +70,13 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
         result = client.add_env_variable(**create_args)
 
         # Generate a unique ID for the variable
-        var_id = self._create_variable_id(
-            project_id,
-            environment_id,
-            inputs["name"]
-        )
+        var_id = self._create_variable_id(project_id, environment_id, inputs["name"])
 
         # Return outputs - note: new API doesn't return project/environment objects
         outs = {
-            "id": result.get("id", var_id),  # Use API ID if available, otherwise use generated ID
+            "id": result.get(
+                "id", var_id
+            ),  # Use API ID if available, otherwise use generated ID
             "name": result["name"],
             "value": result["value"],
             "project_id": inputs["project_id"],  # Store from inputs
@@ -82,10 +84,7 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
             "scope": result["scope"],
         }
 
-        return dynamic.CreateResult(
-            id_=var_id,
-            outs=outs
-        )
+        return dynamic.CreateResult(id_=var_id, outs=outs)
 
     def update(self, id, old_inputs, new_inputs):
         """Update an existing Lagoon variable."""
@@ -93,9 +92,17 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
 
         # Ensure IDs are integers (Pulumi may pass them as strings)
         old_project_id = int(old_inputs["project_id"])
-        old_environment_id = int(old_inputs["environment_id"]) if old_inputs.get("environment_id") else None
+        old_environment_id = (
+            int(old_inputs["environment_id"])
+            if old_inputs.get("environment_id")
+            else None
+        )
         new_project_id = int(new_inputs["project_id"])
-        new_environment_id = int(new_inputs["environment_id"]) if new_inputs.get("environment_id") else None
+        new_environment_id = (
+            int(new_inputs["environment_id"])
+            if new_inputs.get("environment_id")
+            else None
+        )
 
         # In Lagoon, updating a variable is done by deleting and re-creating
         # First, delete the old variable
@@ -127,9 +134,7 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
 
         # Generate new ID
         var_id = self._create_variable_id(
-            new_project_id,
-            new_environment_id,
-            new_inputs["name"]
+            new_project_id, new_environment_id, new_inputs["name"]
         )
 
         # Return updated outputs - note: new API doesn't return project/environment objects
@@ -150,7 +155,9 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
 
         # Ensure IDs are integers (Pulumi may pass them as strings)
         project_id = int(props["project_id"])
-        environment_id = int(props["environment_id"]) if props.get("environment_id") else None
+        environment_id = (
+            int(props["environment_id"]) if props.get("environment_id") else None
+        )
 
         # Delete via API
         delete_args = {
@@ -169,13 +176,13 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
 
         # Ensure IDs are integers (Pulumi may pass them as strings)
         project_id = int(props["project_id"])
-        environment_id = int(props["environment_id"]) if props.get("environment_id") else None
+        environment_id = (
+            int(props["environment_id"]) if props.get("environment_id") else None
+        )
 
         # Query current state
         result = client.get_env_variable_by_name(
-            name=props["name"],
-            project=project_id,
-            environment=environment_id
+            name=props["name"], project=project_id, environment=environment_id
         )
 
         if not result:
@@ -188,14 +195,13 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
             "name": result["name"],
             "value": result["value"],
             "project_id": result["project"]["id"],
-            "environment_id": result.get("environment", {}).get("id") if result.get("environment") else None,
+            "environment_id": result.get("environment", {}).get("id")
+            if result.get("environment")
+            else None,
             "scope": result["scope"],
         }
 
-        return dynamic.ReadResult(
-            id_=id,
-            outs=outs
-        )
+        return dynamic.ReadResult(id_=id, outs=outs)
 
 
 class LagoonVariable(dynamic.Resource):
@@ -265,7 +271,7 @@ class LagoonVariable(dynamic.Resource):
         self,
         resource_name: str,
         args: LagoonVariableArgs,
-        opts: Optional[pulumi.ResourceOptions] = None
+        opts: Optional[pulumi.ResourceOptions] = None,
     ):
         """
         Create a LagoonVariable resource.
@@ -286,9 +292,4 @@ class LagoonVariable(dynamic.Resource):
             "id": None,
         }
 
-        super().__init__(
-            LagoonVariableProvider(),
-            resource_name,
-            inputs,
-            opts
-        )
+        super().__init__(LagoonVariableProvider(), resource_name, inputs, opts)
