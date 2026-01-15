@@ -287,7 +287,7 @@ This project is in early development. Contributions, feedback, and bug reports a
 
 ## License
 
-[License TBD]
+Apache License 2.0 - See [LICENSE](LICENSE) for details.
 
 ## Resources
 
