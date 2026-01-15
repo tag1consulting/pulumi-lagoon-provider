@@ -1,7 +1,6 @@
 """Unit tests for LagoonEnvironment provider."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 
 class TestLagoonEnvironmentProviderCreate:
@@ -90,7 +89,7 @@ class TestLagoonEnvironmentProviderCreate:
             "deploy_title": "Add new feature",
         }
 
-        result = provider.create(inputs)
+        provider.create(inputs)
 
         call_kwargs = mock_client.add_or_update_environment.call_args[1]
         assert call_kwargs["deployBaseRef"] == "main"
@@ -154,7 +153,7 @@ class TestLagoonEnvironmentProviderUpdate:
             "auto_idle": 60,
         }
 
-        result = provider.update("1", old_inputs, new_inputs)
+        provider.update("1", old_inputs, new_inputs)
 
         mock_client.add_or_update_environment.assert_called_once()
 

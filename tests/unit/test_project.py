@@ -1,7 +1,6 @@
 """Unit tests for LagoonProject provider."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 
 class TestLagoonProjectProviderCreate:
@@ -61,7 +60,7 @@ class TestLagoonProjectProviderCreate:
             "storage_calc": 1,
         }
 
-        result = provider.create(inputs)
+        provider.create(inputs)
 
         # Verify the API was called with correct arguments
         call_kwargs = mock_client.create_project.call_args[1]

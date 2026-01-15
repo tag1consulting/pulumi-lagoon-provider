@@ -12,7 +12,7 @@ Environment variables required:
 import pytest
 import os
 
-from pulumi_lagoon.client import LagoonClient, LagoonAPIError
+from pulumi_lagoon.client import LagoonClient
 
 
 # Mark all tests in this module as integration tests

@@ -78,7 +78,7 @@ class TestLagoonClientExecute:
         response = mock_response(data={"test": "value"})
         lagoon_client.session.post.return_value = response
 
-        result = lagoon_client._execute(
+        lagoon_client._execute(
             "query Test($id: Int!) { test(id: $id) }",
             variables={"id": 42}
         )
@@ -308,7 +308,7 @@ class TestVariableOperations:
         response = mock_response(data={"addEnvVariable": env_var})
         lagoon_client.session.post.return_value = response
 
-        result = lagoon_client.add_env_variable(
+        lagoon_client.add_env_variable(
             name="DATABASE_HOST",
             value="mysql.example.com",
             project=1,

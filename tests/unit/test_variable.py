@@ -1,7 +1,6 @@
 """Unit tests for LagoonVariable provider."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 
 class TestLagoonVariableProviderCreate:
@@ -61,7 +60,7 @@ class TestLagoonVariableProviderCreate:
             "scope": "runtime",
         }
 
-        result = provider.create(inputs)
+        provider.create(inputs)
 
         # Verify environment-level variable
         call_kwargs = mock_client.add_env_variable.call_args[1]
@@ -158,7 +157,7 @@ class TestLagoonVariableProviderUpdate:
             "scope": "runtime",
         }
 
-        result = provider.update("p1_DATABASE_HOST", old_inputs, new_inputs)
+        provider.update("p1_DATABASE_HOST", old_inputs, new_inputs)
 
         # Should delete old and create new
         mock_client.delete_env_variable.assert_called_once()
@@ -193,7 +192,7 @@ class TestLagoonVariableProviderUpdate:
         }
 
         # Should not raise, should continue with create
-        result = provider.update("p1_VAR", old_inputs, new_inputs)
+        provider.update("p1_VAR", old_inputs, new_inputs)
 
         mock_client.add_env_variable.assert_called_once()
 

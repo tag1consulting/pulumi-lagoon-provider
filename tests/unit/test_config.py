@@ -1,7 +1,7 @@
 """Unit tests for Lagoon provider configuration."""
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import os
 
 
