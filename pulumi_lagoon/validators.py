@@ -113,9 +113,7 @@ def validate_git_url(git_url: str) -> None:
         )
 
 
-def validate_positive_int(
-    value: Any, field_name: str, allow_zero: bool = False
-) -> int:
+def validate_positive_int(value: Any, field_name: str, allow_zero: bool = False) -> int:
     """Validate that a value is a positive integer.
 
     Args:

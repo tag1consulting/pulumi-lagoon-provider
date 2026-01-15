@@ -176,7 +176,9 @@ class TestLagoonVariableProviderUpdate:
 
         mock_client = Mock()
         # Use LagoonAPIError - this is the type of error that should be caught and ignored
-        mock_client.delete_env_variable.side_effect = LagoonAPIError("Variable not found")
+        mock_client.delete_env_variable.side_effect = LagoonAPIError(
+            "Variable not found"
+        )
         mock_client.add_env_variable.return_value = sample_variable
         mock_config = Mock()
         mock_config.get_client.return_value = mock_client
@@ -457,7 +459,9 @@ class TestLagoonVariableProviderValidation:
         from pulumi_lagoon.variable import LagoonVariableProvider
 
         mock_client = Mock()
-        mock_client.delete_env_variable.side_effect = LagoonAPIError("Variable not found")
+        mock_client.delete_env_variable.side_effect = LagoonAPIError(
+            "Variable not found"
+        )
         mock_client.add_env_variable.return_value = sample_variable
         mock_config = Mock()
         mock_config.get_client.return_value = mock_client
@@ -489,7 +493,9 @@ class TestLagoonVariableProviderValidation:
         from pulumi_lagoon.variable import LagoonVariableProvider
 
         mock_client = Mock()
-        mock_client.delete_env_variable.side_effect = LagoonConnectionError("Network error")
+        mock_client.delete_env_variable.side_effect = LagoonConnectionError(
+            "Network error"
+        )
         mock_config = Mock()
         mock_config.get_client.return_value = mock_client
         mock_config_class.return_value = mock_config
