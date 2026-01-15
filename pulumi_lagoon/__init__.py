@@ -5,14 +5,26 @@ __version__ = "0.1.0"
 # Configuration
 from .config import LagoonConfig
 
-# Resources - will be implemented in next phase
-# from .project import LagoonProject
-# from .environment import LagoonEnvironment
-# from .variable import LagoonVariable
+# Resources
+from .project import LagoonProject, LagoonProjectArgs
+from .environment import LagoonEnvironment, LagoonEnvironmentArgs
+from .variable import LagoonVariable, LagoonVariableArgs
+
+# Client (for advanced use cases)
+from .client import LagoonClient, LagoonAPIError, LagoonConnectionError
 
 __all__ = [
+    # Configuration
     "LagoonConfig",
-    # "LagoonProject",
-    # "LagoonEnvironment",
-    # "LagoonVariable",
+    # Resources
+    "LagoonProject",
+    "LagoonProjectArgs",
+    "LagoonEnvironment",
+    "LagoonEnvironmentArgs",
+    "LagoonVariable",
+    "LagoonVariableArgs",
+    # Client
+    "LagoonClient",
+    "LagoonAPIError",
+    "LagoonConnectionError",
 ]

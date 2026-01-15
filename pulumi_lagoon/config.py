@@ -39,7 +39,8 @@ class LagoonConfig:
             config,
             "sshKeyPath",
             "LAGOON_SSH_KEY_PATH",
-            default=None
+            default=None,
+            required=False
         )
 
     def _get_config_value(
@@ -47,8 +48,9 @@ class LagoonConfig:
         config: pulumi.Config,
         config_key: str,
         env_var: str,
-        default: Optional[str] = None
-    ) -> str:
+        default: Optional[str] = None,
+        required: bool = True
+    ) -> Optional[str]:
         """Get configuration value from Pulumi config or environment variable."""
         # Try Pulumi config first
         value = config.get(config_key)
@@ -60,8 +62,8 @@ class LagoonConfig:
         if value:
             return value
 
-        # Return default
-        if default is not None:
+        # Return default if provided or not required
+        if not required or default is not None:
             return default
 
         raise ValueError(

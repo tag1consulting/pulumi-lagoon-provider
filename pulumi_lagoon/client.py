@@ -3,6 +3,7 @@
 from typing import Dict, Any, Optional, List
 import requests
 import json
+import os
 
 
 class LagoonAPIError(Exception):
@@ -18,21 +19,37 @@ class LagoonConnectionError(Exception):
 class LagoonClient:
     """GraphQL API client for Lagoon."""
 
-    def __init__(self, api_url: str, token: str):
+    def __init__(self, api_url: str, token: str, verify_ssl: bool = None):
         """
         Initialize Lagoon API client.
 
         Args:
             api_url: Lagoon GraphQL API endpoint URL
             token: Authentication token (JWT)
+            verify_ssl: Whether to verify SSL certificates (default: True,
+                        can be overridden with LAGOON_INSECURE=true env var)
         """
         self.api_url = api_url
         self.token = token
+
+        # Determine SSL verification setting
+        if verify_ssl is None:
+            # Check environment variable
+            insecure = os.environ.get("LAGOON_INSECURE", "").lower()
+            self.verify_ssl = insecure not in ("true", "1", "yes")
+        else:
+            self.verify_ssl = verify_ssl
+
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         })
+
+        # Disable SSL verification warnings if insecure mode
+        if not self.verify_ssl:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def _execute(self, query: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -60,7 +77,8 @@ class LagoonClient:
             response = self.session.post(
                 self.api_url,
                 json=payload,
-                timeout=30
+                timeout=30,
+                verify=self.verify_ssl
             )
             response.raise_for_status()
 
@@ -107,7 +125,10 @@ class LagoonClient:
                 id
                 name
                 gitUrl
-                openshift
+                openshift {
+                    id
+                    name
+                }
                 productionEnvironment
                 branches
                 pullrequests
@@ -124,7 +145,13 @@ class LagoonClient:
         }
 
         result = self._execute(mutation, {"input": input_data})
-        return result.get("addProject", {})
+        project = result.get("addProject", {})
+
+        # Normalize openshift to just the ID for consistency
+        if project.get("openshift") and isinstance(project["openshift"], dict):
+            project["openshift"] = project["openshift"].get("id")
+
+        return project
 
     def get_project_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """
@@ -142,7 +169,10 @@ class LagoonClient:
                 id
                 name
                 gitUrl
-                openshift
+                openshift {
+                    id
+                    name
+                }
                 productionEnvironment
                 branches
                 pullrequests
@@ -152,7 +182,50 @@ class LagoonClient:
         """
 
         result = self._execute(query, {"name": name})
-        return result.get("projectByName")
+        project = result.get("projectByName")
+
+        # Normalize openshift to just the ID for consistency
+        if project and project.get("openshift") and isinstance(project["openshift"], dict):
+            project["openshift"] = project["openshift"].get("id")
+
+        return project
+
+    def get_project_by_id(self, project_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get project details by ID.
+
+        Args:
+            project_id: Project ID
+
+        Returns:
+            Project data or None if not found
+        """
+        query = """
+        query ProjectById($id: Int!) {
+            projectById(id: $id) {
+                id
+                name
+                gitUrl
+                openshift {
+                    id
+                    name
+                }
+                productionEnvironment
+                branches
+                pullrequests
+                created
+            }
+        }
+        """
+
+        result = self._execute(query, {"id": project_id})
+        project = result.get("projectById")
+
+        # Normalize openshift to just the ID for consistency
+        if project and project.get("openshift") and isinstance(project["openshift"], dict):
+            project["openshift"] = project["openshift"].get("id")
+
+        return project
 
     def update_project(
         self,
@@ -175,7 +248,10 @@ class LagoonClient:
                 id
                 name
                 gitUrl
-                openshift
+                openshift {
+                    id
+                    name
+                }
                 productionEnvironment
                 branches
                 pullrequests
@@ -189,7 +265,13 @@ class LagoonClient:
         }
 
         result = self._execute(mutation, {"input": input_data})
-        return result.get("updateProject", {})
+        project = result.get("updateProject", {})
+
+        # Normalize openshift to just the ID for consistency
+        if project.get("openshift") and isinstance(project["openshift"], dict):
+            project["openshift"] = project["openshift"].get("id")
+
+        return project
 
     def delete_project(self, name: str) -> str:
         """
@@ -210,24 +292,269 @@ class LagoonClient:
         result = self._execute(mutation, {"input": {"project": name}})
         return result.get("deleteProject", "")
 
-    # Environment operations (stubs - to be implemented)
-    def add_or_update_environment(self, **kwargs) -> Dict[str, Any]:
-        """Add or update an environment."""
-        # TODO: Implement
-        raise NotImplementedError("Environment operations not yet implemented")
+    # Environment operations
+    def add_or_update_environment(
+        self,
+        name: str,
+        project: int,
+        deploy_type: str,
+        environment_type: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Add or update an environment.
 
-    def delete_environment(self, name: str, project: str) -> str:
-        """Delete an environment."""
-        # TODO: Implement
-        raise NotImplementedError("Environment operations not yet implemented")
+        Args:
+            name: Environment name (typically branch name)
+            project: Project ID
+            deploy_type: "branch" or "pullrequest"
+            environment_type: "production", "development", etc.
+            **kwargs: Additional environment properties
 
-    # Variable operations (stubs - to be implemented)
-    def add_env_variable(self, **kwargs) -> Dict[str, Any]:
-        """Add an environment variable."""
-        # TODO: Implement
-        raise NotImplementedError("Variable operations not yet implemented")
+        Returns:
+            Environment data
+        """
+        mutation = """
+        mutation AddOrUpdateEnvironment($input: AddEnvironmentInput!) {
+            addOrUpdateEnvironment(input: $input) {
+                id
+                name
+                project {
+                    id
+                    name
+                }
+                environmentType
+                deployType
+                deployBaseRef
+                deployHeadRef
+                deployTitle
+                autoIdle
+                route
+                routes
+                created
+            }
+        }
+        """
 
-    def delete_env_variable(self, name: str, project: str, environment: Optional[str] = None) -> str:
-        """Delete an environment variable."""
-        # TODO: Implement
-        raise NotImplementedError("Variable operations not yet implemented")
+        input_data = {
+            "name": name,
+            "project": project,
+            "deployType": deploy_type.upper(),  # Lagoon expects uppercase enum
+            "environmentType": environment_type.upper(),  # Lagoon expects uppercase enum
+            **kwargs
+        }
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addOrUpdateEnvironment", {})
+
+    def get_environment_by_name(
+        self,
+        name: str,
+        project_id: int
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get environment by name and project.
+
+        Args:
+            name: Environment name
+            project_id: Project ID
+
+        Returns:
+            Environment data or None if not found
+        """
+        query = """
+        query EnvironmentByName($name: String!, $project: Int!) {
+            environmentByName(name: $name, project: $project) {
+                id
+                name
+                project {
+                    id
+                    name
+                }
+                environmentType
+                deployType
+                route
+                routes
+                created
+            }
+        }
+        """
+
+        result = self._execute(query, {"name": name, "project": project_id})
+        return result.get("environmentByName")
+
+    def delete_environment(
+        self,
+        name: str,
+        project: int,
+        execute: bool = False
+    ) -> str:
+        """
+        Delete an environment.
+
+        Args:
+            name: Environment name
+            project: Project ID
+            execute: Whether to actually execute the deletion (Lagoon safety feature)
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteEnvironment($input: DeleteEnvironmentInput!) {
+            deleteEnvironment(input: $input)
+        }
+        """
+
+        input_data = {
+            "name": name,
+            "project": project,
+            "execute": execute
+        }
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteEnvironment", "")
+
+    # Variable operations
+    def add_env_variable(
+        self,
+        name: str,
+        value: str,
+        project: int,
+        scope: str,
+        environment: Optional[int] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Add an environment variable.
+
+        Args:
+            name: Variable name
+            value: Variable value
+            project: Project ID
+            scope: Variable scope ("build", "runtime", "global", "container_registry", "internal_container_registry")
+            environment: Environment ID (optional, for environment-scoped variables)
+            **kwargs: Additional variable properties
+
+        Returns:
+            Variable data
+        """
+        mutation = """
+        mutation AddEnvVariable($input: EnvVariableInput!) {
+            addEnvVariable(input: $input) {
+                id
+                name
+                value
+                scope
+            }
+        }
+        """
+
+        # Lagoon uses type/typeId to specify whether this is a project or environment variable
+        if environment is not None:
+            input_data = {
+                "name": name,
+                "value": value,
+                "type": "ENVIRONMENT",
+                "typeId": environment,
+                "scope": scope.upper(),  # Lagoon expects uppercase
+                **kwargs
+            }
+        else:
+            input_data = {
+                "name": name,
+                "value": value,
+                "type": "PROJECT",
+                "typeId": project,
+                "scope": scope.upper(),  # Lagoon expects uppercase
+                **kwargs
+            }
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addEnvVariable", {})
+
+    def get_env_variable_by_name(
+        self,
+        name: str,
+        project: int,
+        environment: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get an environment variable by name.
+
+        Args:
+            name: Variable name
+            project: Project ID
+            environment: Environment ID (optional)
+
+        Returns:
+            Variable data or None if not found
+        """
+        # Note: Lagoon doesn't have a direct query for single variable
+        # We need to get all variables and filter
+        query = """
+        query EnvVariablesByProjectEnvironment($project: Int!, $environment: Int) {
+            envVariablesByProjectEnvironment(input: {project: $project, environment: $environment}) {
+                id
+                name
+                value
+                scope
+                project {
+                    id
+                    name
+                }
+                environment {
+                    id
+                    name
+                }
+            }
+        }
+        """
+
+        variables = {"project": project}
+        if environment is not None:
+            variables["environment"] = environment
+
+        result = self._execute(query, variables)
+        all_vars = result.get("envVariablesByProjectEnvironment", [])
+
+        # Filter for the specific variable name
+        for var in all_vars:
+            if var.get("name") == name:
+                return var
+
+        return None
+
+    def delete_env_variable(
+        self,
+        name: str,
+        project: int,
+        environment: Optional[int] = None
+    ) -> str:
+        """
+        Delete an environment variable.
+
+        Args:
+            name: Variable name
+            project: Project ID
+            environment: Environment ID (optional, for environment-scoped variables)
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteEnvVariable($input: DeleteEnvVariableInput!) {
+            deleteEnvVariable(input: $input)
+        }
+        """
+
+        input_data = {
+            "name": name,
+            "project": project
+        }
+
+        if environment is not None:
+            input_data["environment"] = environment
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteEnvVariable", "")
