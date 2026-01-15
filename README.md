@@ -28,12 +28,45 @@ This provider enables you to manage Lagoon hosting platform resources (projects,
 - `LagoonNotification` - Manage notification integrations
 - `LagoonTask` - Manage tasks and backups
 
-## Installation
+## Quick Start - Complete Test Environment
+
+Set up a complete local development environment with Kind cluster, Lagoon, and the provider:
 
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/pulumi-lagoon-provider.git
 cd pulumi-lagoon-provider
+
+# Option 1: Use the setup script (recommended)
+./scripts/setup-complete.sh
+
+# Option 2: Use Make
+make setup-all
+
+# After setup, deploy the example project
+make example-up
+```
+
+**What gets created:**
+- Kind Kubernetes cluster (`lagoon-test`)
+- Lagoon Core (API, UI, Keycloak, RabbitMQ, databases)
+- Harbor container registry
+- Ingress controller with TLS
+- Python virtual environment with provider installed
+- Example project ready to deploy
+
+**Total setup time: ~15-20 minutes**
+
+## Installation (Manual)
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/pulumi-lagoon-provider.git
+cd pulumi-lagoon-provider
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
 # Install in development mode
 pip install -e .
@@ -41,22 +74,23 @@ pip install -e .
 
 ## Configuration
 
-Configure the provider with your Lagoon API credentials:
+**For the local test cluster** (after running setup):
 
 ```bash
-# Set Lagoon API URL
-pulumi config set lagoon:apiUrl https://api.lagoon.example.com/graphql
-
-# Set authentication token (stored encrypted)
-pulumi config set lagoon:token YOUR_TOKEN --secret
+# The example project handles this automatically via the run-pulumi.sh wrapper
+cd examples/simple-project
+./scripts/run-pulumi.sh up
 ```
 
-Or use environment variables:
+**For external Lagoon instances**, use environment variables (recommended for dynamic providers):
 
 ```bash
 export LAGOON_API_URL=https://api.lagoon.example.com/graphql
 export LAGOON_TOKEN=YOUR_TOKEN
 ```
+
+**Note**: Dynamic providers run in a subprocess and cannot access Pulumi config secrets.
+Always use environment variables for `LAGOON_TOKEN`.
 
 ## Usage
 
@@ -109,9 +143,57 @@ See the `examples/` directory for complete examples:
 ### Prerequisites
 - Python 3.8 or later
 - Pulumi CLI
-- Access to a Lagoon instance
+- Docker (for local test cluster)
+- kind CLI (for local test cluster)
+- kubectl
 
-### Setup
+### Quick Setup
+
+```bash
+# Complete automated setup (creates Kind cluster, installs Lagoon, provider)
+make setup-all
+
+# Or just install the provider for use with existing Lagoon
+make venv provider-install
+```
+
+### Make Targets
+
+```bash
+# Setup
+make setup-all          # Complete setup: venv, provider, Kind cluster, Lagoon, user, deploy target
+make venv               # Create Python virtual environment
+make provider-install   # Install provider in development mode
+make cluster-up         # Create Kind cluster + deploy Lagoon via Pulumi
+make cluster-down       # Destroy Kind cluster and Lagoon resources
+
+# Lagoon Setup (called by setup-all)
+make ensure-lagoon-admin   # Create lagoonadmin user in Keycloak
+make ensure-deploy-target  # Create deploy target in Lagoon + set Pulumi config
+
+# Example Project
+make example-setup      # Initialize example Pulumi stack
+make example-preview    # Preview changes (auto token refresh)
+make example-up         # Deploy example resources (auto token refresh)
+make example-down       # Destroy example resources
+make example-output     # Show stack outputs
+
+# Cleanup
+make clean              # Kill port-forwards, remove temp files
+make clean-all          # Full cleanup: clean + destroy cluster + remove venvs
+
+# Status
+make cluster-status     # Show cluster and Lagoon status
+make help               # Show all available targets
+```
+
+**Note**: All targets that interact with Lagoon automatically handle:
+- Port-forward setup (temporary, cleaned up after)
+- Token refresh (5-minute token expiration handled)
+- Direct Access Grants enablement in Keycloak
+- User and deploy target creation (if needed)
+
+### Manual Setup
 
 ```bash
 # Create virtual environment
@@ -139,9 +221,19 @@ pulumi-lagoon-provider/
 │   ├── project.py          # LagoonProject resource
 │   ├── environment.py      # LagoonEnvironment resource
 │   └── variable.py         # LagoonVariable resource
-├── examples/               # Example Pulumi programs
+├── examples/
+│   └── simple-project/     # Example with automation scripts
+│       ├── __main__.py     # Pulumi program
+│       ├── scripts/        # Helper scripts (run-pulumi.sh, etc.)
+│       └── Makefile        # Convenience targets
+├── test-cluster/           # Kind + Lagoon Pulumi program
+│   ├── __main__.py         # Creates complete test environment
+│   └── config/             # Kind and Helm values
+├── scripts/
+│   └── setup-complete.sh   # Unified setup script
 ├── tests/                  # Tests
 ├── memory-bank/            # Planning and architecture docs
+├── Makefile                # Top-level automation
 └── README.md              # This file
 ```
 
@@ -159,12 +251,13 @@ For detailed architecture information, see `memory-bank/architecture.md`.
 
 ## Roadmap
 
-### Phase 1: MVP (Current)
+### Phase 1: MVP (Complete)
 - [x] Project setup and structure
-- [ ] GraphQL client implementation
-- [ ] Core resources (Project, Environment, Variable)
-- [ ] Basic examples
-- [ ] Documentation
+- [x] GraphQL client implementation
+- [x] Core resources (Project, Environment, Variable)
+- [x] Basic examples with automation scripts
+- [x] Test cluster setup via Pulumi (Kind + Lagoon)
+- [x] Documentation
 
 ### Phase 2: Polish
 - [ ] Comprehensive error handling
