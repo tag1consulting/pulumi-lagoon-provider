@@ -1,7 +1,6 @@
 # Pulumi Lagoon Provider
 
 [![Tests](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test.yml)
-[![codecov](https://codecov.io/gh/tag1consulting/pulumi-lagoon-provider/graph/badge.svg?branch=main)](https://codecov.io/gh/tag1consulting/pulumi-lagoon-provider)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
