@@ -36,7 +36,9 @@ class TestLagoonEnvironmentProviderCreate:
         mock_client.add_or_update_environment.assert_called_once()
 
     @patch("pulumi_lagoon.environment.LagoonConfig")
-    def test_create_environment_sets_deploy_base_ref(self, mock_config_class, sample_environment):
+    def test_create_environment_sets_deploy_base_ref(
+        self, mock_config_class, sample_environment
+    ):
         """Test that deployBaseRef defaults to environment name."""
         from pulumi_lagoon.environment import LagoonEnvironmentProvider
 
@@ -62,7 +64,9 @@ class TestLagoonEnvironmentProviderCreate:
         assert call_kwargs["deployBaseRef"] == "main"
 
     @patch("pulumi_lagoon.environment.LagoonConfig")
-    def test_create_environment_with_pullrequest(self, mock_config_class, sample_environment):
+    def test_create_environment_with_pullrequest(
+        self, mock_config_class, sample_environment
+    ):
         """Test creating a pull request environment."""
         from pulumi_lagoon.environment import LagoonEnvironmentProvider
 
@@ -97,7 +101,9 @@ class TestLagoonEnvironmentProviderCreate:
         assert call_kwargs["deployTitle"] == "Add new feature"
 
     @patch("pulumi_lagoon.environment.LagoonConfig")
-    def test_create_handles_string_project_id(self, mock_config_class, sample_environment):
+    def test_create_handles_string_project_id(
+        self, mock_config_class, sample_environment
+    ):
         """Test that string project_id is converted to int."""
         from pulumi_lagoon.environment import LagoonEnvironmentProvider
 
@@ -182,9 +188,7 @@ class TestLagoonEnvironmentProviderDelete:
         provider.delete("1", props)
 
         mock_client.delete_environment.assert_called_once_with(
-            name="develop",
-            project=1,
-            execute=True
+            name="develop", project=1, execute=True
         )
 
 
@@ -214,8 +218,7 @@ class TestLagoonEnvironmentProviderRead:
         assert result.id == "1"
         assert result.outs["name"] == "main"
         mock_client.get_environment_by_name.assert_called_once_with(
-            name="main",
-            project_id=1
+            name="main", project_id=1
         )
 
     @patch("pulumi_lagoon.environment.LagoonConfig")

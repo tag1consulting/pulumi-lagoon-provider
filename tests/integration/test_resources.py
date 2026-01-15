@@ -42,16 +42,14 @@ def lagoon_config():
 @pytest.fixture(scope="module")
 def client(lagoon_config):
     """Create a real Lagoon client."""
-    return LagoonClient(
-        api_url=lagoon_config["api_url"],
-        token=lagoon_config["token"]
-    )
+    return LagoonClient(api_url=lagoon_config["api_url"], token=lagoon_config["token"])
 
 
 @pytest.fixture
 def test_project_name():
     """Generate a unique test project name."""
     import time
+
     return f"test-integration-{int(time.time())}"
 
 
@@ -164,11 +162,7 @@ class TestEnvironmentLifecycle:
 
         finally:
             # Delete
-            client.delete_environment(
-                name="develop",
-                project=project_id,
-                execute=True
-            )
+            client.delete_environment(name="develop", project=project_id, execute=True)
 
             # Verify deletion
             deleted = client.get_environment_by_name("develop", project_id)
@@ -212,23 +206,18 @@ class TestVariableLifecycle:
         try:
             # Read
             fetched = client.get_env_variable_by_name(
-                name="TEST_VAR",
-                project=project_id
+                name="TEST_VAR", project=project_id
             )
             assert fetched is not None
             assert fetched["value"] == "test-value"
 
         finally:
             # Delete
-            client.delete_env_variable(
-                name="TEST_VAR",
-                project=project_id
-            )
+            client.delete_env_variable(name="TEST_VAR", project=project_id)
 
             # Verify deletion
             deleted = client.get_env_variable_by_name(
-                name="TEST_VAR",
-                project=project_id
+                name="TEST_VAR", project=project_id
             )
             assert deleted is None
 
@@ -252,7 +241,4 @@ class TestVariableLifecycle:
             assert var["scope"] == scope
 
             # Cleanup
-            client.delete_env_variable(
-                name=var_name,
-                project=project_id
-            )
+            client.delete_env_variable(name=var_name, project=project_id)

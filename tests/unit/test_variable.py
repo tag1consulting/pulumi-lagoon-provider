@@ -67,7 +67,9 @@ class TestLagoonVariableProviderCreate:
         assert call_kwargs["environment"] == 1
 
     @patch("pulumi_lagoon.variable.LagoonConfig")
-    def test_create_variable_handles_string_ids(self, mock_config_class, sample_variable):
+    def test_create_variable_handles_string_ids(
+        self, mock_config_class, sample_variable
+    ):
         """Test that string IDs are converted to int."""
         from pulumi_lagoon.variable import LagoonVariableProvider
 
@@ -275,9 +277,7 @@ class TestLagoonVariableProviderRead:
 
         assert result.outs["name"] == "DATABASE_HOST"
         mock_client.get_env_variable_by_name.assert_called_once_with(
-            name="DATABASE_HOST",
-            project=1,
-            environment=None
+            name="DATABASE_HOST", project=1, environment=None
         )
 
     @patch("pulumi_lagoon.variable.LagoonConfig")

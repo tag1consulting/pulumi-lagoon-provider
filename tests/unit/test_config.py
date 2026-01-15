@@ -48,10 +48,10 @@ class TestLagoonConfigEnvVars:
 
     def test_config_ssh_key_path_from_env(self, mock_pulumi_config):
         """Test SSH key path from environment variable."""
-        with patch.dict(os.environ, {
-            "LAGOON_TOKEN": "test-token",
-            "LAGOON_SSH_KEY_PATH": "/path/to/key"
-        }):
+        with patch.dict(
+            os.environ,
+            {"LAGOON_TOKEN": "test-token", "LAGOON_SSH_KEY_PATH": "/path/to/key"},
+        ):
             from pulumi_lagoon.config import LagoonConfig
 
             config = LagoonConfig()
@@ -85,10 +85,13 @@ class TestLagoonConfigPulumiConfig:
 
     def test_config_pulumi_takes_precedence(self):
         """Test Pulumi config takes precedence over environment variables."""
-        with patch.dict(os.environ, {
-            "LAGOON_API_URL": "https://api.env.lagoon.sh/graphql",
-            "LAGOON_TOKEN": "env-token",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "LAGOON_API_URL": "https://api.env.lagoon.sh/graphql",
+                "LAGOON_TOKEN": "env-token",
+            },
+        ):
             with patch("pulumi.Config") as mock_config_class:
                 mock_config = Mock()
                 mock_config_class.return_value = mock_config
@@ -123,8 +126,7 @@ class TestLagoonConfigGetClient:
             client = config.get_client()
 
             mock_client_class.assert_called_once_with(
-                "https://api.test.lagoon.sh/graphql",
-                "test-token-from-env"
+                "https://api.test.lagoon.sh/graphql", "test-token-from-env"
             )
             assert client == mock_client
 

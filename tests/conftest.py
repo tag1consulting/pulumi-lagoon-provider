@@ -54,6 +54,7 @@ def mock_session():
 @pytest.fixture
 def mock_response():
     """Create a factory for mock HTTP responses."""
+
     def _make_response(data=None, errors=None, status_code=200):
         response = Mock()
         response.status_code = status_code
@@ -69,6 +70,7 @@ def mock_response():
 
         if status_code >= 400:
             from requests import HTTPError
+
             response.raise_for_status.side_effect = HTTPError(f"HTTP {status_code}")
 
         return response
@@ -88,8 +90,7 @@ def lagoon_client(mock_response):
         mock_session_class.return_value = mock_session
 
         client = LagoonClient(
-            api_url="https://api.test.lagoon.sh/graphql",
-            token="test-jwt-token"
+            api_url="https://api.test.lagoon.sh/graphql", token="test-jwt-token"
         )
 
         # Replace the session with our mock
