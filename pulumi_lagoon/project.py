@@ -6,6 +6,12 @@ from typing import Optional
 from dataclasses import dataclass
 
 from .config import LagoonConfig
+from .validators import (
+    validate_project_name,
+    validate_git_url,
+    validate_positive_int,
+    validate_regex_pattern,
+)
 
 
 @dataclass
@@ -50,6 +56,17 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
 
     def create(self, inputs):
         """Create a new Lagoon project."""
+        # Input validation (fail fast)
+        validate_project_name(inputs.get("name"))
+        validate_git_url(inputs.get("git_url"))
+        validate_positive_int(inputs.get("deploytarget_id"), "deploytarget_id")
+
+        # Validate optional regex patterns
+        if inputs.get("branches"):
+            validate_regex_pattern(inputs["branches"], "branches")
+        if inputs.get("pullrequests"):
+            validate_regex_pattern(inputs["pullrequests"], "pullrequests")
+
         client = self._get_client()
 
         # Prepare input data - use snake_case for client method arguments
@@ -92,6 +109,19 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
 
     def update(self, id, old_inputs, new_inputs):
         """Update an existing Lagoon project."""
+        # Validate changed inputs (fail fast)
+        # Note: name cannot be changed after creation, but validate if provided
+        if new_inputs.get("git_url") != old_inputs.get("git_url"):
+            validate_git_url(new_inputs.get("git_url"))
+        if new_inputs.get("deploytarget_id") != old_inputs.get("deploytarget_id"):
+            validate_positive_int(new_inputs.get("deploytarget_id"), "deploytarget_id")
+        if new_inputs.get("branches") != old_inputs.get("branches"):
+            if new_inputs.get("branches"):
+                validate_regex_pattern(new_inputs["branches"], "branches")
+        if new_inputs.get("pullrequests") != old_inputs.get("pullrequests"):
+            if new_inputs.get("pullrequests"):
+                validate_regex_pattern(new_inputs["pullrequests"], "pullrequests")
+
         client = self._get_client()
 
         # Prepare update data

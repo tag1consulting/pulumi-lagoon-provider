@@ -6,6 +6,12 @@ from typing import Optional
 from dataclasses import dataclass
 
 from .config import LagoonConfig
+from .validators import (
+    validate_environment_name,
+    validate_positive_int,
+    validate_deploy_type,
+    validate_environment_type,
+)
 
 
 @dataclass
@@ -50,10 +56,13 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
 
     def create(self, inputs):
         """Create a new Lagoon environment."""
-        client = self._get_client()
+        # Input validation (fail fast)
+        validate_environment_name(inputs.get("name"))
+        project_id = validate_positive_int(inputs.get("project_id"), "project_id")
+        validate_deploy_type(inputs.get("deploy_type"))
+        validate_environment_type(inputs.get("environment_type"))
 
-        # Ensure project_id is an integer (Pulumi may pass it as string)
-        project_id = int(inputs["project_id"])
+        client = self._get_client()
 
         # Prepare input data
         create_args = {
@@ -98,10 +107,13 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
 
     def update(self, id, old_inputs, new_inputs):
         """Update an existing Lagoon environment."""
-        client = self._get_client()
+        # Input validation (fail fast)
+        validate_environment_name(new_inputs.get("name"))
+        project_id = validate_positive_int(new_inputs.get("project_id"), "project_id")
+        validate_deploy_type(new_inputs.get("deploy_type"))
+        validate_environment_type(new_inputs.get("environment_type"))
 
-        # Ensure project_id is an integer (Pulumi may pass it as string)
-        project_id = int(new_inputs["project_id"])
+        client = self._get_client()
 
         # Lagoon uses addOrUpdateEnvironment for both create and update
         update_args = {
