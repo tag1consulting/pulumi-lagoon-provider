@@ -65,8 +65,9 @@ class LagoonConfig:
         self, config: pulumi.Config, config_key: str, env_var: str
     ) -> Optional[str]:
         """Get secret configuration value from Pulumi config or environment variable."""
-        # Try Pulumi config (secret) first
-        value = config.get_secret(config_key)
+        # Try Pulumi config first (use get() since get_secret() returns Output[str])
+        # The secret nature is preserved by how Pulumi stores the config value
+        value = config.get(config_key)
         if value:
             return value
 

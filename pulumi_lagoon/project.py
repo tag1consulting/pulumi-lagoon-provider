@@ -209,8 +209,7 @@ class LagoonProject(dynamic.Resource):
     """
 
     # Output properties
-    id: pulumi.Output[int]
-    """The Lagoon project ID."""
+    # Note: id is inherited from base class as Output[str]
 
     name: pulumi.Output[str]
     """The project name."""

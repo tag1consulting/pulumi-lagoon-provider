@@ -68,12 +68,12 @@ class TestLagoonConfigPulumiConfig:
             mock_config = Mock()
             mock_config_class.return_value = mock_config
 
-            # Simulate Pulumi config values
+            # Simulate Pulumi config values (token is now retrieved via get(), not get_secret())
             mock_config.get.side_effect = lambda key: {
                 "apiUrl": "https://api.pulumi-config.lagoon.sh/graphql",
+                "token": "pulumi-secret-token",
                 "sshKeyPath": "/pulumi/key/path",
             }.get(key)
-            mock_config.get_secret.return_value = "pulumi-secret-token"
 
             from pulumi_lagoon.config import LagoonConfig
 
@@ -96,11 +96,11 @@ class TestLagoonConfigPulumiConfig:
                 mock_config = Mock()
                 mock_config_class.return_value = mock_config
 
-                # Pulumi config returns values
+                # Pulumi config returns values (token via get(), not get_secret())
                 mock_config.get.side_effect = lambda key: {
                     "apiUrl": "https://api.pulumi.lagoon.sh/graphql",
+                    "token": "pulumi-token",
                 }.get(key)
-                mock_config.get_secret.return_value = "pulumi-token"
 
                 from pulumi_lagoon.config import LagoonConfig
 

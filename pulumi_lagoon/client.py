@@ -21,7 +21,7 @@ class LagoonConnectionError(Exception):
 class LagoonClient:
     """GraphQL API client for Lagoon."""
 
-    def __init__(self, api_url: str, token: str, verify_ssl: bool = None):
+    def __init__(self, api_url: str, token: str, verify_ssl: Optional[bool] = None):
         """
         Initialize Lagoon API client.
 
@@ -73,7 +73,7 @@ class LagoonClient:
             LagoonAPIError: If the API returns an error
             LagoonConnectionError: If there's a connection issue
         """
-        payload = {
+        payload: Dict[str, Any] = {
             "query": query,
         }
 
