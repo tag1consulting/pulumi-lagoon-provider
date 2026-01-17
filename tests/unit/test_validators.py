@@ -14,9 +14,15 @@ from pulumi_lagoon.validators import (
     validate_regex_pattern,
     validate_variable_name,
     validate_environment_name,
+    validate_deploy_target_name,
+    validate_console_url,
+    validate_cloud_provider,
+    validate_ssh_port,
+    validate_ssh_host,
     VALID_DEPLOY_TYPES,
     VALID_ENVIRONMENT_TYPES,
     VALID_SCOPES,
+    VALID_CLOUD_PROVIDERS,
 )
 from pulumi_lagoon.exceptions import LagoonValidationError
 
@@ -518,3 +524,265 @@ class TestExceptionAttributes:
         except LagoonValidationError as e:
             assert e.suggestion is not None
             assert len(e.suggestion) > 0
+
+
+class TestValidateDeployTargetName:
+    """Tests for validate_deploy_target_name."""
+
+    def test_valid_simple_name(self):
+        """Test valid simple deploy target name."""
+        validate_deploy_target_name("production")
+
+    def test_valid_with_hyphens(self):
+        """Test valid name with hyphens."""
+        validate_deploy_target_name("prod-cluster-1")
+
+    def test_valid_starts_with_number(self):
+        """Test valid name starting with number."""
+        validate_deploy_target_name("1-prod-cluster")
+
+    def test_valid_single_char(self):
+        """Test valid single character name."""
+        validate_deploy_target_name("a")
+
+    def test_valid_single_number(self):
+        """Test valid single number name."""
+        validate_deploy_target_name("1")
+
+    def test_invalid_uppercase(self):
+        """Test that uppercase letters are rejected."""
+        with pytest.raises(LagoonValidationError) as exc:
+            validate_deploy_target_name("Prod-Cluster")
+        assert "name" in str(exc.value)
+
+    def test_invalid_starts_with_hyphen(self):
+        """Test that name starting with hyphen is rejected."""
+        with pytest.raises(LagoonValidationError):
+            validate_deploy_target_name("-production")
+
+    def test_invalid_ends_with_hyphen(self):
+        """Test that name ending with hyphen is rejected."""
+        with pytest.raises(LagoonValidationError):
+            validate_deploy_target_name("production-")
+
+    def test_invalid_underscore(self):
+        """Test that underscores are rejected."""
+        with pytest.raises(LagoonValidationError):
+            validate_deploy_target_name("prod_cluster")
+
+    def test_invalid_too_long(self):
+        """Test that names over 63 chars are rejected."""
+        long_name = "a" * 64
+        with pytest.raises(LagoonValidationError) as exc:
+            validate_deploy_target_name(long_name)
+        assert "63" in str(exc.value)
+
+    def test_valid_max_length(self):
+        """Test that 63 char name is valid."""
+        name = "a" * 63
+        validate_deploy_target_name(name)
+
+    def test_none_raises_error(self):
+        """Test that None raises validation error."""
+        with pytest.raises(LagoonValidationError):
+            validate_deploy_target_name(None)
+
+
+class TestValidateConsoleUrl:
+    """Tests for validate_console_url."""
+
+    def test_valid_https_url(self):
+        """Test valid HTTPS URL."""
+        validate_console_url("https://kubernetes.example.com")
+
+    def test_valid_https_with_port(self):
+        """Test valid HTTPS URL with port."""
+        validate_console_url("https://kubernetes.example.com:6443")
+
+    def test_valid_https_with_path(self):
+        """Test valid HTTPS URL with path."""
+        validate_console_url("https://kubernetes.example.com/api/v1")
+
+    def test_valid_http_localhost(self):
+        """Test valid HTTP URL for development."""
+        validate_console_url("http://localhost:8080")
+
+    def test_valid_http_with_ip(self):
+        """Test valid HTTP URL with IP address."""
+        validate_console_url("http://192.168.1.100:6443")
+
+    def test_invalid_no_protocol(self):
+        """Test that URL without protocol is rejected."""
+        with pytest.raises(LagoonValidationError) as exc:
+            validate_console_url("kubernetes.example.com")
+        assert "console_url" in str(exc.value)
+
+    def test_invalid_ftp_protocol(self):
+        """Test that FTP protocol is rejected."""
+        with pytest.raises(LagoonValidationError):
+            validate_console_url("ftp://kubernetes.example.com")
+
+    def test_invalid_just_protocol(self):
+        """Test that just protocol is rejected."""
+        with pytest.raises(LagoonValidationError):
+            validate_console_url("https://")
+
+    def test_none_raises_error(self):
+        """Test that None raises validation error."""
+        with pytest.raises(LagoonValidationError):
+            validate_console_url(None)
+
+    def test_empty_raises_error(self):
+        """Test that empty string raises validation error."""
+        with pytest.raises(LagoonValidationError):
+            validate_console_url("")
+
+
+class TestValidateCloudProvider:
+    """Tests for validate_cloud_provider."""
+
+    def test_valid_kind(self):
+        """Test valid 'kind' cloud provider."""
+        result = validate_cloud_provider("kind")
+        assert result == "kind"
+
+    def test_valid_aws(self):
+        """Test valid 'aws' cloud provider."""
+        result = validate_cloud_provider("aws")
+        assert result == "aws"
+
+    def test_valid_gcp(self):
+        """Test valid 'gcp' cloud provider."""
+        result = validate_cloud_provider("gcp")
+        assert result == "gcp"
+
+    def test_valid_azure(self):
+        """Test valid 'azure' cloud provider."""
+        result = validate_cloud_provider("azure")
+        assert result == "azure"
+
+    def test_case_insensitive(self):
+        """Test case-insensitive validation."""
+        result = validate_cloud_provider("AWS")
+        assert result == "aws"
+
+    def test_invalid_rejected(self):
+        """Test invalid cloud provider is rejected."""
+        with pytest.raises(LagoonValidationError) as exc:
+            validate_cloud_provider("invalid_provider")
+        assert "cloud_provider" in str(exc.value)
+
+    def test_none_rejected(self):
+        """Test that None is rejected."""
+        with pytest.raises(LagoonValidationError):
+            validate_cloud_provider(None)
+
+
+class TestValidateSshPort:
+    """Tests for validate_ssh_port."""
+
+    def test_valid_standard_port(self):
+        """Test valid standard SSH port."""
+        result = validate_ssh_port(22)
+        assert result == 22
+
+    def test_valid_custom_port(self):
+        """Test valid custom SSH port."""
+        result = validate_ssh_port(2222)
+        assert result == 2222
+
+    def test_valid_string_port(self):
+        """Test valid port as string."""
+        result = validate_ssh_port("22")
+        assert result == 22
+
+    def test_valid_min_port(self):
+        """Test minimum valid port."""
+        result = validate_ssh_port(1)
+        assert result == 1
+
+    def test_valid_max_port(self):
+        """Test maximum valid port."""
+        result = validate_ssh_port(65535)
+        assert result == 65535
+
+    def test_invalid_zero(self):
+        """Test that zero port is rejected."""
+        with pytest.raises(LagoonValidationError) as exc:
+            validate_ssh_port(0)
+        assert "ssh_port" in str(exc.value)
+
+    def test_invalid_negative(self):
+        """Test that negative port is rejected."""
+        with pytest.raises(LagoonValidationError):
+            validate_ssh_port(-1)
+
+    def test_invalid_too_high(self):
+        """Test that port over 65535 is rejected."""
+        with pytest.raises(LagoonValidationError) as exc:
+            validate_ssh_port(65536)
+        assert "65535" in str(exc.value)
+
+    def test_invalid_string_rejected(self):
+        """Test that non-numeric strings are rejected."""
+        with pytest.raises(LagoonValidationError) as exc:
+            validate_ssh_port("abc")
+        assert "integer" in str(exc.value).lower()
+
+    def test_none_rejected(self):
+        """Test that None is rejected."""
+        with pytest.raises(LagoonValidationError):
+            validate_ssh_port(None)
+
+
+class TestValidateSshHost:
+    """Tests for validate_ssh_host."""
+
+    def test_valid_hostname(self):
+        """Test valid hostname."""
+        validate_ssh_host("ssh.lagoon.example.com")
+
+    def test_valid_simple_hostname(self):
+        """Test valid simple hostname."""
+        validate_ssh_host("localhost")
+
+    def test_valid_ip_address(self):
+        """Test valid IP address."""
+        validate_ssh_host("192.168.1.100")
+
+    def test_valid_hostname_with_hyphen(self):
+        """Test valid hostname with hyphen."""
+        validate_ssh_host("ssh-server.example.com")
+
+    def test_none_allowed(self):
+        """Test that None is allowed (optional field)."""
+        validate_ssh_host(None)
+
+    def test_invalid_with_space(self):
+        """Test that hostname with space is rejected."""
+        with pytest.raises(LagoonValidationError) as exc:
+            validate_ssh_host("ssh server.example.com")
+        assert "ssh_host" in str(exc.value)
+
+    def test_invalid_with_protocol(self):
+        """Test that hostname with protocol is rejected."""
+        with pytest.raises(LagoonValidationError):
+            validate_ssh_host("ssh://server.example.com")
+
+
+class TestValidCloudProviders:
+    """Tests to ensure VALID_CLOUD_PROVIDERS is properly defined."""
+
+    def test_contains_expected_values(self):
+        """Test VALID_CLOUD_PROVIDERS contains expected values."""
+        assert "kind" in VALID_CLOUD_PROVIDERS
+        assert "aws" in VALID_CLOUD_PROVIDERS
+        assert "gcp" in VALID_CLOUD_PROVIDERS
+        assert "azure" in VALID_CLOUD_PROVIDERS
+        assert "openstack" in VALID_CLOUD_PROVIDERS
+        assert "digitalocean" in VALID_CLOUD_PROVIDERS
+        assert "other" in VALID_CLOUD_PROVIDERS
+
+    def test_minimum_providers(self):
+        """Test that at least common providers are present."""
+        assert len(VALID_CLOUD_PROVIDERS) >= 5

@@ -531,3 +531,191 @@ class LagoonClient:
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("deleteEnvVariable", "")
+
+    # Deploy target (Kubernetes) operations
+    def add_kubernetes(
+        self,
+        name: str,
+        console_url: str,
+        cloud_provider: str = "kind",
+        cloud_region: str = "local",
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Add a Kubernetes deploy target.
+
+        Args:
+            name: Deploy target name
+            console_url: Kubernetes API URL
+            cloud_provider: Cloud provider (e.g., "aws", "gcp", "kind")
+            cloud_region: Cloud region (e.g., "us-east-1", "local")
+            **kwargs: Additional properties (sshHost, sshPort, buildImage, disabled, etc.)
+
+        Returns:
+            Deploy target data
+        """
+        mutation = """
+        mutation AddKubernetes($input: AddKubernetesInput!) {
+            addKubernetes(input: $input) {
+                id
+                name
+                consoleUrl
+                cloudProvider
+                cloudRegion
+                sshHost
+                sshPort
+                buildImage
+                disabled
+                routerPattern
+                sharedBastionSecret
+                created
+            }
+        }
+        """
+
+        input_data = {
+            "name": name,
+            "consoleUrl": console_url,
+            "cloudProvider": cloud_provider,
+            "cloudRegion": cloud_region,
+            **kwargs,
+        }
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addKubernetes", {})
+
+    def get_all_kubernetes(self) -> list:
+        """
+        Get all Kubernetes deploy targets.
+
+        Returns:
+            List of deploy target data
+        """
+        query = """
+        query AllKubernetes {
+            allKubernetes {
+                id
+                name
+                consoleUrl
+                cloudProvider
+                cloudRegion
+                sshHost
+                sshPort
+                buildImage
+                disabled
+                routerPattern
+                sharedBastionSecret
+                created
+            }
+        }
+        """
+
+        result = self._execute(query)
+        return result.get("allKubernetes", [])
+
+    def get_kubernetes_by_id(self, k8s_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get Kubernetes deploy target by ID.
+
+        Args:
+            k8s_id: Kubernetes/deploy target ID
+
+        Returns:
+            Deploy target data or None if not found
+        """
+        query = """
+        query KubernetesById($id: Int!) {
+            kubernetes(id: $id) {
+                id
+                name
+                consoleUrl
+                cloudProvider
+                cloudRegion
+                sshHost
+                sshPort
+                buildImage
+                disabled
+                routerPattern
+                sharedBastionSecret
+                created
+            }
+        }
+        """
+
+        result = self._execute(query, {"id": k8s_id})
+        return result.get("kubernetes")
+
+    def get_kubernetes_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get Kubernetes deploy target by name.
+
+        Args:
+            name: Deploy target name
+
+        Returns:
+            Deploy target data or None if not found
+        """
+        # Lagoon doesn't have a direct query for Kubernetes by name,
+        # so we get all and filter
+        all_k8s = self.get_all_kubernetes()
+
+        for k8s in all_k8s:
+            if k8s.get("name") == name:
+                return k8s
+
+        return None
+
+    def update_kubernetes(self, k8s_id: int, **kwargs) -> Dict[str, Any]:
+        """
+        Update a Kubernetes deploy target.
+
+        Args:
+            k8s_id: Kubernetes/deploy target ID
+            **kwargs: Properties to update
+
+        Returns:
+            Updated deploy target data
+        """
+        mutation = """
+        mutation UpdateKubernetes($input: UpdateKubernetesInput!) {
+            updateKubernetes(input: $input) {
+                id
+                name
+                consoleUrl
+                cloudProvider
+                cloudRegion
+                sshHost
+                sshPort
+                buildImage
+                disabled
+                routerPattern
+                sharedBastionSecret
+            }
+        }
+        """
+
+        input_data = {"id": k8s_id, **kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("updateKubernetes", {})
+
+    def delete_kubernetes(self, name: str) -> str:
+        """
+        Delete a Kubernetes deploy target.
+
+        Args:
+            name: Deploy target name
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteKubernetes($input: DeleteKubernetesInput!) {
+            deleteKubernetes(input: $input)
+        }
+        """
+
+        input_data = {"name": name}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteKubernetes", "")

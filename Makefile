@@ -20,6 +20,7 @@
         provider-install provider-test \
         example-up example-down example-preview example-output \
         ensure-lagoon-admin ensure-deploy-target \
+        multi-cluster-up multi-cluster-down multi-cluster-preview multi-cluster-status multi-cluster-clusters \
         clean clean-all venv
 
 # Variables
@@ -46,11 +47,18 @@ help:
 	@echo "  make cluster-down    - Destroy Kind cluster"
 	@echo "  make cluster-status  - Check cluster and pod status"
 	@echo ""
-	@echo "Example Project:"
+	@echo "Example Project (simple-project):"
 	@echo "  make example-preview - Preview example project changes"
 	@echo "  make example-up      - Deploy example project"
 	@echo "  make example-down    - Destroy example project resources"
 	@echo "  make example-output  - Show example project outputs"
+	@echo ""
+	@echo "Multi-cluster Example:"
+	@echo "  make multi-cluster-up      - Create prod + nonprod clusters"
+	@echo "  make multi-cluster-down    - Destroy multi-cluster environment"
+	@echo "  make multi-cluster-preview - Preview multi-cluster changes"
+	@echo "  make multi-cluster-status  - Show multi-cluster outputs"
+	@echo "  make multi-cluster-clusters - List all Kind clusters"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make provider-test   - Run provider tests"
@@ -235,6 +243,32 @@ example-down:
 
 example-output:
 	@cd $(EXAMPLE_DIR) && ./scripts/run-pulumi.sh stack output
+
+#==============================================================================
+# Multi-cluster Example
+#==============================================================================
+
+MULTI_CLUSTER_DIR := examples/multi-cluster
+
+multi-cluster-up: venv provider-install
+	@echo "Creating multi-cluster environment (prod + nonprod)..."
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) up
+
+multi-cluster-down:
+	@echo "Destroying multi-cluster environment..."
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) down
+
+multi-cluster-preview: venv provider-install
+	@echo "Previewing multi-cluster changes..."
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) preview
+
+multi-cluster-status:
+	@echo "Multi-cluster stack outputs:"
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) status
+
+multi-cluster-clusters:
+	@echo "Kind clusters:"
+	@kind get clusters
 
 #==============================================================================
 # Cleanup

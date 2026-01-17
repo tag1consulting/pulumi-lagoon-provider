@@ -1,0 +1,6 @@
+name: multi-cluster-lagoon
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: Multi-cluster Lagoon example with production and non-production deploy targets

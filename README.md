@@ -21,13 +21,15 @@ This provider enables you to manage Lagoon hosting platform resources (projects,
 
 ## Supported Resources
 
-### Phase 1 (Current Development)
+### Phase 1 (Complete)
 - `LagoonProject` - Manage Lagoon projects
 - `LagoonEnvironment` - Manage environments (branches/PRs)
 - `LagoonVariable` - Manage project and environment variables
 
+### Phase 2 (Current)
+- `LagoonDeployTarget` - Manage Kubernetes cluster deploy targets
+
 ### Planned
-- `LagoonDeployTarget` - Manage Kubernetes cluster targets
 - `LagoonGroup` - Manage user groups and permissions
 - `LagoonNotification` - Manage notification integrations
 - `LagoonTask` - Manage tasks and backups
@@ -138,7 +140,8 @@ pulumi.export("production_url", prod_env.route)
 
 See the `examples/` directory for complete examples:
 
-- `simple-project/` - Basic project setup
+- `simple-project/` - Basic project setup with a single deploy target
+- `multi-cluster/` - Multiple Kind clusters for prod/nonprod deploy targets
 - `multi-environment/` - Project with multiple environments (coming soon)
 - `with-eks/` - Integration with Pulumi EKS (coming soon)
 
@@ -175,12 +178,19 @@ make cluster-down       # Destroy Kind cluster and Lagoon resources
 make ensure-lagoon-admin   # Create lagoonadmin user in Keycloak
 make ensure-deploy-target  # Create deploy target in Lagoon + set Pulumi config
 
-# Example Project
+# Example Project (simple-project)
 make example-setup      # Initialize example Pulumi stack
 make example-preview    # Preview changes (auto token refresh)
 make example-up         # Deploy example resources (auto token refresh)
 make example-down       # Destroy example resources
 make example-output     # Show stack outputs
+
+# Multi-cluster Example
+make multi-cluster-up       # Create prod + nonprod Kind clusters with deploy targets
+make multi-cluster-down     # Destroy multi-cluster environment
+make multi-cluster-preview  # Preview multi-cluster changes
+make multi-cluster-status   # Show multi-cluster stack outputs
+make multi-cluster-clusters # List all Kind clusters
 
 # Cleanup
 make clean              # Kill port-forwards, remove temp files
@@ -222,20 +232,27 @@ pulumi-lagoon-provider/
 │   ├── __init__.py         # Package exports
 │   ├── client.py           # Lagoon GraphQL API client
 │   ├── config.py           # Provider configuration
+│   ├── exceptions.py       # Custom exceptions
+│   ├── validators.py       # Input validation
 │   ├── project.py          # LagoonProject resource
 │   ├── environment.py      # LagoonEnvironment resource
-│   └── variable.py         # LagoonVariable resource
+│   ├── variable.py         # LagoonVariable resource
+│   └── deploytarget.py     # LagoonDeployTarget resource
 ├── examples/
-│   └── simple-project/     # Example with automation scripts
+│   ├── simple-project/     # Basic example with automation scripts
+│   │   ├── __main__.py     # Pulumi program
+│   │   ├── scripts/        # Helper scripts (run-pulumi.sh, etc.)
+│   │   └── Makefile        # Convenience targets
+│   └── multi-cluster/      # Multi-cluster deploy targets example
 │       ├── __main__.py     # Pulumi program
-│       ├── scripts/        # Helper scripts (run-pulumi.sh, etc.)
-│       └── Makefile        # Convenience targets
+│       ├── config/         # Kind cluster configs
+│       └── scripts/        # Helper scripts
 ├── test-cluster/           # Kind + Lagoon Pulumi program
 │   ├── __main__.py         # Creates complete test environment
 │   └── config/             # Kind and Helm values
 ├── scripts/
 │   └── setup-complete.sh   # Unified setup script
-├── tests/                  # Tests
+├── tests/                  # Unit and integration tests
 ├── memory-bank/            # Planning and architecture docs
 ├── Makefile                # Top-level automation
 └── README.md              # This file
@@ -263,12 +280,14 @@ For detailed architecture information, see `memory-bank/architecture.md`.
 - [x] Test cluster setup via Pulumi (Kind + Lagoon)
 - [x] Documentation
 
-### Phase 2: Polish
+### Phase 2: Polish (Current)
 - [x] Comprehensive error handling
-- [x] Unit tests (176 tests, 95% coverage)
+- [x] Unit tests (240+ tests, 95% coverage)
 - [x] Integration test framework
 - [x] CI/CD pipeline (GitHub Actions)
-- [ ] Additional resources (DeployTarget, Group, Notification)
+- [x] DeployTarget resource for Kubernetes cluster management
+- [x] Multi-cluster example (prod/nonprod separation)
+- [ ] Additional resources (Group, Notification)
 - [ ] Advanced examples
 
 ### Phase 3: Production Ready
