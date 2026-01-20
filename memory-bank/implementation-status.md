@@ -1,7 +1,49 @@
 # Pulumi Lagoon Provider - Implementation Status
 
-**Last Updated**: 2026-01-20
-**Status**: Phase 1 Complete - Full End-to-End Testing Passed
+**Last Updated**: 2026-01-21
+**Status**: Phase 2 In Progress - LagoonDeployTarget + Multi-Cluster Example
+
+---
+
+## Current Work (2026-01-21)
+
+### LagoonDeployTarget Resource
+**Status**: ✅ COMPLETE (code) | ⏳ TESTING
+
+New resource for managing Kubernetes deploy targets:
+- `pulumi_lagoon/deploytarget.py` - Full CRUD implementation
+- `pulumi_lagoon/validators.py` - Deploy target validators added
+- `pulumi_lagoon/client.py` - Kubernetes GraphQL operations added
+- `tests/unit/test_deploytarget.py` - Unit tests
+- `tests/unit/test_validators.py` - Validator tests
+
+GraphQL Operations:
+- `add_kubernetes()` - Create deploy target
+- `get_all_kubernetes()` - List all deploy targets
+- `get_kubernetes_by_id()` - Query by ID
+- `get_kubernetes_by_name()` - Query by name
+- `update_kubernetes()` - Update deploy target
+- `delete_kubernetes()` - Delete deploy target
+
+### Multi-Cluster Example
+**Status**: ⚠️ IN PROGRESS (rebasing from develop)
+
+Location: `examples/multi-cluster/`
+
+Architecture:
+- Production cluster (`lagoon-prod`): Lagoon core, Harbor, prod remote controller
+- Non-production cluster (`lagoon-nonprod`): Nonprod remote controller
+
+Components:
+- `clusters/` - Kind cluster creation
+- `infrastructure/` - ingress-nginx, cert-manager, CoreDNS
+- `registry/` - Harbor container registry
+- `lagoon/` - Lagoon core and remote (build-deploy)
+
+**Branch**: `deploytarget-multi-cluster`
+**PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/10 (Draft)
+
+---
 
 ## Completed Work
 
@@ -199,9 +241,12 @@ pulumi config set lagoon:token YOUR_TOKEN --secret
    - API quirks discovered during testing
    - Advanced usage examples
 
-### Phase 2 (Future)
-- Additional resources (DeployTarget, Group, Notification)
-- Integration tests against test Lagoon instance
+### Phase 2 (In Progress)
+- ✅ LagoonDeployTarget resource implemented
+- ✅ Multi-cluster example code complete
+- ⏳ Multi-cluster example debugging (timeout issue)
+- ⏳ Integration tests against test Lagoon instance
+- Additional resources (Group, Notification)
 - CI/CD pipeline
 - PyPI publication
 

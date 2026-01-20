@@ -68,7 +68,11 @@
       "Bash(pip3 show:*)",
       "Bash(. venv/bin/activate)",
       "Bash(gh pr view:*)",
-      "Bash(gh pr edit:*)"
+      "Bash(gh pr edit:*)",
+      "Bash(make multi-cluster-up:*)",
+      "Bash(make multi-cluster-down:*)",
+      "Bash(PULUMI_K8S_DELETE_UNREACHABLE=true pulumi refresh:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],
     "ask": []

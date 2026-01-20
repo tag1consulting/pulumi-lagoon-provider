@@ -1,24 +1,57 @@
 # Next Session Quickstart - Pulumi Lagoon Provider
 
-**Date Updated**: 2026-01-13
-**Status**: Phase 1 Complete - Full End-to-End Testing Passed
+**Date Updated**: 2026-01-16
+**Status**: Phase 2 In Progress - Multi-Cluster Example WIP
+
+---
+
+## 🚨 CONTINUE FROM PREVIOUS SESSION
+
+**Branch**: `deploytarget-multi-cluster`
+**PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/10 (Draft)
+
+### What to do first:
+
+1. Check if Kind clusters still exist:
+   ```bash
+   kind get clusters
+   ```
+
+2. If clusters exist, check pod status:
+   ```bash
+   kubectl --context kind-lagoon-prod get pods -n lagoon-core
+   kubectl --context kind-lagoon-prod get pods -n harbor
+   kubectl --context kind-lagoon-prod get pods -n lagoon
+   kubectl --context kind-lagoon-nonprod get pods -n lagoon
+   ```
+
+3. If clusters don't exist or need fresh start:
+   ```bash
+   make multi-cluster-down  # Clean up any remnants
+   make multi-cluster-up    # Deploy fresh
+   ```
+
+### Known Issue from Last Session
+
+The Lagoon core Helm release timed out after 15 minutes. Need to:
+- Check why pods aren't becoming ready
+- Review logs: `kubectl --context kind-lagoon-prod logs -n lagoon-core -l app.kubernetes.io/component=api`
+- May need to increase resource limits or timeout
 
 ---
 
 ## TL;DR - Quick Commands
 
 ```bash
-# Full setup from scratch (~5 minutes)
-make setup-all
+# Multi-cluster example (current work)
+make multi-cluster-up       # Deploy prod + nonprod clusters
+make multi-cluster-down     # Tear down everything
+make multi-cluster-status   # Check outputs
 
-# Deploy example project
-make example-up
-
-# Check status
-make cluster-status
-
-# Full teardown
-make clean-all
+# Simple example (original, still works)
+make setup-all              # Complete setup (~5 min)
+make example-up             # Deploy example
+make clean-all              # Full teardown
 ```
 
 ---
@@ -26,173 +59,170 @@ make clean-all
 ## Current State
 
 ### What's Working
-- ✅ `make setup-all` - Complete automated setup
-- ✅ `make example-up` - Deploys 7 Lagoon resources
-- ✅ `make clean-all` - Full teardown
-- ✅ Token expiration handled automatically
-- ✅ Keycloak user created automatically
-- ✅ Deploy target created automatically
-- ✅ Direct Access Grants enabled automatically
+- ✅ `LagoonDeployTarget` resource implemented with validators
+- ✅ Multi-cluster example code complete
+- ✅ Kind clusters created successfully
+- ✅ Harbor registry deploys successfully
+- ⚠️ Lagoon core deployment times out (needs debugging)
+- ⏳ Cross-cluster RabbitMQ communication (untested)
 
 ### Project Structure
 ```
 pulumi-lagoon-provider/
-├── Makefile                    # Main automation
+├── Makefile                    # Main automation (includes multi-cluster targets)
 ├── pulumi_lagoon/              # Provider package
-├── examples/simple-project/    # Example with helper scripts
-│   ├── scripts/
-│   │   ├── run-pulumi.sh       # Token-refreshing wrapper
-│   │   ├── create-lagoon-admin.sh
-│   │   └── ensure-deploy-target.sh
-│   └── Makefile
+│   ├── deploytarget.py         # NEW: LagoonDeployTarget resource
+│   ├── validators.py           # Updated with deploy target validators
+│   └── client.py               # Updated with Kubernetes GraphQL ops
+├── examples/
+│   ├── simple-project/         # Original example (working)
+│   └── multi-cluster/          # NEW: Prod/nonprod clusters
+│       ├── __main__.py         # Main orchestration
+│       ├── clusters/           # Kind cluster creation
+│       ├── infrastructure/     # Ingress, cert-manager, CoreDNS
+│       ├── registry/           # Harbor installation
+│       └── lagoon/             # Lagoon core + remote
 ├── test-cluster/               # Kind + Lagoon Pulumi program
 └── memory-bank/                # Documentation
 ```
 
 ---
 
-## Common Tasks
+## Multi-Cluster Example Details
 
-### Start Fresh Development Environment
-```bash
-make setup-all      # Creates everything (~5 min)
-make example-up     # Deploys example
+### Architecture
+```
++---------------------------+     +---------------------------+
+|    lagoon-prod cluster    |     |  lagoon-nonprod cluster   |
+|---------------------------|     |---------------------------|
+| lagoon-core namespace:    |     |                           |
+|   - API, UI, Keycloak     |     |                           |
+|   - RabbitMQ (broker)     |<----+-- lagoon namespace:       |
+|   - SSH, webhooks         |     |     - remote-controller   |
+|                           |     |       (nonprod builds)    |
+| harbor namespace:         |     |                           |
+|   - Harbor Registry       |     |                           |
+|                           |     |                           |
+| lagoon namespace:         |     |                           |
+|   - remote-controller     |     |                           |
+|     (prod builds)         |     |                           |
++---------------------------+     +---------------------------+
 ```
 
-### Destroy and Recreate
+### Key Technical Details
+
+| Component | Details |
+|-----------|---------|
+| Cross-cluster RabbitMQ | NodePort 30672 (custom service, chart doesn't support fixed NodePort) |
+| Keycloak internal URL | `http://{release}-lagoon-core-keycloak.{ns}.svc.cluster.local:8080/auth` |
+| Service naming | `{release}-lagoon-core-{component}` (e.g., `prod-core-lagoon-core-api`) |
+| lagoon-build-deploy | v0.39.0 (required for K8s 1.22+ CRD compatibility) |
+
+### Accessing Services (Port Forwarding)
+
 ```bash
-make clean-all      # Destroys everything
-make setup-all      # Recreates
+# Start port forwards
+kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000
+kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 4000:80
+kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080
 ```
 
-### Just Work on Provider Code
-```bash
-# If cluster already running:
-make provider-install   # Reinstall after code changes
-make example-preview    # Test changes
+**Important**: For browser auth, add to `/etc/hosts`:
 ```
-
-### Debug Issues
-```bash
-make cluster-status     # Check pod status
-kubectl --context kind-lagoon-test logs -n lagoon <pod>
+127.0.0.1 prod-core-lagoon-core-keycloak.lagoon-core.svc.cluster.local
 ```
 
 ---
 
 ## Makefile Targets Reference
 
-### Setup
+### Multi-Cluster Example (NEW)
 ```bash
-make setup-all          # Complete setup: venv, provider, Kind, Lagoon, user, deploy target
-make venv               # Create Python virtual environment
-make provider-install   # Install provider in development mode
-make cluster-up         # Create Kind cluster + deploy Lagoon
-make cluster-down       # Destroy Kind cluster
+make multi-cluster-up       # Create prod + nonprod Kind clusters with Lagoon
+make multi-cluster-down     # Destroy multi-cluster environment
+make multi-cluster-preview  # Preview changes
+make multi-cluster-status   # Show stack outputs
+make multi-cluster-clusters # List Kind clusters
 ```
 
-### Lagoon Setup (called automatically by setup-all)
+### Simple Example (Original)
 ```bash
-make ensure-lagoon-admin   # Create lagoonadmin user in Keycloak
-make ensure-deploy-target  # Create deploy target + set Pulumi config
+make setup-all              # Complete setup: venv, provider, Kind, Lagoon
+make example-up             # Deploy example resources
+make example-down           # Destroy resources
+make clean-all              # Full cleanup
 ```
 
-### Example Project
+### Development
 ```bash
-make example-setup      # Initialize Pulumi stack
-make example-preview    # Preview changes (auto token refresh)
-make example-up         # Deploy resources (auto token refresh)
-make example-down       # Destroy resources
-make example-output     # Show stack outputs
-```
-
-### Cleanup
-```bash
-make clean              # Kill port-forwards, remove temp files
-make clean-all          # Full cleanup: clean + destroy cluster + remove venvs
+make provider-install       # Reinstall provider after code changes
+pytest tests/unit/ -v       # Run unit tests
 ```
 
 ---
 
-## Key Files Changed This Session (2026-01-13)
+## Debugging Commands
 
-### New Scripts
-- `examples/simple-project/scripts/create-lagoon-admin.sh` - Creates Keycloak user
-- `examples/simple-project/scripts/ensure-deploy-target.sh` - Creates deploy target
-
-### Modified Files
-- `Makefile` - Added `ensure-lagoon-admin`, `ensure-deploy-target`, fixed `clean`
-- `examples/simple-project/scripts/quickstart.sh` - Auto user creation
-- `examples/simple-project/scripts/run-pulumi.sh` - Auto user creation
-- `README.md` - Updated Makefile documentation
-
----
-
-## Known Issues & Fixes
-
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| lagoonadmin user missing | Helm chart doesn't create it | `create-lagoon-admin.sh` (auto-called) |
-| "Client not allowed for direct access grants" | Keycloak config | Auto-enabled by scripts |
-| Token expired | 5-min expiration | Use `run-pulumi.sh` wrapper |
-| `make clean` kills itself | pkill pattern too broad | Fixed with `[k]ubectl` pattern |
-
----
-
-## Token Handling
-
-All Makefile targets get fresh tokens automatically:
-
-| Target | Token Type | Handled By |
-|--------|-----------|------------|
-| `ensure-lagoon-admin` | Keycloak admin | `create-lagoon-admin.sh` |
-| `ensure-deploy-target` | Lagoon OAuth | `ensure-deploy-target.sh` |
-| `example-preview/up` | Lagoon OAuth | `run-pulumi.sh` |
-
----
-
-## Resources Created by Example
-
-| Resource | ID | Type |
-|----------|-----|------|
-| Project | 1 | example-drupal-site |
-| Environment | 1 | develop (development) |
-| Environment | 2 | main (production) |
-| Variable | 1 | API_BASE_URL (project) |
-| Variable | 2 | DATABASE_HOST (production) |
-| Variable | 3 | DATABASE_HOST (development) |
-
----
-
-## Manual Access (if needed)
-
-### Get Token Manually
 ```bash
-cd examples/simple-project
-source ./scripts/get-lagoon-token.sh
-echo "Token: ${LAGOON_TOKEN:0:20}..."
+# Check pod status
+kubectl --context kind-lagoon-prod get pods -n lagoon-core
+kubectl --context kind-lagoon-prod get pods -n harbor
+kubectl --context kind-lagoon-prod get pods -n lagoon
+kubectl --context kind-lagoon-nonprod get pods -n lagoon
+
+# View logs
+kubectl --context kind-lagoon-prod logs -n lagoon-core -l app.kubernetes.io/component=api --tail=50
+kubectl --context kind-lagoon-prod logs -n lagoon-core -l app.kubernetes.io/component=keycloak --tail=50
+kubectl --context kind-lagoon-prod logs -n lagoon -l app.kubernetes.io/name=lagoon-build-deploy --tail=50
+
+# Check services
+kubectl --context kind-lagoon-prod get svc -n lagoon-core
+kubectl --context kind-lagoon-prod get svc -n lagoon-core | grep broker
+
+# Check cross-cluster connectivity
+kubectl --context kind-lagoon-nonprod exec -it -n lagoon <pod> -- nc -zv <prod-node-ip> 30672
 ```
 
-### Credentials
-```bash
-# Lagoon admin password
-kubectl --context kind-lagoon-test -n lagoon get secret lagoon-core-keycloak \
-  -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d
+---
 
-# Keycloak admin password
-kubectl --context kind-lagoon-test -n lagoon get secret lagoon-core-keycloak \
-  -o jsonpath='{.data.KEYCLOAK_ADMIN_PASSWORD}' | base64 -d
-```
+## Helm Chart Versions
+
+| Chart | Version | Notes |
+|-------|---------|-------|
+| ingress-nginx | 4.10.1 | Standard Kubernetes ingress |
+| cert-manager | v1.14.4 | TLS certificate management |
+| harbor | 1.14.2 | Container registry |
+| lagoon-core | 1.0.0 | Lagoon core services |
+| lagoon-build-deploy | 0.39.0 | Updated for K8s 1.22+ CRDs |
+
+---
+
+## Known Limitations
+
+1. **Browser Auth**: UI redirects to internal K8s URLs - requires hosts file entry for port-forwarding
+2. **Self-Signed Certs**: Browsers show security warnings
+3. **S3/MinIO**: Disabled (placeholder config)
+4. **Elasticsearch**: Disabled (placeholder config)
 
 ---
 
 ## Documentation Files
 
-- **Session Summary**: `memory-bank/session-summary-2026-01-13.md`
+- **Session Summary (2026-01-16)**: `memory-bank/session-summary-2026-01-16.md`
+- **Multi-Cluster README**: `examples/multi-cluster/README.md`
 - **Implementation Status**: `memory-bank/implementation-status.md`
-- **Example README**: `examples/simple-project/README.md`
 - **Main README**: `README.md`
 
 ---
 
-**Summary**: Phase 1 complete. Use `make setup-all` for fresh setup, `make example-up` to deploy. All automation working.
+## Next Steps
+
+1. Debug Lagoon core timeout issue
+2. Verify cross-cluster RabbitMQ communication works
+3. Test browser-based authentication with port-forwarding
+4. Mark PR as ready for review once working
+5. Consider adding integration tests
+
+---
+
+**Summary**: Multi-cluster example code is complete but needs debugging. Branch is `deploytarget-multi-cluster`, PR #10 is open as draft. Check cluster status first when starting next session.
