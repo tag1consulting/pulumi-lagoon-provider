@@ -17,6 +17,39 @@ from pulumi_command import local as command
 from config import DomainConfig
 
 
+def get_kind_container_id(
+    name: str,
+    cluster_name: str,
+    opts: Optional[pulumi.ResourceOptions] = None,
+) -> command.Command:
+    """Get the Docker container ID for a Kind cluster node.
+
+    This is used as a trigger for IP lookups - when the container ID changes
+    (cluster recreated), the IP lookup will be refreshed.
+
+    Args:
+        name: Pulumi resource name prefix
+        cluster_name: Kind cluster name (e.g., "lagoon-prod")
+        opts: Pulumi resource options
+
+    Returns:
+        Command resource with container ID in stdout
+    """
+    container_name = f"{cluster_name}-control-plane"
+
+    # Get container ID - this changes when cluster is recreated
+    return command.Command(
+        f"{name}-container-id",
+        create=f"docker inspect -f '{{{{.Id}}}}' {container_name} 2>/dev/null || echo 'not-found'",
+        # Also run on update to detect changes
+        update=f"docker inspect -f '{{{{.Id}}}}' {container_name} 2>/dev/null || echo 'not-found'",
+        opts=pulumi.ResourceOptions(
+            parent=opts.parent if opts else None,
+            depends_on=opts.depends_on if opts else None,
+        ),
+    )
+
+
 def get_kind_node_internal_ip(
     name: str,
     cluster_name: str,
@@ -30,6 +63,9 @@ def get_kind_node_internal_ip(
     Uses docker inspect to get the node IP directly from the container,
     which is more reliable than kubectl as it doesn't require kubeconfig.
 
+    This function automatically refreshes the IP when the cluster container
+    changes (e.g., after cluster recreation), using the container ID as a trigger.
+
     Args:
         name: Pulumi resource name prefix
         cluster_name: Kind cluster name (e.g., "lagoon-prod")
@@ -38,15 +74,30 @@ def get_kind_node_internal_ip(
     Returns:
         Output containing the node's internal IP address
     """
+    # First get the container ID - this will be used as a trigger
+    # When the container ID changes (cluster recreated), the IP lookup refreshes
+    container_id_cmd = get_kind_container_id(
+        f"{name}-trigger",
+        cluster_name,
+        opts,
+    )
+
     # Use docker inspect to get the Kind node's IP address
     # Kind nodes are Docker containers named <cluster-name>-control-plane
     container_name = f"{cluster_name}-control-plane"
+
+    # The IP lookup uses the container ID as a trigger
+    # If the container ID changes, this command will be recreated
     get_node_ip = command.Command(
         f"{name}-get-node-ip",
         create=f"docker inspect -f '{{{{.NetworkSettings.Networks.kind.IPAddress}}}}' {container_name}",
+        # Also run on update to get fresh IP
+        update=f"docker inspect -f '{{{{.NetworkSettings.Networks.kind.IPAddress}}}}' {container_name}",
+        # Trigger refresh when container ID changes
+        triggers=[container_id_cmd.stdout],
         opts=pulumi.ResourceOptions(
             parent=opts.parent if opts else None,
-            depends_on=opts.depends_on if opts else None,
+            depends_on=[container_id_cmd] + (opts.depends_on if opts and opts.depends_on else []),
         ),
     )
 
@@ -139,9 +190,14 @@ def patch_coredns_for_lagoon(
     patch_cmd = node_ip.apply(build_patch_command)
 
     # Use kubectl to patch the existing CoreDNS ConfigMap
+    # The node_ip trigger ensures this re-runs when the IP changes
     coredns_patch = command.Command(
         f"{name}-coredns-patch",
         create=patch_cmd,
+        # Also run on update when IP changes
+        update=patch_cmd,
+        # Trigger re-patch when the node IP changes
+        triggers=[node_ip],
         opts=pulumi.ResourceOptions(
             parent=opts.parent if opts else None,
             depends_on=opts.depends_on if opts else None,

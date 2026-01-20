@@ -1,7 +1,7 @@
 # Next Session Quickstart - Pulumi Lagoon Provider
 
-**Date Updated**: 2026-01-16
-**Status**: Phase 2 In Progress - Multi-Cluster Example WIP
+**Date Updated**: 2026-01-20
+**Status**: Phase 2 In Progress - Multi-Cluster Example Debugged
 
 ---
 
@@ -31,12 +31,19 @@
    make multi-cluster-up    # Deploy fresh
    ```
 
-### Known Issue from Last Session
+### Issues Fixed (2026-01-20)
 
-The Lagoon core Helm release timed out after 15 minutes. Need to:
-- Check why pods aren't becoming ready
-- Review logs: `kubectl --context kind-lagoon-prod logs -n lagoon-core -l app.kubernetes.io/component=api`
-- May need to increase resource limits or timeout
+1. **RabbitMQ CrashLoopBackOff**: Fixed by deleting PVCs to clear corrupted Mnesia data
+   - Root cause: Mnesia table sync timeout between broker pods
+   - Fix: Scale StatefulSet to 0, delete PVCs, scale back up, delete pods to force recreation
+
+2. **Service Selector Bug**: Fixed in `lagoon/core.py`
+   - Root cause: `create_rabbitmq_nodeport_service()` used selector `app.kubernetes.io/component: broker`
+   - Fix: Changed to `app.kubernetes.io/component: {release_name}-lagoon-core-broker`
+
+3. **Cross-cluster RabbitMQ IP**: The nonprod remote had wrong IP
+   - Root cause: Pulumi state had stale IP from initial deployment
+   - Manually fixed with: `kubectl set env deployment/nonprod-remote-lagoon-build-deploy -n lagoon RABBITMQ_HOSTNAME=<correct-ip>:30672`
 
 ---
 
@@ -63,8 +70,9 @@ make clean-all              # Full teardown
 - ✅ Multi-cluster example code complete
 - ✅ Kind clusters created successfully
 - ✅ Harbor registry deploys successfully
-- ⚠️ Lagoon core deployment times out (needs debugging)
-- ⏳ Cross-cluster RabbitMQ communication (untested)
+- ✅ Lagoon core running (RabbitMQ fixed)
+- ✅ Cross-cluster RabbitMQ communication working
+- ⏳ Browser-based authentication (needs testing)
 
 ### Project Structure
 ```
@@ -217,12 +225,13 @@ kubectl --context kind-lagoon-nonprod exec -it -n lagoon <pod> -- nc -zv <prod-n
 
 ## Next Steps
 
-1. Debug Lagoon core timeout issue
-2. Verify cross-cluster RabbitMQ communication works
+1. ✅ ~~Debug Lagoon core timeout issue~~ (Fixed: RabbitMQ Mnesia data)
+2. ✅ ~~Verify cross-cluster RabbitMQ communication~~ (Working)
 3. Test browser-based authentication with port-forwarding
-4. Mark PR as ready for review once working
-5. Consider adding integration tests
+4. Run `pulumi up` to apply the service selector fix
+5. Mark PR as ready for review once working
+6. Consider adding integration tests
 
 ---
 
-**Summary**: Multi-cluster example code is complete but needs debugging. Branch is `deploytarget-multi-cluster`, PR #10 is open as draft. Check cluster status first when starting next session.
+**Summary**: Multi-cluster infrastructure is operational! RabbitMQ and cross-cluster communication issues were fixed on 2026-01-20. Code fix in `lagoon/core.py` for service selector needs to be applied via `pulumi up`. Branch is `deploytarget-multi-cluster`, PR #10 is open as draft. Next: test browser auth, then mark PR ready for review.

@@ -404,8 +404,9 @@ def create_rabbitmq_nodeport_service(
                 ),
             ],
             # Select the broker pods using the same labels as the Helm chart
+            # Note: The Helm chart sets component to "{release_name}-lagoon-core-broker"
             selector={
-                "app.kubernetes.io/component": "broker",
+                "app.kubernetes.io/component": f"{release_name}-lagoon-core-broker",
                 "app.kubernetes.io/instance": release_name,
                 "app.kubernetes.io/name": "lagoon-core",
             },

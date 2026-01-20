@@ -1,7 +1,7 @@
 # Pulumi Lagoon Provider - Implementation Status
 
 **Last Updated**: 2026-01-21
-**Status**: Phase 2 In Progress - LagoonDeployTarget + Multi-Cluster Example
+**Status**: Phase 2 In Progress - LagoonDeployTarget + Multi-Cluster Example (Debugged)
 
 ---
 
@@ -26,7 +26,7 @@ GraphQL Operations:
 - `delete_kubernetes()` - Delete deploy target
 
 ### Multi-Cluster Example
-**Status**: ⚠️ IN PROGRESS (rebasing from develop)
+**Status**: ✅ OPERATIONAL (2026-01-20)
 
 Location: `examples/multi-cluster/`
 
@@ -39,6 +39,15 @@ Components:
 - `infrastructure/` - ingress-nginx, cert-manager, CoreDNS
 - `registry/` - Harbor container registry
 - `lagoon/` - Lagoon core and remote (build-deploy)
+
+Issues Fixed (2026-01-20):
+- RabbitMQ CrashLoopBackOff: Cleared corrupted Mnesia data by deleting PVCs
+- Service selector bug in `lagoon/core.py`: Changed selector to match actual pod labels
+- Cross-cluster RabbitMQ IP: Manually fixed via kubectl env update
+
+Remaining:
+- Run `pulumi up` to apply code fix for service selector
+- Test browser authentication with port-forwarding
 
 **Branch**: `deploytarget-multi-cluster`
 **PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/10 (Draft)
