@@ -223,8 +223,9 @@ echo "lagoonadmin user: configured"
                     containers=[
                         k8s.core.v1.ContainerArgs(
                             name="configure-keycloak",
-                            image="curlimages/curl:8.5.0",
-                            command=["/bin/sh", "/scripts/configure-keycloak.sh"],
+                            # Use alpine with curl and jq installed
+                            image="alpine:3.19",
+                            command=["/bin/sh", "-c", "apk add --no-cache curl jq && /bin/sh /scripts/configure-keycloak.sh"],
                             env=[
                                 k8s.core.v1.EnvVarArgs(
                                     name="KEYCLOAK_SERVICE",
