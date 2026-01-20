@@ -48,6 +48,7 @@ from lagoon import (
     install_lagoon_core,
     install_lagoon_remote,
     create_rabbitmq_nodeport_service,
+    configure_keycloak_for_cli_auth,
 )
 
 
@@ -266,6 +267,22 @@ if prod_provider is not None and install_lagoon_components and lagoon_secrets is
         lagoon_core.namespace,
         prod_provider,
         nodeport=30672,  # Fixed NodePort for cross-cluster communication
+        opts=pulumi.ResourceOptions(
+            depends_on=[lagoon_core.release],
+        ),
+    )
+
+    # Configure Keycloak for CLI/programmatic authentication
+    # This enables Direct Access Grants (OAuth password grant) for the lagoon-ui
+    # client and creates the lagoonadmin user if it doesn't exist.
+    # Without this, CLI tools and scripts cannot authenticate to the Lagoon API.
+    pulumi.log.info("Configuring Keycloak for CLI authentication...")
+    keycloak_config_job = configure_keycloak_for_cli_auth(
+        "prod-lagoon",
+        prod_provider,
+        namespace=lagoon_core.namespace,
+        keycloak_service="prod-core-lagoon-core-keycloak",
+        keycloak_admin_secret="prod-core-lagoon-core-keycloak",
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
         ),

@@ -43,7 +43,12 @@
 
 3. **Cross-cluster RabbitMQ IP**: The nonprod remote had wrong IP
    - Root cause: Pulumi state had stale IP from initial deployment
-   - Manually fixed with: `kubectl set env deployment/nonprod-remote-lagoon-build-deploy -n lagoon RABBITMQ_HOSTNAME=<correct-ip>:30672`
+   - Code fix: Added dynamic IP refresh using container ID triggers
+
+4. **Keycloak Direct Access Grants**: OAuth password grant wasn't working
+   - Root cause: The `lagoon-ui` Keycloak client doesn't have Direct Access Grants enabled by default
+   - Fix: Added Pulumi Job (`lagoon/keycloak.py`) that auto-configures Keycloak after install
+   - Also creates `lagoonadmin` user with `platform-owner` role
 
 ---
 

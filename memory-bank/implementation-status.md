@@ -43,11 +43,19 @@ Components:
 Issues Fixed (2026-01-20):
 - RabbitMQ CrashLoopBackOff: Cleared corrupted Mnesia data by deleting PVCs
 - Service selector bug in `lagoon/core.py`: Changed selector to match actual pod labels
-- Cross-cluster RabbitMQ IP: Manually fixed via kubectl env update
+- Cross-cluster RabbitMQ IP: Added dynamic IP refresh using container ID triggers
+- Keycloak Direct Access Grants: Added `lagoon/keycloak.py` for automatic configuration
 
-Remaining:
-- Run `pulumi up` to apply code fix for service selector
-- Test browser authentication with port-forwarding
+New Features:
+- `lagoon/keycloak.py`: Kubernetes Job that configures Keycloak for CLI auth
+  - Enables Direct Access Grants for lagoon-ui client (OAuth password grant)
+  - Creates lagoonadmin user with platform-owner role
+- Dynamic IP refresh: Cluster IPs now automatically refresh when Kind clusters change
+
+Completed:
+- All code fixes applied via `pulumi up`
+- Browser authentication tested and working
+- CLI authentication via OAuth password grant tested and working
 
 **Branch**: `deploytarget-multi-cluster`
 **PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/10 (Draft)

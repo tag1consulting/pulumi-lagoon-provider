@@ -122,7 +122,90 @@ pulumi config set installLagoon false
 | Service | Username | Password |
 |---------|----------|----------|
 | Keycloak Admin | admin | (check Pulumi output or generated secret) |
+| Lagoon Admin | lagoonadmin | (check secret below) |
 | Harbor Admin | admin | (check `harbor_admin_password` Pulumi output) |
+
+### Getting Passwords from Secrets
+
+```bash
+# Keycloak admin password
+kubectl --context kind-lagoon-prod -n lagoon-core get secret prod-core-lagoon-core-keycloak \
+  -o jsonpath='{.data.KEYCLOAK_ADMIN_PASSWORD}' | base64 -d && echo
+
+# Lagoon admin password
+kubectl --context kind-lagoon-prod -n lagoon-core get secret prod-core-lagoon-core-keycloak \
+  -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d && echo
+```
+
+## Authentication
+
+Lagoon uses Keycloak for authentication. This example automatically configures:
+
+1. **Direct Access Grants** - Enables OAuth password grant for CLI tools
+2. **lagoonadmin user** - Creates a platform-owner user for API access
+
+### CLI Authentication (Programmatic)
+
+To authenticate via the API (for scripts, CLI tools, or testing):
+
+```bash
+# Get the Lagoon admin password
+LAGOON_PASSWORD=$(kubectl --context kind-lagoon-prod -n lagoon-core get secret \
+  prod-core-lagoon-core-keycloak -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d)
+
+# Get an OAuth token (requires port-forward to Keycloak on 8080)
+TOKEN=$(curl -s -X POST "http://localhost:8080/auth/realms/lagoon/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=lagoon-ui" \
+  -d "grant_type=password" \
+  -d "username=lagoonadmin" \
+  -d "password=$LAGOON_PASSWORD" | jq -r '.access_token')
+
+# Use the token with the API (requires port-forward to API on 4000)
+curl -s http://localhost:4000/graphql \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ lagoonVersion }"}'
+```
+
+### Browser Authentication
+
+Browser-based authentication requires additional setup because the Lagoon UI redirects
+to an internal Kubernetes service URL for Keycloak.
+
+**Step 1:** Add hosts file entry:
+```bash
+# Add to /etc/hosts
+127.0.0.1 prod-core-lagoon-core-keycloak.lagoon-core.svc.cluster.local
+```
+
+**Step 2:** Start port forwards:
+```bash
+kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000 &
+kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 &
+```
+
+**Step 3:** Open http://localhost:3000 and log in as `lagoonadmin`
+
+### How Keycloak Configuration Works
+
+The multi-cluster example includes automatic Keycloak configuration via a Kubernetes Job
+that runs after Lagoon core is installed. The job (`prod-lagoon-keycloak-config`):
+
+1. Waits for Keycloak to be ready
+2. Gets an admin token
+3. Enables Direct Access Grants for the `lagoon-ui` client
+4. Creates the `lagoonadmin` user with `platform-owner` role
+
+Without Direct Access Grants, the OAuth password grant flow doesn't work, which means
+CLI tools cannot authenticate using username/password. The Lagoon Helm chart does not
+enable this by default.
+
+To check the job status:
+```bash
+kubectl --context kind-lagoon-prod get jobs -n lagoon-core | grep keycloak-config
+kubectl --context kind-lagoon-prod logs -n lagoon-core job/prod-lagoon-keycloak-config
+```
 
 ## Troubleshooting
 
