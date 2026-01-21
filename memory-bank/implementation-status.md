@@ -1,6 +1,6 @@
 # Pulumi Lagoon Provider - Implementation Status
 
-**Last Updated**: 2026-01-13
+**Last Updated**: 2026-01-20
 **Status**: Phase 1 Complete - Full End-to-End Testing Passed
 
 ## Completed Work
@@ -272,6 +272,20 @@ Implement Phase 1: Core resource providers
 ✅ Automated setup via `make setup-all` (~5 minutes)
 ✅ Token expiration handled automatically
 ✅ Full end-to-end testing passed (2026-01-13)
+
+## Recent Fixes
+
+### Issue #6: Keycloak Migration Job Wait Fix (2026-01-20)
+**Problem**: The `lagoon-core-api-migratedb` job pod would fail on initial deploy because the database wasn't ready yet. The `kubectl wait --for=condition=ready` commands would then block for the full timeout (300s/5 minutes) because Job pods don't become "ready" - they either complete or fail.
+
+**Solution**: Updated the wait logic in both `Makefile` and `scripts/setup-complete.sh` to:
+1. First wait for the migration job to complete (checking for Complete or Failed conditions)
+2. If the job fails, delete it to allow Helm to retry on next deployment
+3. Then wait for specific deployment pods using more targeted label selectors (e.g., `app.kubernetes.io/component=api`, `app.kubernetes.io/component=lagoon-core-keycloak`) instead of the generic `app.kubernetes.io/name=lagoon-core` which matched Job pods
+
+**Files Modified**:
+- `Makefile` - `wait-for-lagoon` target
+- `scripts/setup-complete.sh` - `wait_for_lagoon()` function
 
 ## Known Limitations
 
