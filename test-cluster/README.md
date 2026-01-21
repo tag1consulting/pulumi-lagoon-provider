@@ -1,5 +1,9 @@
 # Lagoon Test Cluster
 
+> **Note:** This directory will be superseded by `examples/single-cluster/` after the multi-cluster branch merges.
+> The shared scripts in `scripts/` now support this configuration via `LAGOON_PRESET=single`.
+> See the main README for details.
+
 This directory contains a Pulumi program that creates a complete local Lagoon installation for testing the pulumi-lagoon-provider.
 
 > **Quick Start**: For full environment setup (cluster + provider + example), use the unified setup from the repository root:

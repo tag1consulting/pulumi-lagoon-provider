@@ -2,7 +2,7 @@
 #
 # This Makefile provides a unified interface for setting up and managing
 # the complete development/test environment including:
-# - Kind cluster
+# - Kind cluster(s)
 # - Lagoon installation via Helm
 # - Python provider installation
 # - Example project deployment
@@ -20,6 +20,7 @@
         provider-install provider-test \
         example-up example-down example-preview example-output \
         ensure-lagoon-admin ensure-deploy-target \
+        port-forwards check-health \
         clean clean-all venv
 
 # Variables
@@ -28,6 +29,7 @@ PYTHON := python3
 CLUSTER_NAME := lagoon-test
 TEST_CLUSTER_DIR := test-cluster
 EXAMPLE_DIR := examples/simple-project
+SCRIPTS_DIR := scripts
 
 #==============================================================================
 # Help
@@ -37,7 +39,7 @@ help:
 	@echo "Pulumi Lagoon Provider - Development Environment"
 	@echo ""
 	@echo "Complete Setup (recommended for first-time users):"
-	@echo "  make setup-all       - Complete setup from scratch (15-20 min)"
+	@echo "  make setup-all       - Complete setup from scratch"
 	@echo ""
 	@echo "Individual Steps:"
 	@echo "  make venv            - Create Python virtual environment"
@@ -46,7 +48,11 @@ help:
 	@echo "  make cluster-down    - Destroy Kind cluster"
 	@echo "  make cluster-status  - Check cluster and pod status"
 	@echo ""
-	@echo "Example Project:"
+	@echo "Cluster Operations (using shared scripts):"
+	@echo "  make check-health    - Check cluster health"
+	@echo "  make port-forwards   - Set up kubectl port-forwards"
+	@echo ""
+	@echo "Example Project (simple-project):"
 	@echo "  make example-preview - Preview example project changes"
 	@echo "  make example-up      - Deploy example project"
 	@echo "  make example-down    - Destroy example project resources"
@@ -58,6 +64,18 @@ help:
 	@echo "Cleanup:"
 	@echo "  make clean           - Kill port-forwards, clean temp files"
 	@echo "  make clean-all       - Complete cleanup including Kind cluster"
+	@echo ""
+	@echo "Shared Scripts (in scripts/ directory):"
+	@echo "  ./scripts/check-cluster-health.sh  - Check cluster health"
+	@echo "  ./scripts/setup-port-forwards.sh   - Set up port-forwards"
+	@echo "  ./scripts/get-token.sh             - Get OAuth token"
+	@echo "  ./scripts/fix-rabbitmq-password.sh - Fix RabbitMQ auth issues"
+	@echo "  ./scripts/run-pulumi.sh            - Wrapper with auto token refresh"
+	@echo ""
+	@echo "Script Configuration:"
+	@echo "  LAGOON_PRESET=single      - Single-cluster (default, test-cluster)"
+	@echo "  LAGOON_PRESET=multi-prod  - Multi-cluster production"
+	@echo "  LAGOON_PRESET=multi-nonprod - Multi-cluster non-production"
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - Docker installed and running"
@@ -126,7 +144,7 @@ provider-test: venv
 	@. $(VENV_DIR)/bin/activate && pytest tests/ -v
 
 #==============================================================================
-# Kind Cluster + Lagoon
+# Kind Cluster + Lagoon (Single-cluster via test-cluster)
 #==============================================================================
 
 cluster-up: venv
@@ -162,8 +180,6 @@ cluster-status:
 
 wait-for-lagoon:
 	@echo "Waiting for Lagoon to be ready..."
-	@# First, wait for the api-migratedb job to complete (success or failure)
-	@# This prevents blocking on a failed job pod
 	@echo "Waiting for database migration job to complete..."
 	@for i in 1 2 3 4 5 6 7 8 9 10 11 12; do \
 		JOB_STATUS=$$(kubectl --context kind-$(CLUSTER_NAME) get job lagoon-core-api-migratedb -n lagoon -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null); \
@@ -180,7 +196,6 @@ wait-for-lagoon:
 			sleep 10; \
 		fi; \
 	done
-	@# Now wait for the key deployment pods (excluding completed/failed job pods)
 	@echo "Waiting for Lagoon core pods..."
 	@kubectl --context kind-$(CLUSTER_NAME) wait --for=condition=ready pod \
 		-l app.kubernetes.io/name=lagoon-core --field-selector=status.phase=Running -n lagoon --timeout=300s 2>/dev/null || true
@@ -190,13 +205,23 @@ wait-for-lagoon:
 	@echo "Checking pod status..."
 	@kubectl --context kind-$(CLUSTER_NAME) get pods -n lagoon
 
+#==============================================================================
+# Shared Script Operations
+#==============================================================================
+
+check-health:
+	@LAGOON_PRESET=single $(SCRIPTS_DIR)/check-cluster-health.sh
+
+port-forwards:
+	@LAGOON_PRESET=single $(SCRIPTS_DIR)/setup-port-forwards.sh
+
 ensure-lagoon-admin:
 	@echo "Ensuring lagoonadmin user exists in Keycloak..."
 	@echo "Starting temporary port-forward to Keycloak..."
 	@kubectl --context kind-$(CLUSTER_NAME) port-forward -n lagoon svc/lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 & \
 		PF_PID=$$!; \
 		sleep 2; \
-		cd $(EXAMPLE_DIR) && ./scripts/create-lagoon-admin.sh; \
+		LAGOON_PRESET=single $(SCRIPTS_DIR)/create-lagoon-admin.sh; \
 		kill $$PF_PID 2>/dev/null || true
 
 ensure-deploy-target:
@@ -207,13 +232,13 @@ ensure-deploy-target:
 		kubectl --context kind-$(CLUSTER_NAME) port-forward -n lagoon svc/lagoon-core-api 7080:80 >/dev/null 2>&1 & \
 		API_PID=$$!; \
 		sleep 3; \
-		DEPLOY_TARGET_ID=$$(cd $(EXAMPLE_DIR) && ./scripts/ensure-deploy-target.sh) || { kill $$KC_PID $$API_PID 2>/dev/null; exit 1; }; \
+		DEPLOY_TARGET_ID=$$(LAGOON_PRESET=single $(SCRIPTS_DIR)/ensure-deploy-target.sh) || { kill $$KC_PID $$API_PID 2>/dev/null; exit 1; }; \
 		kill $$KC_PID $$API_PID 2>/dev/null || true; \
 		echo "Deploy target ID: $$DEPLOY_TARGET_ID"; \
 		cd $(EXAMPLE_DIR) && pulumi config set deploytargetId $$DEPLOY_TARGET_ID 2>/dev/null || true
 
 #==============================================================================
-# Example Project
+# Example Project (simple-project - provider usage demo)
 #==============================================================================
 
 example-setup: venv provider-install
@@ -225,16 +250,16 @@ example-setup: venv provider-install
 	@echo "Run 'make example-up' to deploy."
 
 example-preview:
-	@cd $(EXAMPLE_DIR) && ./scripts/run-pulumi.sh preview
+	@cd $(EXAMPLE_DIR) && LAGOON_PRESET=single ./scripts/run-pulumi.sh preview
 
 example-up:
-	@cd $(EXAMPLE_DIR) && ./scripts/run-pulumi.sh up --yes
+	@cd $(EXAMPLE_DIR) && LAGOON_PRESET=single ./scripts/run-pulumi.sh up --yes
 
 example-down:
-	@cd $(EXAMPLE_DIR) && ./scripts/run-pulumi.sh destroy
+	@cd $(EXAMPLE_DIR) && LAGOON_PRESET=single ./scripts/run-pulumi.sh destroy
 
 example-output:
-	@cd $(EXAMPLE_DIR) && ./scripts/run-pulumi.sh stack output
+	@cd $(EXAMPLE_DIR) && LAGOON_PRESET=single ./scripts/run-pulumi.sh stack output
 
 #==============================================================================
 # Cleanup
