@@ -63,7 +63,11 @@
       "Bash(pytest:*)",
       "Bash(ruff check:*)",
       "Bash(mypy:*)",
-      "Bash(ruff format:*)"
+      "Bash(ruff format:*)",
+      "Bash(gh issue:*)",
+      "Bash(lagoon --help:*)",
+      "Bash(lagoon config:*)",
+      "Bash(lagoon login:*)"
     ],
     "deny": [],
     "ask": []
