@@ -197,7 +197,7 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
         return dynamic.ReadResult(id_=str(result["id"]), outs=outs)
 
 
-class LagoonEnvironment(dynamic.Resource):
+class LagoonEnvironment(dynamic.Resource, module="lagoon", name="Environment"):
     """
     A Lagoon environment resource.
 

@@ -212,7 +212,7 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
         return dynamic.ReadResult(id_=str(result["id"]), outs=outs)
 
 
-class LagoonProject(dynamic.Resource):
+class LagoonProject(dynamic.Resource, module="lagoon", name="Project"):
     """
     A Lagoon project resource.
 

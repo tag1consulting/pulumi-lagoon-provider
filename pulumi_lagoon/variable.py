@@ -229,7 +229,7 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
         return dynamic.ReadResult(id_=id, outs=outs)
 
 
-class LagoonVariable(dynamic.Resource):
+class LagoonVariable(dynamic.Resource, module="lagoon", name="Variable"):
     """
     A Lagoon variable resource.
 
