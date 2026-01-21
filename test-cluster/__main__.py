@@ -667,9 +667,28 @@ lagoon_build_deploy = Chart(
 # The password is already base64-encoded from the source secret
 def create_patch_script(password_b64: str) -> str:
     return f"""
+set -e
+
+# Wait for lagoon-build-deploy secret to exist (Helm chart may not have finished creating it)
+echo "Waiting for lagoon-build-deploy secret to exist..."
+for i in $(seq 1 60); do
+    if kubectl --context kind-{cluster_name} get secret lagoon-build-deploy -n lagoon 2>/dev/null | grep -q lagoon-build-deploy; then
+        echo "Secret found"
+        break
+    fi
+    if [ $i -eq 60 ]; then
+        echo "Timeout waiting for lagoon-build-deploy secret"
+        exit 1
+    fi
+    echo "Waiting for secret... (attempt $i/60)"
+    sleep 5
+done
+
+# Patch the secret with the correct password
 kubectl --context kind-{cluster_name} patch secret lagoon-build-deploy -n lagoon \
   --type='json' \
   -p='[{{"op":"replace","path":"/data/RABBITMQ_PASSWORD","value":"{password_b64}"}}]'
+echo "Secret patched successfully"
 """
 
 patch_build_deploy_secret = command.local.Command(
