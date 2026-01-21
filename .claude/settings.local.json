@@ -66,7 +66,9 @@
       "Bash(ruff format:*)",
       "Bash(gh issue:*)",
       "Bash(pip3 show:*)",
-      "Bash(. venv/bin/activate)"
+      "Bash(. venv/bin/activate)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr edit:*)"
     ],
     "deny": [],
     "ask": []
