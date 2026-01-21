@@ -566,7 +566,7 @@ lagoon_core = Chart(
     "lagoon-core",
     ChartOpts(
         chart="lagoon-core",
-        version="1.55.0",
+        version="1.59.0",
         namespace="lagoon",
         fetch_opts=FetchOpts(
             repo="https://uselagoon.github.io/lagoon-charts/",
@@ -632,14 +632,14 @@ get_rabbitmq_password_cmd = command.local.Command(
     opts=pulumi.ResourceOptions(depends_on=[lagoon_core, get_kubeconfig]),
 )
 
-# Install lagoon-build-deploy (remote controller)
+# Install lagoon-remote (remote controller)
 # Note: We don't set rabbitMQPassword in the chart values because
 # we'll create the secret ourselves with the correct password
-lagoon_build_deploy = Chart(
-    "lagoon-build-deploy",
+lagoon_remote = Chart(
+    "lagoon-remote",
     ChartOpts(
-        chart="lagoon-build-deploy",
-        version="0.35.0",
+        chart="lagoon-remote",
+        version="0.103.0",
         namespace="lagoon",
         fetch_opts=FetchOpts(
             repo="https://uselagoon.github.io/lagoon-charts/",
@@ -662,22 +662,22 @@ lagoon_build_deploy = Chart(
     ),
 )
 
-# Patch the lagoon-build-deploy secret with the correct RabbitMQ password
+# Patch the lagoon-remote secret with the correct RabbitMQ password
 # Using kubectl patch preserves other fields in the secret while updating only RABBITMQ_PASSWORD
 # The password is already base64-encoded from the source secret
 def create_patch_script(password_b64: str) -> str:
     return f"""
 set -e
 
-# Wait for lagoon-build-deploy secret to exist (Helm chart may not have finished creating it)
-echo "Waiting for lagoon-build-deploy secret to exist..."
+# Wait for lagoon-remote secret to exist (Helm chart may not have finished creating it)
+echo "Waiting for lagoon-remote secret to exist..."
 for i in $(seq 1 60); do
-    if kubectl --context kind-{cluster_name} get secret lagoon-build-deploy -n lagoon 2>/dev/null | grep -q lagoon-build-deploy; then
+    if kubectl --context kind-{cluster_name} get secret lagoon-remote -n lagoon 2>/dev/null | grep -q lagoon-remote; then
         echo "Secret found"
         break
     fi
     if [ $i -eq 60 ]; then
-        echo "Timeout waiting for lagoon-build-deploy secret"
+        echo "Timeout waiting for lagoon-remote secret"
         exit 1
     fi
     echo "Waiting for secret... (attempt $i/60)"
@@ -685,7 +685,7 @@ for i in $(seq 1 60); do
 done
 
 # Patch the secret with the correct password
-kubectl --context kind-{cluster_name} patch secret lagoon-build-deploy -n lagoon \
+kubectl --context kind-{cluster_name} patch secret lagoon-remote -n lagoon \
   --type='json' \
   -p='[{{"op":"replace","path":"/data/RABBITMQ_PASSWORD","value":"{password_b64}"}}]'
 echo "Secret patched successfully"
@@ -698,14 +698,14 @@ patch_build_deploy_secret = command.local.Command(
     update=get_rabbitmq_password_cmd.stdout.apply(create_patch_script),
     # Triggers ensure the patch runs when the password changes
     triggers=[get_rabbitmq_password_cmd.stdout],
-    opts=pulumi.ResourceOptions(depends_on=[lagoon_build_deploy, get_kubeconfig]),
+    opts=pulumi.ResourceOptions(depends_on=[lagoon_remote, get_kubeconfig]),
 )
 
-# Restart the lagoon-build-deploy deployment to pick up the new secret
+# Restart the lagoon-remote-kubernetes-build-deploy deployment to pick up the new secret
 # This ensures the pods use the correct RabbitMQ password
 restart_build_deploy = command.local.Command(
     "restart-build-deploy",
-    create=f"kubectl --context kind-{cluster_name} rollout restart deployment lagoon-build-deploy -n lagoon && kubectl --context kind-{cluster_name} rollout status deployment lagoon-build-deploy -n lagoon --timeout=120s",
+    create=f"kubectl --context kind-{cluster_name} rollout restart deployment lagoon-remote-kubernetes-build-deploy -n lagoon && kubectl --context kind-{cluster_name} rollout status deployment lagoon-remote-kubernetes-build-deploy -n lagoon --timeout=120s",
     # Use triggers to ensure restart happens when secret changes
     triggers=[get_rabbitmq_password_cmd.stdout],
     opts=pulumi.ResourceOptions(depends_on=[patch_build_deploy_secret, get_kubeconfig]),
