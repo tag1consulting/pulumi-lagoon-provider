@@ -1,16 +1,36 @@
 #!/bin/bash
-# Wrapper script for running Pulumi commands with Lagoon token refresh
-# Usage: ./scripts/run-pulumi.sh <pulumi-command> [args...]
+# Wrapper script for running Pulumi commands with automatic token refresh
 #
-# This script:
-# 1. Refreshes the Lagoon API token using lagoon-cli
-# 2. Runs the specified Pulumi command
-# 3. Works with the multi-cluster example
+# Usage:
+#   ./scripts/run-pulumi.sh preview
+#   ./scripts/run-pulumi.sh up
+#   ./scripts/run-pulumi.sh up --yes
+#   ./scripts/run-pulumi.sh destroy
+#   ./scripts/run-pulumi.sh stack output
+#
+# This script automatically:
+#   1. Checks/starts port-forwards to the prod cluster
+#   2. Gets a fresh OAuth token from Keycloak
+#   3. Runs the specified Pulumi command
+#
+# Prerequisites:
+#   - kubectl configured with kind-lagoon-prod context
+#   - Multi-cluster setup running
+#   - Python virtual environment with provider installed
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$SCRIPT_DIR/.."
+
+# Activate virtual environment if it exists
+if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
+    # shellcheck source=/dev/null
+    source "venv/bin/activate"
+fi
+
+CONTEXT="${KUBE_CONTEXT:-kind-lagoon-prod}"
+NAMESPACE="${LAGOON_NAMESPACE:-lagoon}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -30,58 +50,160 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Function to refresh Lagoon token
-refresh_lagoon_token() {
-    log_info "Refreshing Lagoon API token..."
-
-    if ! command -v lagoon &> /dev/null; then
-        log_warn "lagoon-cli not found. Using existing LAGOON_TOKEN if set."
+# Check if port-forwards are running
+check_port_forwards() {
+    if curl -s --connect-timeout 2 "http://localhost:8080/auth/" >/dev/null 2>&1 && \
+       curl -s --connect-timeout 2 "http://localhost:7080/" >/dev/null 2>&1; then
         return 0
     fi
-
-    # Get token from lagoon-cli
-    TOKEN=$(lagoon get token 2>/dev/null || echo "")
-
-    if [ -n "$TOKEN" ]; then
-        export LAGOON_TOKEN="$TOKEN"
-        log_info "Lagoon token refreshed successfully"
-    else
-        log_warn "Could not refresh token. Using existing LAGOON_TOKEN if set."
-    fi
+    return 1
 }
 
-# Function to check prerequisites
-check_prerequisites() {
-    local missing=()
+# Start port-forwards
+start_port_forwards() {
+    log_info "Starting port-forwards to $CONTEXT..."
 
-    if ! command -v pulumi &> /dev/null; then
-        missing+=("pulumi")
-    fi
+    # Kill existing port-forwards
+    pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+    sleep 1
 
-    if ! command -v kind &> /dev/null; then
-        missing+=("kind")
-    fi
+    # Start new port-forwards
+    kubectl --context "$CONTEXT" port-forward -n "$NAMESPACE" svc/lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
+    kubectl --context "$CONTEXT" port-forward -n "$NAMESPACE" svc/lagoon-core-api 7080:80 >/dev/null 2>&1 &
 
-    if [ ${#missing[@]} -gt 0 ]; then
-        log_error "Missing required tools: ${missing[*]}"
+    # Wait for them to be ready
+    local retries=10
+    while ! check_port_forwards && [ $retries -gt 0 ]; do
+        sleep 1
+        retries=$((retries - 1))
+    done
+
+    if ! check_port_forwards; then
+        log_error "Failed to start port-forwards"
         exit 1
     fi
+
+    log_info "Port-forwards ready"
 }
 
-# Main
-check_prerequisites
+# Get OAuth token
+get_token() {
+    log_info "Getting OAuth token..."
 
-# Refresh token before running Pulumi
-refresh_lagoon_token
+    # Get password from secret
+    local password
+    password=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret lagoon-core-keycloak \
+        -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d)
 
-# Change to project directory
-cd "$PROJECT_DIR"
+    # Get token
+    local response
+    response=$(curl -s "http://localhost:8080/auth/realms/lagoon/protocol/openid-connect/token" \
+        -d "grant_type=password" \
+        -d "client_id=lagoon-ui" \
+        -d "username=lagoonadmin" \
+        -d "password=$password" 2>&1)
 
-# Activate virtual environment if it exists
-if [ -f "venv/bin/activate" ]; then
-    source venv/bin/activate
-fi
+    local token
+    token=$(echo "$response" | jq -r '.access_token // empty')
 
-# Run Pulumi with all arguments
-log_info "Running: pulumi $*"
-pulumi "$@"
+    if [ -z "$token" ]; then
+        # Check if we need to enable Direct Access Grants
+        if echo "$response" | grep -q "Client not allowed for direct access grants"; then
+            log_warn "Enabling Direct Access Grants in Keycloak..."
+
+            local admin_password
+            admin_password=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret lagoon-core-keycloak \
+                -o jsonpath='{.data.KEYCLOAK_ADMIN_PASSWORD}' | base64 -d)
+
+            local admin_token
+            admin_token=$(curl -s "http://localhost:8080/auth/realms/master/protocol/openid-connect/token" \
+                -d "grant_type=password" \
+                -d "client_id=admin-cli" \
+                -d "username=admin" \
+                -d "password=$admin_password" | jq -r '.access_token')
+
+            local client_id
+            client_id=$(curl -s "http://localhost:8080/auth/admin/realms/lagoon/clients?clientId=lagoon-ui" \
+                -H "Authorization: Bearer $admin_token" | jq -r '.[0].id')
+
+            curl -s -X PUT "http://localhost:8080/auth/admin/realms/lagoon/clients/$client_id" \
+                -H "Authorization: Bearer $admin_token" \
+                -H "Content-Type: application/json" \
+                -d '{"directAccessGrantsEnabled": true}' >/dev/null
+
+            # Retry getting token
+            response=$(curl -s "http://localhost:8080/auth/realms/lagoon/protocol/openid-connect/token" \
+                -d "grant_type=password" \
+                -d "client_id=lagoon-ui" \
+                -d "username=lagoonadmin" \
+                -d "password=$password" 2>&1)
+
+            token=$(echo "$response" | jq -r '.access_token // empty')
+        fi
+    fi
+
+    # Check if user doesn't exist (invalid_grant with "Invalid user credentials")
+    if [ -z "$token" ] && echo "$response" | grep -q "Invalid user credentials"; then
+        log_warn "lagoonadmin user not found. Creating..."
+        ./scripts/create-lagoon-admin.sh
+
+        # Retry getting token
+        response=$(curl -s "http://localhost:8080/auth/realms/lagoon/protocol/openid-connect/token" \
+            -d "grant_type=password" \
+            -d "client_id=lagoon-ui" \
+            -d "username=lagoonadmin" \
+            -d "password=$password" 2>&1)
+
+        token=$(echo "$response" | jq -r '.access_token // empty')
+    fi
+
+    if [ -z "$token" ]; then
+        log_error "Failed to get OAuth token"
+        echo "$response" >&2
+        exit 1
+    fi
+
+    export LAGOON_TOKEN="$token"
+    export LAGOON_API_URL="http://localhost:7080/graphql"
+
+    log_info "Token acquired (valid for ~5 minutes)"
+}
+
+# Main execution
+main() {
+    if [ $# -eq 0 ]; then
+        echo "Usage: $0 <pulumi-command> [args...]"
+        echo ""
+        echo "Examples:"
+        echo "  $0 preview"
+        echo "  $0 up"
+        echo "  $0 up --yes"
+        echo "  $0 destroy"
+        echo "  $0 stack output"
+        exit 1
+    fi
+
+    # Check cluster connectivity
+    if ! kubectl --context "$CONTEXT" cluster-info >/dev/null 2>&1; then
+        log_error "Cannot connect to cluster '$CONTEXT'"
+        exit 1
+    fi
+
+    # Ensure port-forwards are running
+    if ! check_port_forwards; then
+        start_port_forwards
+    else
+        log_info "Port-forwards already running"
+    fi
+
+    # Get fresh token
+    get_token
+
+    # Run pulumi command
+    log_info "Running: pulumi $*"
+    echo ""
+
+    pulumi "$@"
+}
+
+main "$@"
