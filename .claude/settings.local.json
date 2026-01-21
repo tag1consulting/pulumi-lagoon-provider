@@ -63,7 +63,10 @@
       "Bash(pytest:*)",
       "Bash(ruff check:*)",
       "Bash(mypy:*)",
-      "Bash(ruff format:*)"
+      "Bash(ruff format:*)",
+      "Bash(gh issue:*)",
+      "Bash(pip3 show:*)",
+      "Bash(. venv/bin/activate)"
     ],
     "deny": [],
     "ask": []
