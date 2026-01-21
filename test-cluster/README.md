@@ -86,6 +86,16 @@ After deployment, services are available at (default ports 80/443):
 
 > **Note:** If you configured custom ports, add the port to the URLs (e.g., `https://ui.lagoon.test:8443`)
 
+## Lagoon CLI Setup
+
+To configure the lagoon CLI for the test cluster:
+
+```bash
+./scripts/setup-lagoon-cli.sh
+```
+
+This obtains an OAuth token and configures the CLI automatically. See [LAGOON_CLI_SETUP.md](./LAGOON_CLI_SETUP.md) for detailed instructions, manual configuration, and troubleshooting.
+
 ## Getting Credentials
 
 To get the admin API token:
