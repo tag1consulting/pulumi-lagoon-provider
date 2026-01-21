@@ -324,8 +324,8 @@ examples/multi-cluster/
 | ingress-nginx | 4.10.1 | Standard Kubernetes ingress |
 | cert-manager | v1.14.4 | TLS certificate management |
 | harbor | 1.14.2 | Container registry |
-| lagoon-core | 1.0.0 | Lagoon core services |
-| lagoon-build-deploy | 0.39.0 | Remote controller (updated for K8s 1.22+ CRD compatibility) |
+| lagoon-core | 1.59.0 | Lagoon core services |
+| lagoon-build-deploy | 0.103.0 | Remote controller |
 
 ### Service Naming Convention
 

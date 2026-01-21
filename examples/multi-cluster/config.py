@@ -21,8 +21,8 @@ VERSIONS = {
     "ingress_nginx": "4.10.1",
     "cert_manager": "v1.14.4",
     "harbor": "1.14.2",
-    "lagoon_core": "1.0.0",
-    "lagoon_build_deploy": "0.39.0",  # Updated for k8s 1.22+ CRD compatibility
+    "lagoon_core": "1.59.0",
+    "lagoon_build_deploy": "0.103.0",
 }
 
 # Kind node image - use a version compatible with WSL2/cgroup v2
