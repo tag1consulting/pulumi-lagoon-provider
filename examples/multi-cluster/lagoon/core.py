@@ -106,6 +106,9 @@ def install_lagoon_core(
         "apiJWTSecret": "changeme-jwt-secret-for-local-dev-only",
         "api": {
             "enabled": True,
+            "serviceMonitor": {
+                "enabled": False,
+            },
             "ingress": {
                 "enabled": True,
                 "ingressClassName": ingress_class,
@@ -139,6 +142,9 @@ def install_lagoon_core(
         },
         "apiDB": {
             "enabled": True,
+            "serviceMonitor": {
+                "enabled": False,
+            },
             "password": secrets.api_db_password,
             "resources": {
                 "requests": {
@@ -177,6 +183,9 @@ def install_lagoon_core(
         },
         "keycloak": {
             "enabled": True,
+            "serviceMonitor": {
+                "enabled": False,
+            },
             "ingress": {
                 "enabled": True,
                 "ingressClassName": ingress_class,

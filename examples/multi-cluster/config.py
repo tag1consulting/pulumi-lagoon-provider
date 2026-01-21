@@ -22,7 +22,7 @@ VERSIONS = {
     "cert_manager": "v1.14.4",
     "harbor": "1.14.2",
     "lagoon_core": "1.59.0",
-    "lagoon_build_deploy": "0.103.0",
+    "lagoon_remote": "0.103.0",
 }
 
 # Kind node image - use a version compatible with WSL2/cgroup v2

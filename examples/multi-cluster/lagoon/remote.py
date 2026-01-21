@@ -120,8 +120,8 @@ def install_lagoon_remote(
     release = k8s.helm.v3.Release(
         f"{name}-release",
         name=release_name,
-        chart="lagoon-build-deploy",
-        version=VERSIONS["lagoon_build_deploy"],
+        chart="lagoon-remote",
+        version=VERSIONS["lagoon_remote"],
         namespace=namespace,
         repository_opts=k8s.helm.v3.RepositoryOptsArgs(
             repo="https://uselagoon.github.io/lagoon-charts/",
@@ -208,8 +208,8 @@ def install_lagoon_remote_minimal(
     release = k8s.helm.v3.Release(
         f"{name}-release",
         name=release_name,
-        chart="lagoon-build-deploy",
-        version=VERSIONS["lagoon_build_deploy"],
+        chart="lagoon-remote",
+        version=VERSIONS["lagoon_remote"],
         namespace=namespace,
         repository_opts=k8s.helm.v3.RepositoryOptsArgs(
             repo="https://uselagoon.github.io/lagoon-charts/",

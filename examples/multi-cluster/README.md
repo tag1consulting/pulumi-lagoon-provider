@@ -325,7 +325,7 @@ examples/multi-cluster/
 | cert-manager | v1.14.4 | TLS certificate management |
 | harbor | 1.14.2 | Container registry |
 | lagoon-core | 1.59.0 | Lagoon core services |
-| lagoon-build-deploy | 0.103.0 | Remote controller |
+| lagoon-remote | 0.103.0 | Remote controller |
 
 ### Service Naming Convention
 
