@@ -27,3 +27,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 .cache/
+
+# Generated Kind config (created dynamically by Pulumi)
+config/kind-config-generated.yaml
