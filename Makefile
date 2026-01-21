@@ -228,7 +228,7 @@ example-preview:
 	@cd $(EXAMPLE_DIR) && ./scripts/run-pulumi.sh preview
 
 example-up:
-	@cd $(EXAMPLE_DIR) && ./scripts/run-pulumi.sh up
+	@cd $(EXAMPLE_DIR) && ./scripts/run-pulumi.sh up --yes
 
 example-down:
 	@cd $(EXAMPLE_DIR) && ./scripts/run-pulumi.sh destroy
