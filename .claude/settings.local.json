@@ -60,7 +60,11 @@
       "Bash(./scripts/run-pulumi.sh:*)",
       "Bash(make clean-all:*)",
       "Bash(pgrep:*)",
-      "Bash(pytest:*)"
+      "Bash(pytest:*)",
+      "Bash(gh issue list:*)",
+      "Bash(git worktree:*)",
+      "Bash(gh issue view:*)",
+      "Bash(git branch:*)"
     ],
     "deny": [],
     "ask": []
