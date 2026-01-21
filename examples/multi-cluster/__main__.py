@@ -250,6 +250,7 @@ if prod_provider is not None and install_lagoon_components and lagoon_secrets is
         tls_secret_name="prod-lagoon-tls",
         harbor=prod_harbor,
         namespace_config=namespace_config,
+        helm_timeout=config.helm_timeout,
         opts=pulumi.ResourceOptions(
             depends_on=lagoon_core_deps,
         ),

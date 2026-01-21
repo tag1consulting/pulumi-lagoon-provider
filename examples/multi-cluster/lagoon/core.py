@@ -28,6 +28,7 @@ def install_lagoon_core(
     harbor: Optional[HarborOutputs] = None,
     ingress_class: str = "nginx",
     namespace_config: Optional[NamespaceConfig] = None,
+    helm_timeout: int = 1800,
     opts: Optional[pulumi.ResourceOptions] = None,
 ) -> LagoonCoreOutputs:
     """Install Lagoon core using Helm.
@@ -41,6 +42,7 @@ def install_lagoon_core(
         harbor: Optional Harbor outputs for registry integration
         ingress_class: Ingress class to use (default: nginx)
         namespace_config: Optional namespace configuration
+        helm_timeout: Helm release timeout in seconds (default: 1800 = 30 minutes)
         opts: Pulumi resource options
 
     Returns:
@@ -326,8 +328,8 @@ def install_lagoon_core(
             repo="https://uselagoon.github.io/lagoon-charts/",
         ),
         values=helm_values,
-        # Lagoon core takes a long time to initialize - extend timeout
-        timeout=900,
+        # Lagoon core takes a long time to initialize - use configurable timeout
+        timeout=helm_timeout,
         wait_for_jobs=True,
         opts=pulumi.ResourceOptions(
             provider=provider,

@@ -21,6 +21,7 @@
         example-up example-down example-preview example-output \
         ensure-lagoon-admin ensure-deploy-target \
         multi-cluster-up multi-cluster-down multi-cluster-preview multi-cluster-status multi-cluster-clusters \
+        multi-cluster-deploy multi-cluster-verify \
         clean clean-all venv
 
 # Variables
@@ -54,9 +55,11 @@ help:
 	@echo "  make example-output  - Show example project outputs"
 	@echo ""
 	@echo "Multi-cluster Example:"
+	@echo "  make multi-cluster-deploy  - Deploy with automatic retry (RECOMMENDED)"
 	@echo "  make multi-cluster-up      - Create prod + nonprod clusters"
 	@echo "  make multi-cluster-down    - Destroy multi-cluster environment"
 	@echo "  make multi-cluster-preview - Preview multi-cluster changes"
+	@echo "  make multi-cluster-verify  - Verify deployment and test API"
 	@echo "  make multi-cluster-status  - Show multi-cluster outputs"
 	@echo "  make multi-cluster-clusters - List all Kind clusters"
 	@echo ""
@@ -253,6 +256,14 @@ MULTI_CLUSTER_DIR := examples/multi-cluster
 multi-cluster-up: venv provider-install
 	@echo "Creating multi-cluster environment (prod + nonprod)..."
 	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) up
+
+multi-cluster-deploy: venv provider-install
+	@echo "Deploying multi-cluster environment with automatic retry..."
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) deploy
+
+multi-cluster-verify:
+	@echo "Verifying multi-cluster deployment..."
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) verify
 
 multi-cluster-down:
 	@echo "Destroying multi-cluster environment..."

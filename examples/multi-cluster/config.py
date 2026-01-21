@@ -259,6 +259,17 @@ class MultiClusterConfig:
         val = self._config.get_bool("installLagoon")
         return val if val is not None else True
 
+    @property
+    def helm_timeout(self) -> int:
+        """Helm release timeout in seconds (default: 1800 = 30 minutes).
+
+        Lagoon core takes a long time to initialize. If you experience timeouts,
+        you can increase this value:
+            pulumi config set helmTimeout 3600  # 1 hour
+        """
+        val = self._config.get_int("helmTimeout")
+        return val if val is not None else 1800  # Default 30 minutes
+
     def get_domain_config(self) -> DomainConfig:
         """Get domain configuration based on Pulumi config."""
         return DomainConfig(base=self.base_domain)

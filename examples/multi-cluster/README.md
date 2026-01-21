@@ -15,13 +15,41 @@ This example deploys a complete Lagoon infrastructure across two Kind clusters:
 ## Quick Start
 
 ```bash
-# From the repository root
-make multi-cluster-up
+# From the repository root (RECOMMENDED - handles timeouts automatically)
+make multi-cluster-deploy
+```
+
+Or from this directory:
+```bash
+make deploy
+```
+
+**Note**: The Lagoon core Helm release may timeout (~15-30 minutes) but pods usually
+start successfully. The `deploy` target handles this automatically by running
+refresh + up cycles until deployment completes.
+
+To verify the deployment:
+```bash
+make multi-cluster-verify
+# or from this directory:
+make verify
 ```
 
 To tear down:
 ```bash
 make multi-cluster-down
+```
+
+### Alternative Commands
+
+If you prefer manual control:
+```bash
+# Single deployment attempt (may timeout on first run)
+make multi-cluster-up
+
+# If it times out, run:
+make multi-cluster-preview  # Check what's pending
+# Then retry until complete
 ```
 
 ## Accessing Services
@@ -115,7 +143,19 @@ pulumi config set installHarbor false
 
 # Disable Lagoon installation
 pulumi config set installLagoon false
+
+# Increase Helm timeout for slow environments (default: 1800 seconds = 30 min)
+pulumi config set helmTimeout 3600  # 1 hour
 ```
+
+### Helm Timeout
+
+Lagoon core takes a long time to initialize because it runs database migrations and
+waits for all pods to be ready. If you experience timeouts:
+
+1. Use `make deploy` instead of `make up` (handles retries automatically)
+2. Or increase the timeout: `pulumi config set helmTimeout 3600`
+3. Or run refresh + up after a timeout: `make refresh && make up`
 
 ## Default Credentials
 
