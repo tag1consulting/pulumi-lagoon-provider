@@ -51,7 +51,21 @@ pip install -r requirements.txt
 pulumi stack init dev
 ```
 
-### 3. Deploy the cluster
+### 3. Configure ports (optional)
+
+By default, the ingress controller uses ports 80 (HTTP) and 443 (HTTPS). If these ports are already in use by other services (e.g., another local development environment like DDEV, Lando, or another web server), you can configure alternative ports:
+
+```bash
+# Use custom ports (e.g., 8080 for HTTP and 8443 for HTTPS)
+pulumi config set ingressHttpPort 8080
+pulumi config set ingressHttpsPort 8443
+```
+
+**Note:** When using custom ports, you'll need to include the port in URLs:
+- `https://ui.lagoon.test:8443` instead of `https://ui.lagoon.test`
+- `https://api.lagoon.test:8443/graphql` instead of `https://api.lagoon.test/graphql`
+
+### 4. Deploy the cluster
 
 ```bash
 pulumi up
@@ -59,16 +73,18 @@ pulumi up
 
 **Total deployment time: ~4-5 minutes**
 
-### 4. Access the services
+### 5. Access the services
 
-After deployment, services are available at:
+After deployment, services are available at (default ports 80/443):
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| Lagoon UI | http://ui.lagoon.test | Via Keycloak |
-| Lagoon API | http://api.lagoon.test/graphql | API token required |
-| Keycloak | http://keycloak.lagoon.test/auth | Check pod logs |
-| Harbor | http://harbor.lagoon.test | admin / Harbor12345 |
+| Lagoon UI | https://ui.lagoon.test | Via Keycloak |
+| Lagoon API | https://api.lagoon.test/graphql | API token required |
+| Keycloak | https://keycloak.lagoon.test/auth | Check pod logs |
+| Harbor | https://harbor.lagoon.test | admin / Harbor12345 |
+
+> **Note:** If you configured custom ports, add the port to the URLs (e.g., `https://ui.lagoon.test:8443`)
 
 ## Getting Credentials
 
@@ -91,6 +107,32 @@ pulumi destroy
 ```
 
 ## Troubleshooting
+
+### Port conflicts (ports 80/443 in use)
+
+If you see errors about ports 80 or 443 being in use, you likely have another service (like DDEV, Lando, Apache, nginx, or another development environment) running on these ports.
+
+**Option 1: Stop the conflicting service**
+```bash
+# Check what's using port 80
+sudo lsof -i :80
+# Check what's using port 443
+sudo lsof -i :443
+```
+
+**Option 2: Use alternative ports**
+```bash
+# Configure custom ingress ports
+pulumi config set ingressHttpPort 8080
+pulumi config set ingressHttpsPort 8443
+pulumi up
+```
+
+After using custom ports, access services with the port in the URL:
+- `https://ui.lagoon.test:8443`
+- `https://api.lagoon.test:8443/graphql`
+- `https://keycloak.lagoon.test:8443/auth`
+- `https://harbor.lagoon.test:8443`
 
 ### Services not accessible
 
