@@ -584,8 +584,40 @@ lagoon_core = Chart(
 # The password is output to stdout so Pulumi can capture it as an Output
 get_rabbitmq_password_script = f"""
 set -e
-# Wait for broker pod to be ready (this ensures the secret exists)
-kubectl --context kind-{cluster_name} wait --for=condition=ready pod -l app.kubernetes.io/name=broker -n lagoon --timeout=300s >&2
+
+# First wait for the broker StatefulSet pod to exist (kubectl wait fails if no resources match)
+# Use statefulset.kubernetes.io/pod-name label to exclude the bootstrap job pod
+echo "Waiting for broker pod to exist..." >&2
+for i in $(seq 1 60); do
+    if kubectl --context kind-{cluster_name} get pod lagoon-core-broker-0 -n lagoon 2>/dev/null | grep -q Running; then
+        echo "Broker pod found and running" >&2
+        break
+    fi
+    if [ $i -eq 60 ]; then
+        echo "Timeout waiting for broker pod to exist" >&2
+        exit 1
+    fi
+    echo "Waiting for broker pod... (attempt $i/60)" >&2
+    sleep 5
+done
+
+# Now wait for broker pod to be ready (using specific pod name)
+echo "Waiting for broker pod to be ready..." >&2
+kubectl --context kind-{cluster_name} wait --for=condition=ready pod/lagoon-core-broker-0 -n lagoon --timeout=300s >&2
+
+# Wait for the secret to exist
+echo "Waiting for broker secret..." >&2
+for i in $(seq 1 30); do
+    if kubectl --context kind-{cluster_name} get secret lagoon-core-broker -n lagoon 2>/dev/null | grep -q lagoon-core-broker; then
+        echo "Broker secret found" >&2
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        echo "Timeout waiting for broker secret" >&2
+        exit 1
+    fi
+    sleep 2
+done
 
 # Get the password (base64 encoded as stored in the secret)
 RABBIT_PASS=$(kubectl --context kind-{cluster_name} get secret lagoon-core-broker -n lagoon -o jsonpath='{{.data.RABBITMQ_PASSWORD}}')
