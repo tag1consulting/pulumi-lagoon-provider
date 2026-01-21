@@ -279,9 +279,9 @@ Implement Phase 1: Core resource providers
 **Problem**: The `lagoon-core-api-migratedb` job pod would fail on initial deploy because the database wasn't ready yet. The `kubectl wait --for=condition=ready` commands would then block for the full timeout (300s/5 minutes) because Job pods don't become "ready" - they either complete or fail.
 
 **Solution**: Updated the wait logic in both `Makefile` and `scripts/setup-complete.sh` to:
-1. First wait for the migration job to complete (checking for Complete or Failed conditions)
+1. First wait for the migration job to complete by name (`lagoon-core-api-migratedb`), checking for Complete or Failed conditions
 2. If the job fails, delete it to allow Helm to retry on next deployment
-3. Then wait for specific deployment pods using more targeted label selectors (e.g., `app.kubernetes.io/component=api`, `app.kubernetes.io/component=lagoon-core-keycloak`) instead of the generic `app.kubernetes.io/name=lagoon-core` which matched Job pods
+3. Then wait for deployment pods using `--field-selector=status.phase=Running` to exclude completed/failed job pods from the wait
 
 **Files Modified**:
 - `Makefile` - `wait-for-lagoon` target
