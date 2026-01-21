@@ -30,7 +30,11 @@ if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
 fi
 
 CONTEXT="${KUBE_CONTEXT:-kind-lagoon-prod}"
-NAMESPACE="${LAGOON_NAMESPACE:-lagoon}"
+NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
+# Service names in multi-cluster setup include the Helm release prefix
+KEYCLOAK_SVC="${KEYCLOAK_SVC:-prod-core-lagoon-core-keycloak}"
+API_SVC="${API_SVC:-prod-core-lagoon-core-api}"
+KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-prod-core-lagoon-core-keycloak}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -68,8 +72,8 @@ start_port_forwards() {
     sleep 1
 
     # Start new port-forwards
-    kubectl --context "$CONTEXT" port-forward -n "$NAMESPACE" svc/lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
-    kubectl --context "$CONTEXT" port-forward -n "$NAMESPACE" svc/lagoon-core-api 7080:80 >/dev/null 2>&1 &
+    kubectl --context "$CONTEXT" port-forward -n "$NAMESPACE" "svc/$KEYCLOAK_SVC" 8080:8080 >/dev/null 2>&1 &
+    kubectl --context "$CONTEXT" port-forward -n "$NAMESPACE" "svc/$API_SVC" 7080:80 >/dev/null 2>&1 &
 
     # Wait for them to be ready
     local retries=10
@@ -92,7 +96,7 @@ get_token() {
 
     # Get password from secret
     local password
-    password=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret lagoon-core-keycloak \
+    password=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret "$KEYCLOAK_SECRET" \
         -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d)
 
     # Get token
@@ -112,7 +116,7 @@ get_token() {
             log_warn "Enabling Direct Access Grants in Keycloak..."
 
             local admin_password
-            admin_password=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret lagoon-core-keycloak \
+            admin_password=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret "$KEYCLOAK_SECRET" \
                 -o jsonpath='{.data.KEYCLOAK_ADMIN_PASSWORD}' | base64 -d)
 
             local admin_token
@@ -183,12 +187,18 @@ main() {
         exit 1
     fi
 
-    # Check cluster connectivity
+    # Check cluster connectivity - if cluster doesn't exist yet, skip token refresh
+    # (Pulumi will create the cluster on first run)
     if ! kubectl --context "$CONTEXT" cluster-info >/dev/null 2>&1; then
-        log_error "Cannot connect to cluster '$CONTEXT'"
-        exit 1
+        log_warn "Cluster '$CONTEXT' not found - running Pulumi without token refresh"
+        log_warn "This is expected on first run (Pulumi will create the clusters)"
+        log_info "Running: pulumi $*"
+        echo ""
+        pulumi "$@"
+        return
     fi
 
+    # Cluster exists - do full token refresh flow
     # Ensure port-forwards are running
     if ! check_port_forwards; then
         start_port_forwards

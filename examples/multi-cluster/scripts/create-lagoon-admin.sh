@@ -18,14 +18,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
 CONTEXT="${KUBE_CONTEXT:-kind-lagoon-prod}"
-NAMESPACE="${LAGOON_NAMESPACE:-lagoon}"
+NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8080}"
+# Secret name in multi-cluster setup includes the Helm release prefix
+KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-prod-core-lagoon-core-keycloak}"
 
 echo "Creating lagoonadmin user in Keycloak..."
 
 # Get admin credentials
-KEYCLOAK_ADMIN_PASSWORD=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret lagoon-core-keycloak -o jsonpath='{.data.KEYCLOAK_ADMIN_PASSWORD}' | base64 -d)
-LAGOON_ADMIN_PASSWORD=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret lagoon-core-keycloak -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d)
+KEYCLOAK_ADMIN_PASSWORD=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret "$KEYCLOAK_SECRET" -o jsonpath='{.data.KEYCLOAK_ADMIN_PASSWORD}' | base64 -d)
+LAGOON_ADMIN_PASSWORD=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret "$KEYCLOAK_SECRET" -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d)
 
 # Get admin token from master realm
 echo "  Getting Keycloak admin token..."

@@ -62,8 +62,8 @@ check:
 port-forwards:
 	@echo "Starting port-forwards to prod cluster..."
 	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
-	@kubectl --context kind-lagoon-prod port-forward -n lagoon svc/lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
-	@kubectl --context kind-lagoon-prod port-forward -n lagoon svc/lagoon-core-api 7080:80 >/dev/null 2>&1 &
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
 	@sleep 2
 	@echo "Port-forwards started:"
 	@echo "  Keycloak: http://localhost:8080/auth"
@@ -118,7 +118,7 @@ ensure-lagoon-admin:
 	@echo "Ensuring lagoonadmin user exists in Keycloak..."
 	@echo "Starting temporary port-forward to Keycloak..."
 	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
-	@kubectl --context kind-lagoon-prod port-forward -n lagoon svc/lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 & \
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 & \
 		PF_PID=$$!; \
 		sleep 2; \
 		./scripts/create-lagoon-admin.sh; \

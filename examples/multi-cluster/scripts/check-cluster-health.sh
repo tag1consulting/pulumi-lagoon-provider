@@ -11,7 +11,7 @@
 
 set -e
 
-NAMESPACE="${LAGOON_NAMESPACE:-lagoon}"
+NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -44,12 +44,29 @@ check_cluster() {
         return 1
     fi
 
-    # Check Lagoon pods
+    # Determine namespaces to check based on cluster type
+    # Prod has both lagoon-core (core services) and lagoon (remote)
+    # Nonprod only has lagoon (remote)
+    if [ "$cluster_name" = "prod" ]; then
+        NAMESPACES_TO_CHECK=("lagoon-core" "lagoon")
+    else
+        NAMESPACES_TO_CHECK=("lagoon")
+    fi
+
+    # Check Lagoon pods across all relevant namespaces
     echo ""
     echo "=== Lagoon Pods ==="
-    UNHEALTHY=$(kubectl --context "$context" get pods -n "$NAMESPACE" --no-headers 2>/dev/null | grep -v "Running\|Completed" | wc -l)
-    TOTAL=$(kubectl --context "$context" get pods -n "$NAMESPACE" --no-headers 2>/dev/null | wc -l)
-    RUNNING=$(kubectl --context "$context" get pods -n "$NAMESPACE" --no-headers 2>/dev/null | grep Running | wc -l)
+    TOTAL=0
+    RUNNING=0
+    UNHEALTHY=0
+    for ns in "${NAMESPACES_TO_CHECK[@]}"; do
+        NS_TOTAL=$(kubectl --context "$context" get pods -n "$ns" --no-headers 2>/dev/null | wc -l)
+        NS_RUNNING=$(kubectl --context "$context" get pods -n "$ns" --no-headers 2>/dev/null | grep Running | wc -l)
+        NS_UNHEALTHY=$(kubectl --context "$context" get pods -n "$ns" --no-headers 2>/dev/null | grep -v "Running\|Completed" | wc -l)
+        TOTAL=$((TOTAL + NS_TOTAL))
+        RUNNING=$((RUNNING + NS_RUNNING))
+        UNHEALTHY=$((UNHEALTHY + NS_UNHEALTHY))
+    done
 
     echo "Total pods: $TOTAL"
     echo "Running: $RUNNING"
@@ -58,7 +75,9 @@ check_cluster() {
     if [ "$UNHEALTHY" -gt 0 ]; then
         echo ""
         echo -e "${YELLOW}Unhealthy pods:${NC}"
-        kubectl --context "$context" get pods -n "$NAMESPACE" --no-headers | grep -v "Running\|Completed"
+        for ns in "${NAMESPACES_TO_CHECK[@]}"; do
+            kubectl --context "$context" get pods -n "$ns" --no-headers 2>/dev/null | grep -v "Running\|Completed"
+        done
     fi
 
     # Check specific critical pods based on cluster type
@@ -66,19 +85,32 @@ check_cluster() {
     echo "=== Critical Services ==="
 
     if [ "$cluster_name" = "prod" ]; then
-        CRITICAL_PODS=("lagoon-core-api" "lagoon-core-keycloak" "lagoon-core-broker" "lagoon-build-deploy")
-    else
-        CRITICAL_PODS=("lagoon-build-deploy")
-    fi
-
-    for POD_PREFIX in "${CRITICAL_PODS[@]}"; do
-        POD_STATUS=$(kubectl --context "$context" get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=$POD_PREFIX" -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+        # Check core services in lagoon-core namespace
+        for COMPONENT in "prod-core-lagoon-core-api" "prod-core-lagoon-core-keycloak" "prod-core-lagoon-core-broker"; do
+            POD_STATUS=$(kubectl --context "$context" get pods -n "lagoon-core" -l "app.kubernetes.io/component=$COMPONENT" -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+            DISPLAY_NAME="${COMPONENT##*-lagoon-}"
+            if [ "$POD_STATUS" = "Running" ]; then
+                echo -e "${GREEN}OK${NC} - $DISPLAY_NAME: Running"
+            else
+                echo -e "${RED}FAILED${NC} - $DISPLAY_NAME: $POD_STATUS"
+            fi
+        done
+        # Check remote controller in lagoon namespace
+        POD_STATUS=$(kubectl --context "$context" get pods -n "lagoon" -l "app.kubernetes.io/name=lagoon-build-deploy" -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
         if [ "$POD_STATUS" = "Running" ]; then
-            echo -e "${GREEN}OK${NC} - $POD_PREFIX: Running"
+            echo -e "${GREEN}OK${NC} - prod-remote: Running"
         else
-            echo -e "${RED}FAILED${NC} - $POD_PREFIX: $POD_STATUS"
+            echo -e "${RED}FAILED${NC} - prod-remote: $POD_STATUS"
         fi
-    done
+    else
+        # Check remote controller in lagoon namespace
+        POD_STATUS=$(kubectl --context "$context" get pods -n "lagoon" -l "app.kubernetes.io/name=lagoon-build-deploy" -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+        if [ "$POD_STATUS" = "Running" ]; then
+            echo -e "${GREEN}OK${NC} - nonprod-remote: Running"
+        else
+            echo -e "${RED}FAILED${NC} - nonprod-remote: $POD_STATUS"
+        fi
+    fi
 
     # Check network access
     echo ""
