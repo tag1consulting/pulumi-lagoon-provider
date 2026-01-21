@@ -17,12 +17,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Default configuration
 CLUSTER_NAME="${LAGOON_CLUSTER_NAME:-lagoon-test}"
 CONTEXT="kind-${CLUSTER_NAME}"
-KEYCLOAK_URL="${LAGOON_KEYCLOAK_URL:-http://localhost:30370}"
+# Use HTTPS ingress endpoint (with self-signed cert)
+KEYCLOAK_URL="${LAGOON_KEYCLOAK_URL:-https://keycloak.lagoon.test}"
 KEYCLOAK_REALM="lagoon"
 KEYCLOAK_CLIENT="lagoon-ui"
 USERNAME="${LAGOON_USER:-lagoonadmin}"
-PASSWORD="${LAGOON_PASSWORD:-lagoonadmin}"
+# Password can be set via env var, or will be fetched from k8s secret
+PASSWORD="${LAGOON_PASSWORD:-}"
 QUIET=false
+# Use -k for insecure mode (self-signed certs)
+CURL_OPTS="-k"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -50,9 +54,9 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Environment variables:"
             echo "  LAGOON_CLUSTER_NAME    Kind cluster name (default: lagoon-test)"
-            echo "  LAGOON_KEYCLOAK_URL    Keycloak URL (default: http://localhost:30370)"
+            echo "  LAGOON_KEYCLOAK_URL    Keycloak URL (default: https://keycloak.lagoon.test)"
             echo "  LAGOON_USER            Username (default: lagoonadmin)"
-            echo "  LAGOON_PASSWORD        Password (default: lagoonadmin)"
+            echo "  LAGOON_PASSWORD        Password (default: fetched from k8s secret)"
             exit 0
             ;;
         *)
@@ -78,10 +82,23 @@ if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
     error "Cluster '${CLUSTER_NAME}' not found. Run 'pulumi up' in test-cluster/ first."
 fi
 
+# Fetch password from Kubernetes secret if not provided
+if [ -z "$PASSWORD" ]; then
+    log "Fetching lagoonadmin password from Kubernetes secret..."
+    PASSWORD=$(kubectl --context "${CONTEXT}" get secret lagoon-core-keycloak -n lagoon \
+        -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' 2>/dev/null | base64 -d) || {
+        error "Failed to fetch password from Kubernetes secret.
+Make sure the cluster is deployed and the lagoon namespace exists."
+    }
+    if [ -z "$PASSWORD" ]; then
+        error "Password secret is empty. Lagoon may not be fully deployed."
+    fi
+fi
+
 # Check if Keycloak is accessible
 log "Checking Keycloak connectivity at ${KEYCLOAK_URL}..."
-if ! curl -sf "${KEYCLOAK_URL}/health/ready" >/dev/null 2>&1 && \
-   ! curl -sf "${KEYCLOAK_URL}/auth/realms/${KEYCLOAK_REALM}" >/dev/null 2>&1; then
+if ! curl -sf ${CURL_OPTS} "${KEYCLOAK_URL}/health/ready" >/dev/null 2>&1 && \
+   ! curl -sf ${CURL_OPTS} "${KEYCLOAK_URL}/auth/realms/${KEYCLOAK_REALM}" >/dev/null 2>&1; then
     log "Warning: Could not reach Keycloak health endpoint directly."
     log "Attempting token request anyway..."
 fi
@@ -91,7 +108,7 @@ log "Requesting OAuth token for user '${USERNAME}'..."
 
 TOKEN_ENDPOINT="${KEYCLOAK_URL}/auth/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token"
 
-RESPONSE=$(curl -sf -X POST "${TOKEN_ENDPOINT}" \
+RESPONSE=$(curl -sf ${CURL_OPTS} -X POST "${TOKEN_ENDPOINT}" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -d "grant_type=password" \
     -d "client_id=${KEYCLOAK_CLIENT}" \
@@ -101,12 +118,12 @@ RESPONSE=$(curl -sf -X POST "${TOKEN_ENDPOINT}" \
 
 Possible causes:
 - Keycloak is not ready (wait a few minutes after cluster deployment)
-- Port 30370 is not accessible
+- Keycloak ingress not accessible (check /etc/hosts has keycloak.lagoon.test)
 - Invalid username/password
 
 Try:
   kubectl --context ${CONTEXT} -n lagoon get pods | grep keycloak
-  curl -v ${TOKEN_ENDPOINT}"
+  curl -kv ${TOKEN_ENDPOINT}"
 }
 
 # Extract access token

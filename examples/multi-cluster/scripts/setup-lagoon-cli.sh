@@ -23,9 +23,9 @@ USERNAME="${LAGOON_USER:-lagoonadmin}"
 PASSWORD="${LAGOON_PASSWORD:-lagoonadmin}"
 FORCE=false
 
-# Lagoon API endpoints (using HTTP NodePorts to avoid TLS issues)
-API_URL="http://localhost:30030/graphql"
-UI_URL="http://localhost:31311"
+# Lagoon API endpoints (using HTTPS ingress with self-signed certs)
+API_URL="https://api.lagoon.test/graphql"
+UI_URL="https://ui.lagoon.test"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
