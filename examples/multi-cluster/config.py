@@ -270,6 +270,37 @@ class MultiClusterConfig:
         val = self._config.get_int("helmTimeout")
         return val if val is not None else 1800  # Default 30 minutes
 
+    @property
+    def create_example_project(self) -> bool:
+        """Whether to create the example Drupal project (default: True).
+
+        Set to false to skip example project creation:
+            pulumi config set createExampleProject false
+        """
+        val = self._config.get_bool("createExampleProject")
+        return val if val is not None else True
+
+    @property
+    def example_project_name(self) -> str:
+        """Name for the example Drupal project (default: drupal-example).
+
+        Set a custom name:
+            pulumi config set exampleProjectName my-drupal-site
+        """
+        return self._config.get("exampleProjectName") or "drupal-example"
+
+    @property
+    def example_project_git_url(self) -> str:
+        """Git URL for the example project (default: Lagoon's Drupal base).
+
+        Set a custom Git URL:
+            pulumi config set exampleProjectGitUrl https://github.com/myorg/myrepo.git
+        """
+        return (
+            self._config.get("exampleProjectGitUrl")
+            or "https://github.com/lagoon-examples/drupal-base.git"
+        )
+
     def get_domain_config(self) -> DomainConfig:
         """Get domain configuration based on Pulumi config."""
         return DomainConfig(base=self.base_domain)

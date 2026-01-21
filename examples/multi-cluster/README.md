@@ -146,6 +146,32 @@ pulumi config set installLagoon false
 
 # Increase Helm timeout for slow environments (default: 1800 seconds = 30 min)
 pulumi config set helmTimeout 3600  # 1 hour
+
+# Disable example project creation
+pulumi config set createExampleProject false
+
+# Customize example project name (default: drupal-example)
+pulumi config set exampleProjectName my-drupal-site
+
+# Use a different Git repository for the example project
+pulumi config set exampleProjectGitUrl https://github.com/myorg/myrepo.git
+```
+
+### Example Drupal Project
+
+By default, this example creates a Drupal project that demonstrates multi-cluster
+deployment routing:
+
+- **Production branch (`main`)** → Deploys to the production cluster (`lagoon-prod`)
+- **Development branches (`develop`, `feature/*`)** → Deploy to the non-production cluster (`lagoon-nonprod`)
+- **Pull requests** → Deploy to the non-production cluster
+
+This is implemented using Lagoon's Deploy Target Configurations, which route deployments
+to different Kubernetes clusters based on branch patterns and priority weights.
+
+To disable the example project:
+```bash
+pulumi config set createExampleProject false
 ```
 
 ### Helm Timeout

@@ -10,6 +10,7 @@ from .project import LagoonProject, LagoonProjectArgs
 from .environment import LagoonEnvironment, LagoonEnvironmentArgs
 from .variable import LagoonVariable, LagoonVariableArgs
 from .deploytarget import LagoonDeployTarget, LagoonDeployTargetArgs
+from .deploytarget_config import LagoonDeployTargetConfig, LagoonDeployTargetConfigArgs
 
 # Client (for advanced use cases)
 from .client import LagoonClient
@@ -35,6 +36,8 @@ __all__ = [
     "LagoonVariableArgs",
     "LagoonDeployTarget",
     "LagoonDeployTargetArgs",
+    "LagoonDeployTargetConfig",
+    "LagoonDeployTargetConfigArgs",
     # Client
     "LagoonClient",
     # Exceptions

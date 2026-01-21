@@ -49,6 +49,8 @@ from lagoon import (
     install_lagoon_remote,
     create_rabbitmq_nodeport_service,
     configure_keycloak_for_cli_auth,
+    create_deploy_targets,
+    create_example_drupal_project,
 )
 
 
@@ -383,6 +385,48 @@ if lagoon_core is not None and lagoon_secrets is not None:
 
 
 # =============================================================================
+# Phase 7: Create Example Drupal Project (Optional)
+# =============================================================================
+
+example_project = None
+if lagoon_core is not None and config.create_example_project:
+    pulumi.log.info("Creating example Drupal project with multi-cluster routing...")
+
+    # Create deploy targets for both clusters
+    # These register the Kind clusters as deploy targets in Lagoon
+    deploy_targets = create_deploy_targets(
+        "example",
+        prod_cluster_name="lagoon-prod",
+        nonprod_cluster_name="lagoon-nonprod",
+        domain_config=domain_config,
+        # SSH host is the Lagoon SSH service in the prod cluster
+        ssh_host=lagoon_core.ssh_host,
+        opts=pulumi.ResourceOptions(
+            depends_on=[lagoon_core.release, keycloak_config_job],
+        ),
+    )
+
+    pulumi.export("prod_deploy_target_id", deploy_targets.prod_target.id)
+    pulumi.export("nonprod_deploy_target_id", deploy_targets.nonprod_target.id)
+
+    # Create the example Drupal project with deploy target configurations
+    # - 'main' branch deploys to prod cluster
+    # - All other branches and PRs deploy to nonprod cluster
+    example_project = create_example_drupal_project(
+        config.example_project_name,
+        deploy_targets=deploy_targets,
+        git_url=config.example_project_git_url,
+        production_environment="main",
+        opts=pulumi.ResourceOptions(
+            depends_on=[deploy_targets.prod_target, deploy_targets.nonprod_target],
+        ),
+    )
+
+    pulumi.export("example_project_id", example_project.project_id)
+    pulumi.export("example_project_name", example_project.project_name)
+
+
+# =============================================================================
 # Summary Exports
 # =============================================================================
 
@@ -398,4 +442,5 @@ pulumi.export("installation_summary", {
     "clusters_created": create_clusters,
     "harbor_installed": install_harbor_registry and prod_harbor is not None,
     "lagoon_installed": install_lagoon_components and lagoon_core is not None,
+    "example_project_created": config.create_example_project and example_project is not None,
 })
