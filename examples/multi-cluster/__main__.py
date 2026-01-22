@@ -51,7 +51,7 @@ from lagoon import (
     configure_keycloak_for_cli_auth,
     create_deploy_targets,
     create_example_drupal_project,
-    check_knex_migrations_inline,
+    ensure_knex_migrations,
 )
 
 
@@ -396,10 +396,11 @@ knex_migrations = None
 if lagoon_core is not None:
     pulumi.log.info("Ensuring Lagoon database migrations are applied...")
 
-    knex_migrations = check_knex_migrations_inline(
+    knex_migrations = ensure_knex_migrations(
         "prod-lagoon",
         context="kind-lagoon-prod",
         namespace=namespace_config.lagoon_core,
+        core_secrets_name="prod-core-lagoon-core-secrets",  # Not used by script but required by function
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release, keycloak_config_job],
         ),

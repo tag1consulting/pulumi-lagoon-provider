@@ -176,7 +176,7 @@ wait-for-pods:
 	@# Wait for prod cluster Lagoon core pods
 	@echo "Checking prod cluster..."
 	@for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do \
-		RUNNING=$$(kubectl --context kind-lagoon-prod get pods -n lagoon-core --no-headers 2>/dev/null | grep -c Running || echo 0); \
+		RUNNING=$$(kubectl --context kind-lagoon-prod get pods -n lagoon-core --no-headers 2>/dev/null | grep Running | wc -l); \
 		if [ "$$RUNNING" -ge 30 ]; then \
 			echo "  Prod cluster: $$RUNNING pods running"; \
 			break; \
@@ -186,10 +186,10 @@ wait-for-pods:
 	done
 	@# Check nonprod cluster (may not have pods yet on first run)
 	@echo "Checking nonprod cluster..."
-	@NONPROD_NS=$$(kubectl --context kind-lagoon-nonprod get ns lagoon --no-headers 2>/dev/null | wc -l || echo 0); \
+	@NONPROD_NS=$$(kubectl --context kind-lagoon-nonprod get ns lagoon --no-headers 2>/dev/null | wc -l); \
 	if [ "$$NONPROD_NS" -gt 0 ]; then \
 		for i in 1 2 3 4 5; do \
-			RUNNING=$$(kubectl --context kind-lagoon-nonprod get pods -n lagoon --no-headers 2>/dev/null | grep -c Running || echo 0); \
+			RUNNING=$$(kubectl --context kind-lagoon-nonprod get pods -n lagoon --no-headers 2>/dev/null | grep Running | wc -l); \
 			if [ "$$RUNNING" -ge 1 ]; then \
 				echo "  Nonprod cluster: $$RUNNING pods running"; \
 				break; \
