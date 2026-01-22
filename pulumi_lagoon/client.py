@@ -567,7 +567,6 @@ class LagoonClient:
                 buildImage
                 disabled
                 routerPattern
-                sharedBastionSecret
                 created
             }
         }
@@ -604,7 +603,6 @@ class LagoonClient:
                 buildImage
                 disabled
                 routerPattern
-                sharedBastionSecret
                 created
             }
         }
@@ -636,7 +634,6 @@ class LagoonClient:
                 buildImage
                 disabled
                 routerPattern
-                sharedBastionSecret
                 created
             }
         }
@@ -689,7 +686,6 @@ class LagoonClient:
                 buildImage
                 disabled
                 routerPattern
-                sharedBastionSecret
             }
         }
         """

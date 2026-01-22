@@ -68,7 +68,8 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
         outs = {
             "id": result["id"],
             "project_id": result.get("projectId") or inputs["project_id"],
-            "deploy_target_id": result.get("deployTargetId") or inputs["deploy_target_id"],
+            "deploy_target_id": result.get("deployTargetId")
+            or inputs["deploy_target_id"],
             "branches": result.get("branches", ""),
             "pullrequests": result.get("pullrequests", "false"),
             "weight": result.get("weight", 1),
@@ -110,7 +111,9 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
                 "branches": result.get("branches", ""),
                 "pullrequests": result.get("pullrequests", "false"),
                 "weight": result.get("weight", 1),
-                "deploy_target_project_pattern": result.get("deployTargetProjectPattern"),
+                "deploy_target_project_pattern": result.get(
+                    "deployTargetProjectPattern"
+                ),
             }
         else:
             # No changes, return new inputs
@@ -140,7 +143,8 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
         outs = {
             "id": result["id"],
             "project_id": result.get("projectId") or props["project_id"],
-            "deploy_target_id": result.get("deployTargetId") or props["deploy_target_id"],
+            "deploy_target_id": result.get("deployTargetId")
+            or props["deploy_target_id"],
             "branches": result.get("branches", ""),
             "pullrequests": result.get("pullrequests", "false"),
             "weight": result.get("weight", 1),
@@ -245,4 +249,6 @@ class LagoonDeployTargetConfig(dynamic.Resource):
             "id": None,
         }
 
-        super().__init__(LagoonDeployTargetConfigProvider(), resource_name, inputs, opts)
+        super().__init__(
+            LagoonDeployTargetConfigProvider(), resource_name, inputs, opts
+        )

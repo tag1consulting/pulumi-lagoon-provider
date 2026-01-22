@@ -90,7 +90,62 @@ ensure_port_forwards() {
     log_info "Port-forwards ready"
 }
 
-# Get OAuth token
+# Get admin JWT token (signed with JWTSECRET for full API access)
+get_admin_jwt_token() {
+    log_info "Getting admin JWT token..."
+
+    # Get JWTSECRET from core secrets
+    local jwt_secret
+    jwt_secret=$(get_secret_value "$CORE_SECRETS" "JWTSECRET")
+
+    if [ -z "$jwt_secret" ]; then
+        log_error "Could not get JWTSECRET from $CORE_SECRETS"
+        return 1
+    fi
+
+    # Write secret to temp file to avoid shell escaping issues
+    local secret_file
+    secret_file=$(mktemp)
+    echo "$jwt_secret" > "$secret_file"
+
+    # Generate admin JWT token using Python
+    local token
+    token=$(python3 << EOF
+import jwt
+import time
+
+with open('$secret_file', 'r') as f:
+    secret = f.read().strip()
+
+now = int(time.time())
+payload = {
+    'role': 'admin',
+    'iss': 'lagoon-api',
+    'sub': 'lagoonadmin',
+    'aud': 'api.dev',
+    'iat': now,
+    'exp': now + 3600  # 1 hour validity
+}
+print(jwt.encode(payload, secret, algorithm='HS256'))
+EOF
+)
+
+    # Clean up temp file
+    rm -f "$secret_file"
+
+    if [ -z "$token" ] || echo "$token" | grep -q "Traceback\|Error\|ModuleNotFoundError"; then
+        log_error "Failed to generate admin JWT token"
+        echo "$token" >&2
+        return 1
+    fi
+
+    export LAGOON_TOKEN="$token"
+    export LAGOON_API_URL="http://localhost:7080/graphql"
+
+    log_info "Admin token acquired (valid for 1 hour)"
+}
+
+# Legacy OAuth token function (kept for reference, but OAuth doesn't have deploy target permissions)
 get_oauth_token() {
     log_info "Getting OAuth token..."
 
@@ -203,7 +258,8 @@ main() {
     # Ensure port-forwards are running (only for clusters with core services)
     if [ -n "$KEYCLOAK_SVC" ] && [ -n "$API_SVC" ]; then
         ensure_port_forwards || exit 1
-        get_oauth_token || exit 1
+        # Use admin JWT token for full API access (including deploy targets)
+        get_admin_jwt_token || exit 1
     else
         log_warn "No core services configured - skipping port-forwards and token"
     fi

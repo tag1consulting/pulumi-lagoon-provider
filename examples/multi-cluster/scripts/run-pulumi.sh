@@ -10,24 +10,42 @@
 #
 # This script automatically:
 #   1. Checks/starts port-forwards to the prod cluster
-#   2. Gets a fresh OAuth token from Keycloak
+#   2. Gets an admin JWT token (signed with JWTSECRET for full API access)
 #   3. Runs the specified Pulumi command
+#
+# Note: Admin JWT tokens are required for managing deploy targets (openshift/kubernetes).
+# OAuth tokens from Keycloak don't have permission for deploy target operations.
 #
 # Prerequisites:
 #   - kubectl configured with kind-lagoon-prod context
 #   - Multi-cluster setup running
-#   - Python virtual environment with provider installed
+#   - Python virtual environment with provider installed (including PyJWT)
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
-# Activate virtual environment if it exists
-if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
-    # shellcheck source=/dev/null
-    source "venv/bin/activate"
-fi
+# Activate virtual environment - check multiple locations
+activate_venv() {
+    local venv_locations=(
+        "./venv"
+        "../../venv"
+    )
+
+    for venv in "${venv_locations[@]}"; do
+        if [ -d "$venv" ] && [ -f "$venv/bin/activate" ]; then
+            # shellcheck source=/dev/null
+            source "$venv/bin/activate"
+            return 0
+        fi
+    done
+
+    echo "WARNING: No virtual environment found. PyJWT may not be available."
+    return 1
+}
+
+activate_venv || true
 
 CONTEXT="${KUBE_CONTEXT:-kind-lagoon-prod}"
 NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
@@ -35,6 +53,7 @@ NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
 KEYCLOAK_SVC="${KEYCLOAK_SVC:-prod-core-lagoon-core-keycloak}"
 API_SVC="${API_SVC:-prod-core-lagoon-core-api}"
 KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-prod-core-lagoon-core-keycloak}"
+CORE_SECRETS="${CORE_SECRETS:-prod-core-lagoon-core-secrets}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -90,8 +109,64 @@ start_port_forwards() {
     log_info "Port-forwards ready"
 }
 
-# Get OAuth token
-get_token() {
+# Get admin JWT token (signed with JWTSECRET for full API access)
+get_admin_jwt_token() {
+    log_info "Getting admin JWT token..."
+
+    # Get JWTSECRET from core secrets
+    local jwt_secret
+    jwt_secret=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret "$CORE_SECRETS" \
+        -o jsonpath='{.data.JWTSECRET}' | base64 -d)
+
+    if [ -z "$jwt_secret" ]; then
+        log_error "Could not get JWTSECRET from $CORE_SECRETS"
+        exit 1
+    fi
+
+    # Write secret to temp file to avoid shell escaping issues
+    local secret_file
+    secret_file=$(mktemp)
+    echo "$jwt_secret" > "$secret_file"
+
+    # Generate admin JWT token using Python
+    local token
+    token=$(python3 << EOF
+import jwt
+import time
+
+with open('$secret_file', 'r') as f:
+    secret = f.read().strip()
+
+now = int(time.time())
+payload = {
+    'role': 'admin',
+    'iss': 'lagoon-api',
+    'sub': 'lagoonadmin',
+    'aud': 'api.dev',
+    'iat': now,
+    'exp': now + 3600  # 1 hour validity
+}
+print(jwt.encode(payload, secret, algorithm='HS256'))
+EOF
+)
+
+    # Clean up temp file
+    rm -f "$secret_file"
+
+    if [ -z "$token" ] || echo "$token" | grep -q "Traceback\|Error\|ModuleNotFoundError"; then
+        log_error "Failed to generate admin JWT token"
+        echo "$token" >&2
+        exit 1
+    fi
+
+    export LAGOON_TOKEN="$token"
+    export LAGOON_API_URL="http://localhost:7080/graphql"
+
+    log_info "Admin token acquired (valid for 1 hour)"
+}
+
+# Legacy OAuth token function (kept for reference, but OAuth doesn't have deploy target permissions)
+get_oauth_token() {
     log_info "Getting OAuth token..."
 
     # Get password from secret
@@ -206,8 +281,8 @@ main() {
         log_info "Port-forwards already running"
     fi
 
-    # Get fresh token
-    get_token
+    # Get admin JWT token (has full API access including deploy targets)
+    get_admin_jwt_token
 
     # Run pulumi command
     log_info "Running: pulumi $*"

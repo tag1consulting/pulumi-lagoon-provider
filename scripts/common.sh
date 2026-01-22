@@ -46,6 +46,7 @@ case "${LAGOON_PRESET:-}" in
         KEYCLOAK_SVC="${KEYCLOAK_SVC:-lagoon-core-keycloak}"
         API_SVC="${API_SVC:-lagoon-core-api}"
         KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-lagoon-core-keycloak}"
+        CORE_SECRETS="${CORE_SECRETS:-lagoon-core-secrets}"
         BROKER_SECRET="${BROKER_SECRET:-lagoon-core-broker}"
         REMOTE_SECRET="${REMOTE_SECRET:-lagoon-remote}"
         REMOTE_DEPLOYMENT="${REMOTE_DEPLOYMENT:-lagoon-remote-kubernetes-build-deploy}"
@@ -58,6 +59,7 @@ case "${LAGOON_PRESET:-}" in
         KEYCLOAK_SVC="${KEYCLOAK_SVC:-prod-core-lagoon-core-keycloak}"
         API_SVC="${API_SVC:-prod-core-lagoon-core-api}"
         KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-prod-core-lagoon-core-keycloak}"
+        CORE_SECRETS="${CORE_SECRETS:-prod-core-lagoon-core-secrets}"
         BROKER_SECRET="${BROKER_SECRET:-prod-core-lagoon-core-broker}"
         REMOTE_SECRET="${REMOTE_SECRET:-prod-lagoon-remote-lagoon-remote}"
         REMOTE_DEPLOYMENT="${REMOTE_DEPLOYMENT:-prod-lagoon-remote-lagoon-remote-kubernetes-build-deploy}"
@@ -84,7 +86,7 @@ esac
 
 # Export all variables
 export KUBE_CONTEXT LAGOON_NAMESPACE KIND_CLUSTER_NAME
-export KEYCLOAK_SVC API_SVC KEYCLOAK_SECRET BROKER_SECRET
+export KEYCLOAK_SVC API_SVC KEYCLOAK_SECRET CORE_SECRETS BROKER_SECRET
 export REMOTE_SECRET REMOTE_DEPLOYMENT
 
 # Colors for output
@@ -147,6 +149,7 @@ print_config() {
     echo "  KEYCLOAK_SVC:      $KEYCLOAK_SVC"
     echo "  API_SVC:           $API_SVC"
     echo "  KEYCLOAK_SECRET:   $KEYCLOAK_SECRET"
+    echo "  CORE_SECRETS:      $CORE_SECRETS"
     echo "  BROKER_SECRET:     $BROKER_SECRET"
     echo "  REMOTE_SECRET:     $REMOTE_SECRET"
     echo "  REMOTE_DEPLOYMENT: $REMOTE_DEPLOYMENT"
