@@ -54,19 +54,27 @@ make multi-cluster-preview  # Check what's pending
 
 ## Accessing Services
 
-### Option 1: Port Forwarding
+### Option 1: Port Forwarding (Recommended)
 
-Use kubectl port-forward to access the services:
+From the repository root, use the make target to start port-forwards:
+
+```bash
+# Start port-forwards for API and Keycloak
+make multi-cluster-port-forwards
+
+# Or from this directory:
+make port-forwards
+```
+
+This starts port-forwards to:
+- **Keycloak**: http://localhost:8080/auth
+- **Lagoon API**: http://localhost:7080/graphql
+
+For additional services, you can manually add port-forwards:
 
 ```bash
 # Lagoon UI (http://localhost:3000)
 kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000
-
-# Lagoon API (http://localhost:4000/graphql)
-kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 4000:80
-
-# Keycloak (http://localhost:8080/auth)
-kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080
 
 # Harbor (http://localhost:8081)
 kubectl --context kind-lagoon-prod port-forward -n harbor svc/prod-harbor-portal 8081:80
@@ -82,12 +90,12 @@ kubectl --context kind-lagoon-prod port-forward -n harbor svc/prod-harbor-portal
 This is required because the Lagoon UI redirects the browser to the internal Keycloak URL for authentication. Without this entry, the browser cannot resolve the internal Kubernetes service name.
 
 **Service URLs with port-forwarding:**
-| Service | URL |
-|---------|-----|
-| Lagoon UI | http://localhost:3000 |
-| Lagoon API | http://localhost:4000/graphql |
-| Keycloak | http://localhost:8080/auth |
-| Harbor | http://localhost:8081 |
+| Service | URL | Make Target |
+|---------|-----|-------------|
+| Lagoon API | http://localhost:7080/graphql | `make port-forwards` |
+| Keycloak | http://localhost:8080/auth | `make port-forwards` |
+| Lagoon UI | http://localhost:3000 | Manual |
+| Harbor | http://localhost:8081 | Manual |
 
 ### Option 2: Host File Entries
 
@@ -212,14 +220,24 @@ Lagoon uses Keycloak for authentication. This example automatically configures:
 
 ### CLI Authentication (Programmatic)
 
-To authenticate via the API (for scripts, CLI tools, or testing):
+The easiest way to test API access is with the make target:
+
+```bash
+# From repository root
+make multi-cluster-test-api
+
+# Or from this directory
+make test-api
+```
+
+For manual authentication (requires `make port-forwards` running):
 
 ```bash
 # Get the Lagoon admin password
 LAGOON_PASSWORD=$(kubectl --context kind-lagoon-prod -n lagoon-core get secret \
   prod-core-lagoon-core-keycloak -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d)
 
-# Get an OAuth token (requires port-forward to Keycloak on 8080)
+# Get an OAuth token
 TOKEN=$(curl -s -X POST "http://localhost:8080/auth/realms/lagoon/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=lagoon-ui" \
@@ -227,8 +245,8 @@ TOKEN=$(curl -s -X POST "http://localhost:8080/auth/realms/lagoon/protocol/openi
   -d "username=lagoonadmin" \
   -d "password=$LAGOON_PASSWORD" | jq -r '.access_token')
 
-# Use the token with the API (requires port-forward to API on 4000)
-curl -s http://localhost:4000/graphql \
+# Use the token with the API
+curl -s http://localhost:7080/graphql \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query":"{ lagoonVersion }"}'
@@ -247,8 +265,11 @@ to an internal Kubernetes service URL for Keycloak.
 
 **Step 2:** Start port forwards:
 ```bash
+# Start API and Keycloak port-forwards
+make port-forwards
+
+# Manually add UI port-forward
 kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000 &
-kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 &
 ```
 
 **Step 3:** Open http://localhost:3000 and log in as `lagoonadmin`

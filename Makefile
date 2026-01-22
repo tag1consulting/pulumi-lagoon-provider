@@ -22,7 +22,7 @@
         ensure-lagoon-admin ensure-deploy-target \
         port-forwards check-health \
         multi-cluster-up multi-cluster-down multi-cluster-preview multi-cluster-status multi-cluster-clusters \
-        multi-cluster-deploy multi-cluster-verify \
+        multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-test-api \
         clean clean-all venv
 
 # Variables
@@ -68,6 +68,8 @@ help:
 	@echo "  make multi-cluster-verify  - Verify deployment and test API"
 	@echo "  make multi-cluster-status  - Show multi-cluster outputs"
 	@echo "  make multi-cluster-clusters - List all Kind clusters"
+	@echo "  make multi-cluster-port-forwards - Start kubectl port-forwards"
+	@echo "  make multi-cluster-test-api - Test Lagoon API access"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make provider-test   - Run provider tests"
@@ -305,6 +307,12 @@ multi-cluster-status:
 multi-cluster-clusters:
 	@echo "Kind clusters:"
 	@kind get clusters
+
+multi-cluster-port-forwards:
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) port-forwards
+
+multi-cluster-test-api:
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) test-api
 
 #==============================================================================
 # Cleanup
