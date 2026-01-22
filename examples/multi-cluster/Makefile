@@ -51,7 +51,7 @@ help:
 	@echo "Note: 'make deploy' handles Helm timeouts automatically by running"
 	@echo "      refresh + up cycles until all resources are deployed."
 
-# Setup virtual environment
+# Setup virtual environment and Pulumi stack
 setup:
 	@if [ ! -d "venv" ]; then \
 		echo "Creating Python virtual environment..."; \
@@ -59,6 +59,8 @@ setup:
 	fi
 	@./venv/bin/pip install --upgrade pip -q
 	@./venv/bin/pip install -r requirements.txt -q
+	@echo "Ensuring Pulumi stack exists..."
+	@pulumi stack select dev 2>/dev/null || pulumi stack init dev
 	@echo "Setup complete."
 
 # Check cluster health
