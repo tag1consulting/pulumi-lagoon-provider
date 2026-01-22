@@ -14,6 +14,10 @@ from .project import (
     DeployTargetPair,
     ExampleProjectOutputs,
 )
+from .migrations import (
+    ensure_knex_migrations,
+    check_knex_migrations_inline,
+)
 
 __all__ = [
     "generate_lagoon_secrets",
@@ -25,4 +29,6 @@ __all__ = [
     "create_example_drupal_project",
     "DeployTargetPair",
     "ExampleProjectOutputs",
+    "ensure_knex_migrations",
+    "check_knex_migrations_inline",
 ]

@@ -19,7 +19,7 @@
 .PHONY: help setup-all cluster-up cluster-down cluster-status \
         provider-install provider-test \
         example-up example-down example-preview example-output \
-        ensure-lagoon-admin ensure-deploy-target \
+        ensure-lagoon-admin ensure-deploy-target ensure-migrations \
         port-forwards check-health \
         multi-cluster-up multi-cluster-down multi-cluster-preview multi-cluster-status multi-cluster-clusters \
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-test-api \
@@ -51,8 +51,9 @@ help:
 	@echo "  make cluster-status  - Check cluster and pod status"
 	@echo ""
 	@echo "Cluster Operations (using shared scripts):"
-	@echo "  make check-health    - Check cluster health"
-	@echo "  make port-forwards   - Set up kubectl port-forwards"
+	@echo "  make check-health      - Check cluster health"
+	@echo "  make port-forwards     - Set up kubectl port-forwards"
+	@echo "  make ensure-migrations - Ensure Lagoon Knex migrations are run"
 	@echo ""
 	@echo "Example Project (simple-project):"
 	@echo "  make example-preview - Preview example project changes"
@@ -79,11 +80,12 @@ help:
 	@echo "  make clean-all       - Complete cleanup including Kind cluster"
 	@echo ""
 	@echo "Shared Scripts (in scripts/ directory):"
-	@echo "  ./scripts/check-cluster-health.sh  - Check cluster health"
-	@echo "  ./scripts/setup-port-forwards.sh   - Set up port-forwards"
-	@echo "  ./scripts/get-token.sh             - Get OAuth token"
-	@echo "  ./scripts/fix-rabbitmq-password.sh - Fix RabbitMQ auth issues"
-	@echo "  ./scripts/run-pulumi.sh            - Wrapper with auto token refresh"
+	@echo "  ./scripts/check-cluster-health.sh   - Check cluster health"
+	@echo "  ./scripts/setup-port-forwards.sh    - Set up port-forwards"
+	@echo "  ./scripts/get-token.sh              - Get OAuth token"
+	@echo "  ./scripts/fix-rabbitmq-password.sh  - Fix RabbitMQ auth issues"
+	@echo "  ./scripts/run-pulumi.sh             - Wrapper with auto token refresh"
+	@echo "  ./scripts/ensure-knex-migrations.sh - Check/run Knex migrations"
 	@echo ""
 	@echo "Script Configuration:"
 	@echo "  LAGOON_PRESET=single      - Single-cluster (default, test-cluster)"
@@ -227,6 +229,9 @@ check-health:
 
 port-forwards:
 	@LAGOON_PRESET=single $(SCRIPTS_DIR)/setup-port-forwards.sh
+
+ensure-migrations:
+	@LAGOON_PRESET=single $(SCRIPTS_DIR)/ensure-knex-migrations.sh
 
 ensure-lagoon-admin:
 	@echo "Ensuring lagoonadmin user exists in Keycloak..."

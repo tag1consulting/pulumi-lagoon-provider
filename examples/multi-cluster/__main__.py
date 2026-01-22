@@ -51,6 +51,7 @@ from lagoon import (
     configure_keycloak_for_cli_auth,
     create_deploy_targets,
     create_example_drupal_project,
+    check_knex_migrations_inline,
 )
 
 
@@ -385,12 +386,38 @@ if lagoon_core is not None and lagoon_secrets is not None:
 
 
 # =============================================================================
-# Phase 7: Create Example Drupal Project (Optional)
+# Phase 7: Ensure Database Migrations
+# =============================================================================
+
+# Lagoon v2.30.0 has a bug where Knex migrations aren't run by the init container.
+# This check ensures the base schema tables exist before we try to use the API
+# for deploy target management.
+knex_migrations = None
+if lagoon_core is not None:
+    pulumi.log.info("Ensuring Lagoon database migrations are applied...")
+
+    knex_migrations = check_knex_migrations_inline(
+        "prod-lagoon",
+        context="kind-lagoon-prod",
+        namespace=namespace_config.lagoon_core,
+        opts=pulumi.ResourceOptions(
+            depends_on=[lagoon_core.release, keycloak_config_job],
+        ),
+    )
+
+
+# =============================================================================
+# Phase 8: Create Example Drupal Project (Optional)
 # =============================================================================
 
 example_project = None
 if lagoon_core is not None and config.create_example_project:
     pulumi.log.info("Creating example Drupal project with multi-cluster routing...")
+
+    # Determine dependencies for deploy targets
+    deploy_target_deps = [lagoon_core.release, keycloak_config_job]
+    if knex_migrations is not None:
+        deploy_target_deps.append(knex_migrations)
 
     # Create deploy targets for both clusters
     # These register the Kind clusters as deploy targets in Lagoon
@@ -402,7 +429,7 @@ if lagoon_core is not None and config.create_example_project:
         # SSH host is the Lagoon SSH service in the prod cluster
         ssh_host=lagoon_core.ssh_host,
         opts=pulumi.ResourceOptions(
-            depends_on=[lagoon_core.release, keycloak_config_job],
+            depends_on=deploy_target_deps,
         ),
     )
 
