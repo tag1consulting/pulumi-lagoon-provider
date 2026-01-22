@@ -108,12 +108,12 @@ def install_ingress_nginx(
                         "effect": "NoSchedule",
                     },
                 ],
+                # Disable admission webhook for local development (avoids timing issues)
+                "admissionWebhooks": {
+                    "enabled": False,
+                },
             },
             "defaultBackend": {
-                "enabled": False,
-            },
-            # Disable admission webhook for local development (avoids timing issues)
-            "admissionWebhooks": {
                 "enabled": False,
             },
         },
