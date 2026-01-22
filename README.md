@@ -186,7 +186,9 @@ make example-down       # Destroy example resources
 make example-output     # Show stack outputs
 
 # Multi-cluster Example
-make multi-cluster-up       # Create prod + nonprod Kind clusters with deploy targets
+make multi-cluster-up       # Create prod + nonprod Kind clusters with full Lagoon stack:
+                            #   - prod cluster: lagoon-core + lagoon-remote + Harbor
+                            #   - nonprod cluster: lagoon-remote only (connects to prod core)
 make multi-cluster-down     # Destroy multi-cluster environment
 make multi-cluster-preview  # Preview multi-cluster changes
 make multi-cluster-status   # Show multi-cluster stack outputs
