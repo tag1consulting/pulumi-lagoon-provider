@@ -295,7 +295,8 @@ def install_lagoon_core(
             "enabled": True,
             "privateHostKey": secrets.ssh_private_key,
             "service": {
-                "type": "LoadBalancer",
+                # Use NodePort for Kind clusters (LoadBalancer stays pending without MetalLB)
+                "type": "NodePort",
                 "port": 22,
             },
             "resources": {
