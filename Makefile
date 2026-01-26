@@ -190,13 +190,43 @@ cluster-down:
 cluster-status:
 	@echo "Cluster Status:"
 	@echo "==============="
-	@kind get clusters 2>/dev/null | grep -q $(CLUSTER_NAME) && echo "Kind cluster '$(CLUSTER_NAME)': Running" || echo "Kind cluster '$(CLUSTER_NAME)': Not found"
+	@# Check for single-cluster
+	@if kind get clusters 2>/dev/null | grep -q "^lagoon$$"; then \
+		echo ""; \
+		echo "Single-cluster (lagoon): Running"; \
+		CORE_PODS=$$(kubectl --context kind-lagoon get pods -n lagoon-core --no-headers 2>/dev/null | grep -c Running || echo 0); \
+		REMOTE_PODS=$$(kubectl --context kind-lagoon get pods -n lagoon --no-headers 2>/dev/null | grep -c Running || echo 0); \
+		echo "  lagoon-core: $$CORE_PODS pods running"; \
+		echo "  lagoon (remote): $$REMOTE_PODS pods running"; \
+	else \
+		echo ""; \
+		echo "Single-cluster (lagoon): Not found"; \
+	fi
+	@# Check for multi-cluster prod
+	@if kind get clusters 2>/dev/null | grep -q "^lagoon-prod$$"; then \
+		echo ""; \
+		echo "Multi-cluster prod (lagoon-prod): Running"; \
+		CORE_PODS=$$(kubectl --context kind-lagoon-prod get pods -n lagoon-core --no-headers 2>/dev/null | grep -c Running || echo 0); \
+		REMOTE_PODS=$$(kubectl --context kind-lagoon-prod get pods -n lagoon --no-headers 2>/dev/null | grep -c Running || echo 0); \
+		HARBOR_PODS=$$(kubectl --context kind-lagoon-prod get pods -n harbor --no-headers 2>/dev/null | grep -c Running || echo 0); \
+		echo "  lagoon-core: $$CORE_PODS pods running"; \
+		echo "  lagoon (remote): $$REMOTE_PODS pods running"; \
+		echo "  harbor: $$HARBOR_PODS pods running"; \
+	else \
+		echo ""; \
+		echo "Multi-cluster prod (lagoon-prod): Not found"; \
+	fi
+	@# Check for multi-cluster nonprod
+	@if kind get clusters 2>/dev/null | grep -q "^lagoon-nonprod$$"; then \
+		echo ""; \
+		echo "Multi-cluster nonprod (lagoon-nonprod): Running"; \
+		REMOTE_PODS=$$(kubectl --context kind-lagoon-nonprod get pods -n lagoon --no-headers 2>/dev/null | grep -c Running || echo 0); \
+		echo "  lagoon (remote): $$REMOTE_PODS pods running"; \
+	else \
+		echo ""; \
+		echo "Multi-cluster nonprod (lagoon-nonprod): Not found"; \
+	fi
 	@echo ""
-	@echo "Lagoon Core Pods:"
-	@kubectl --context kind-$(CLUSTER_NAME) get pods -n lagoon-core 2>/dev/null | head -20 || echo "Could not get pod status"
-	@echo ""
-	@echo "Lagoon Remote Pods:"
-	@kubectl --context kind-$(CLUSTER_NAME) get pods -n lagoon 2>/dev/null || echo "Could not get pod status"
 
 wait-for-lagoon:
 	@echo "Waiting for Lagoon to be ready..."
