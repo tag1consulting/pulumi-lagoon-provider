@@ -40,42 +40,44 @@
 case "${LAGOON_PRESET:-}" in
     single|"")
         # Single-cluster defaults (examples/single-cluster)
+        # Release name is "lagoon-core", so services are {release_name}-{component}
         KUBE_CONTEXT="${KUBE_CONTEXT:-kind-lagoon}"
         LAGOON_NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
         KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-lagoon}"
-        KEYCLOAK_SVC="${KEYCLOAK_SVC:-lagoon-core-lagoon-core-keycloak}"
-        API_SVC="${API_SVC:-lagoon-core-lagoon-core-api}"
-        KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-lagoon-core-lagoon-core-keycloak}"
-        CORE_SECRETS="${CORE_SECRETS:-lagoon-core-lagoon-core-secrets}"
-        BROKER_SECRET="${BROKER_SECRET:-lagoon-core-lagoon-core-broker}"
-        REMOTE_SECRET="${REMOTE_SECRET:-lagoon-remote-lagoon-remote}"
+        KEYCLOAK_SVC="${KEYCLOAK_SVC:-lagoon-core-keycloak}"
+        API_SVC="${API_SVC:-lagoon-core-api}"
+        KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-lagoon-core-keycloak}"
+        CORE_SECRETS="${CORE_SECRETS:-lagoon-core-secrets}"
+        BROKER_SECRET="${BROKER_SECRET:-lagoon-core-broker}"
+        REMOTE_SECRET="${REMOTE_SECRET:-lagoon-remote-lagoon-build-deploy}"
         REMOTE_DEPLOYMENT="${REMOTE_DEPLOYMENT:-lagoon-remote-lagoon-build-deploy}"
         ;;
     multi-prod)
         # Multi-cluster production defaults
+        # Release name is "prod-core", so services are {release_name}-{component}
         KUBE_CONTEXT="${KUBE_CONTEXT:-kind-lagoon-prod}"
         LAGOON_NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
         KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-lagoon-prod}"
-        KEYCLOAK_SVC="${KEYCLOAK_SVC:-prod-core-lagoon-core-keycloak}"
-        API_SVC="${API_SVC:-prod-core-lagoon-core-api}"
-        KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-prod-core-lagoon-core-keycloak}"
-        CORE_SECRETS="${CORE_SECRETS:-prod-core-lagoon-core-secrets}"
-        BROKER_SECRET="${BROKER_SECRET:-prod-core-lagoon-core-broker}"
-        REMOTE_SECRET="${REMOTE_SECRET:-prod-lagoon-remote-lagoon-remote}"
-        REMOTE_DEPLOYMENT="${REMOTE_DEPLOYMENT:-prod-lagoon-remote-lagoon-remote-kubernetes-build-deploy}"
+        KEYCLOAK_SVC="${KEYCLOAK_SVC:-prod-core-keycloak}"
+        API_SVC="${API_SVC:-prod-core-api}"
+        KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-prod-core-keycloak}"
+        CORE_SECRETS="${CORE_SECRETS:-prod-core-secrets}"
+        BROKER_SECRET="${BROKER_SECRET:-prod-core-broker}"
+        REMOTE_SECRET="${REMOTE_SECRET:-prod-lagoon-remote-lagoon-build-deploy}"
+        REMOTE_DEPLOYMENT="${REMOTE_DEPLOYMENT:-prod-lagoon-remote-lagoon-build-deploy}"
         ;;
     multi-nonprod)
         # Multi-cluster non-production defaults
         KUBE_CONTEXT="${KUBE_CONTEXT:-kind-lagoon-nonprod}"
-        LAGOON_NAMESPACE="${LAGOON_NAMESPACE:-lagoon-remote}"
+        LAGOON_NAMESPACE="${LAGOON_NAMESPACE:-lagoon}"
         KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-lagoon-nonprod}"
         # Note: nonprod doesn't have core services, only remote
         KEYCLOAK_SVC="${KEYCLOAK_SVC:-}"
         API_SVC="${API_SVC:-}"
         KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-}"
         BROKER_SECRET="${BROKER_SECRET:-}"
-        REMOTE_SECRET="${REMOTE_SECRET:-nonprod-lagoon-remote-lagoon-remote}"
-        REMOTE_DEPLOYMENT="${REMOTE_DEPLOYMENT:-nonprod-lagoon-remote-lagoon-remote-kubernetes-build-deploy}"
+        REMOTE_SECRET="${REMOTE_SECRET:-nonprod-lagoon-remote-lagoon-build-deploy}"
+        REMOTE_DEPLOYMENT="${REMOTE_DEPLOYMENT:-nonprod-lagoon-remote-lagoon-build-deploy}"
         ;;
     *)
         echo "Unknown LAGOON_PRESET: $LAGOON_PRESET" >&2
