@@ -54,7 +54,7 @@ make example-up
 ```
 
 **What gets created:**
-- Kind Kubernetes cluster (`lagoon-test`)
+- Kind Kubernetes cluster (`lagoon`)
 - Lagoon Core (API, UI, Keycloak, RabbitMQ, databases)
 - Harbor container registry
 - Ingress controller with TLS

@@ -196,12 +196,16 @@ All unit tests implemented and passing (240 tests):
 Run tests with: `pytest tests/unit/ -v`
 
 ### Documentation Updates
-**Status**: ⏸️ PENDING
+**Status**: ✅ COMPLETE (2026-01-26)
 
-Still needed:
-- Update main README.md with complete usage examples
-- Add testing instructions
-- Document discovered API quirks (if any after real-world testing)
+README.md includes:
+- Complete usage examples (LagoonProject, LagoonEnvironment, LagoonVariable)
+- Testing instructions (`pytest tests/`)
+- Make targets documentation
+- Project structure overview
+- Examples directory descriptions
+
+No significant API quirks discovered during testing.
 
 ## How to Use Right Now
 
