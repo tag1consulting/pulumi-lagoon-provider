@@ -192,34 +192,23 @@ cluster-status:
 	@echo "==============="
 	@kind get clusters 2>/dev/null | grep -q $(CLUSTER_NAME) && echo "Kind cluster '$(CLUSTER_NAME)': Running" || echo "Kind cluster '$(CLUSTER_NAME)': Not found"
 	@echo ""
-	@echo "Lagoon Pods:"
+	@echo "Lagoon Core Pods:"
+	@kubectl --context kind-$(CLUSTER_NAME) get pods -n lagoon-core 2>/dev/null | head -20 || echo "Could not get pod status"
+	@echo ""
+	@echo "Lagoon Remote Pods:"
 	@kubectl --context kind-$(CLUSTER_NAME) get pods -n lagoon 2>/dev/null || echo "Could not get pod status"
 
 wait-for-lagoon:
 	@echo "Waiting for Lagoon to be ready..."
-	@echo "Waiting for database migration job to complete..."
-	@for i in 1 2 3 4 5 6 7 8 9 10 11 12; do \
-		JOB_STATUS=$$(kubectl --context kind-$(CLUSTER_NAME) get job lagoon-core-api-migratedb -n lagoon -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null); \
-		JOB_FAILED=$$(kubectl --context kind-$(CLUSTER_NAME) get job lagoon-core-api-migratedb -n lagoon -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null); \
-		if [ "$$JOB_STATUS" = "True" ]; then \
-			echo "Migration job completed successfully."; \
-			break; \
-		elif [ "$$JOB_FAILED" = "True" ]; then \
-			echo "Migration job failed, deleting for retry..."; \
-			kubectl --context kind-$(CLUSTER_NAME) delete job lagoon-core-api-migratedb -n lagoon 2>/dev/null || true; \
-			sleep 10; \
-		else \
-			echo "Waiting for migration job... (attempt $$i/12)"; \
-			sleep 10; \
-		fi; \
-	done
+	@echo "Note: Pulumi handles migrations via ensure_knex_migrations"
 	@echo "Waiting for Lagoon core pods..."
 	@kubectl --context kind-$(CLUSTER_NAME) wait --for=condition=ready pod \
-		-l app.kubernetes.io/name=lagoon-core --field-selector=status.phase=Running -n lagoon --timeout=300s 2>/dev/null || true
-	@echo "Waiting for Broker pods..."
+		-l app.kubernetes.io/name=lagoon-core -n lagoon-core --timeout=300s 2>/dev/null || true
+	@echo "Waiting for Lagoon remote pods..."
 	@kubectl --context kind-$(CLUSTER_NAME) wait --for=condition=ready pod \
-		-l app.kubernetes.io/name=broker -n lagoon --timeout=300s 2>/dev/null || true
+		-l app.kubernetes.io/name=lagoon-remote -n lagoon --timeout=300s 2>/dev/null || true
 	@echo "Checking pod status..."
+	@kubectl --context kind-$(CLUSTER_NAME) get pods -n lagoon-core | head -20
 	@kubectl --context kind-$(CLUSTER_NAME) get pods -n lagoon
 
 #==============================================================================
