@@ -257,6 +257,25 @@ class SingleClusterConfig:
         """Name for the deploy target (default: local-kind)."""
         return self._config.get("deployTargetName") or "local-kind"
 
+    @property
+    def create_example_project(self) -> bool:
+        """Whether to create the example Drupal project (default: False)."""
+        val = self._config.get_bool("createExampleProject")
+        return val if val is not None else False
+
+    @property
+    def example_project_name(self) -> str:
+        """Name for the example project (default: lagoon-drupal-example)."""
+        return self._config.get("exampleProjectName") or "lagoon-drupal-example"
+
+    @property
+    def example_project_git_url(self) -> str:
+        """Git URL for the example project."""
+        return (
+            self._config.get("exampleProjectGitUrl")
+            or "https://github.com/lagoon-examples/drupal-base.git"
+        )
+
     def get_domain_config(self) -> DomainConfig:
         """Get domain configuration based on Pulumi config."""
         return DomainConfig(base=self.base_domain)

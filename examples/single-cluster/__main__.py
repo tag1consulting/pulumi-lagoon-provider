@@ -23,7 +23,6 @@ import pulumi_kubernetes as k8s
 from config import (
     config,
     VERSIONS,
-    KIND_NODE_IMAGE,
     DomainConfig,
     NamespaceConfig,
 )
@@ -35,6 +34,7 @@ from clusters import create_kind_cluster, create_k8s_provider
 from infrastructure import (
     install_ingress_nginx,
     install_cert_manager,
+    create_cluster_issuer,
     create_wildcard_certificate,
 )
 from infrastructure.coredns import patch_coredns_for_lagoon, restart_coredns
@@ -49,7 +49,11 @@ from lagoon import (
     install_lagoon_remote,
     install_lagoon_build_deploy_crds,
     configure_keycloak_for_cli_auth,
+    ensure_knex_migrations,
 )
+
+# Import pulumi_lagoon for deploy targets and projects
+import pulumi_lagoon as lagoon
 
 # =============================================================================
 # Configuration
@@ -76,13 +80,11 @@ if config.create_cluster:
     cluster = create_kind_cluster(
         cluster_config.name,
         cluster_config,
-        node_image=KIND_NODE_IMAGE,
     )
 
     provider = create_k8s_provider(
         f"{cluster_config.name}-provider",
-        cluster.kubeconfig,
-        cluster.context_name,
+        cluster,
     )
 
     pulumi.export("cluster_name", cluster.name)
@@ -101,6 +103,8 @@ else:
 
 ingress = None
 cert_manager = None
+cluster_issuer = None
+lagoon_core_ns = None
 wildcard_cert = None
 
 if provider is not None:
@@ -128,23 +132,46 @@ if provider is not None:
         ),
     )
 
+    # Create ClusterIssuer
+    cluster_issuer = create_cluster_issuer(
+        "cluster-issuer",
+        provider,
+        cert_manager,
+    )
+
+    # Create namespace for Lagoon core BEFORE certificates
+    # (certificates need the namespace to exist)
+    lagoon_core_ns = k8s.core.v1.Namespace(
+        "lagoon-core-ns",
+        metadata=k8s.meta.v1.ObjectMetaArgs(
+            name=namespace_config.lagoon_core,
+        ),
+        opts=pulumi.ResourceOptions(
+            provider=provider,
+            depends_on=[cluster.cluster_resource] if cluster else None,
+        ),
+    )
+
     # Create wildcard certificate
     wildcard_cert = create_wildcard_certificate(
         "wildcard-cert",
+        domain_config.base,
+        namespace_config.lagoon_core,
+        cluster_issuer,
         provider,
-        domain_config,
-        cert_manager,
-        namespace_config,
+        opts=pulumi.ResourceOptions(depends_on=[lagoon_core_ns]),
     )
 
 # =============================================================================
 # Phase 3: Configure CoreDNS for Local Domain Resolution
 # =============================================================================
 
+coredns_setup = None
+
 if provider is not None and cluster is not None:
     pulumi.log.info("Configuring CoreDNS for local domain resolution...")
 
-    from clusters import get_kind_node_internal_ip
+    from infrastructure import get_kind_node_internal_ip
 
     # Get the cluster's node IP
     node_ip = get_kind_node_internal_ip(
@@ -166,7 +193,7 @@ if provider is not None and cluster is not None:
     )
 
     # Restart CoreDNS to pick up the new configuration
-    coredns_restart = restart_coredns(
+    coredns_setup = restart_coredns(
         "coredns",
         cluster.name,
         coredns_patch,
@@ -183,19 +210,42 @@ harbor = None
 if provider is not None and config.install_harbor:
     pulumi.log.info("Installing Harbor registry...")
 
+    # Create Harbor namespace
+    harbor_ns = k8s.core.v1.Namespace(
+        "harbor-namespace",
+        metadata=k8s.meta.v1.ObjectMetaArgs(
+            name=namespace_config.harbor,
+        ),
+        opts=pulumi.ResourceOptions(
+            provider=provider,
+            depends_on=[cluster.cluster_resource] if cluster else None,
+        ),
+    )
+
+    # Create certificate for Harbor
+    harbor_cert = create_wildcard_certificate(
+        "harbor",
+        domain_config.base,
+        namespace_config.harbor,
+        cluster_issuer,
+        provider,
+        opts=pulumi.ResourceOptions(depends_on=[harbor_ns]),
+    )
+
     harbor = install_harbor(
         "harbor",
         provider,
         domain_config,
-        namespace_config,
+        tls_secret_name="harbor-tls",
         admin_password=config.harbor_admin_password,
+        namespace_config=namespace_config,
         opts=pulumi.ResourceOptions(
-            depends_on=[wildcard_cert] if wildcard_cert else [ingress.service],
+            depends_on=[ingress.service, harbor_cert, harbor_ns],
         ),
     )
 
     pulumi.export("harbor_url", harbor.url)
-    pulumi.export("harbor_admin_password", harbor.admin_password)
+    pulumi.export("harbor_admin_password", pulumi.Output.secret(harbor.admin_password))
 
 # =============================================================================
 # Phase 5: Install Lagoon Core
@@ -203,6 +253,8 @@ if provider is not None and config.install_harbor:
 
 lagoon_secrets = None
 lagoon_core = None
+knex_migrations = None
+keycloak_config = None
 
 if provider is not None and config.install_lagoon:
     pulumi.log.info("Generating Lagoon secrets...")
@@ -213,19 +265,21 @@ if provider is not None and config.install_lagoon:
 
     pulumi.log.info("Installing Lagoon core...")
 
-    core_depends = [ingress.service]
-    if harbor:
+    # Build dependency list - include namespace, cert, CoreDNS, and optionally Harbor
+    core_depends = [ingress.service, wildcard_cert, lagoon_core_ns]
+    if coredns_setup is not None:
+        core_depends.append(coredns_setup)
+    if harbor is not None:
         core_depends.append(harbor.release)
-    if wildcard_cert:
-        core_depends.append(wildcard_cert)
 
     lagoon_core = install_lagoon_core(
         "lagoon-core",
         provider,
         domain_config,
         lagoon_secrets,
+        tls_secret_name="wildcard-cert-tls",
+        harbor=harbor,
         namespace_config=namespace_config,
-        harbor_outputs=harbor,
         helm_timeout=config.helm_timeout,
         opts=pulumi.ResourceOptions(depends_on=core_depends),
     )
@@ -237,11 +291,32 @@ if provider is not None and config.install_lagoon:
     # Configure Keycloak for CLI authentication
     pulumi.log.info("Configuring Keycloak for CLI authentication...")
 
+    # The keycloak service name follows pattern: {release_name}-keycloak
+    # For name="lagoon-core", release_name="lagoon-core", so service="lagoon-core-keycloak"
     keycloak_config = configure_keycloak_for_cli_auth(
         "keycloak-config",
         provider,
-        lagoon_core,
-        namespace_config,
+        namespace=lagoon_core.namespace,
+        keycloak_service="lagoon-core-keycloak",
+        keycloak_admin_secret="lagoon-core-keycloak",
+        opts=pulumi.ResourceOptions(
+            depends_on=[lagoon_core.release],
+        ),
+    )
+
+    # Ensure database migrations are applied
+    # Lagoon v2.30.0 has a bug where Knex migrations aren't run by the init container.
+    # This check ensures the base schema tables exist before we try to use the API.
+    pulumi.log.info("Ensuring Lagoon database migrations are applied...")
+
+    knex_migrations = ensure_knex_migrations(
+        "lagoon",
+        context=cluster_config.context_name,
+        namespace=namespace_config.lagoon_core,
+        core_secrets_name="lagoon-core-lagoon-core-secrets",
+        opts=pulumi.ResourceOptions(
+            depends_on=[lagoon_core.release, keycloak_config],
+        ),
     )
 
 # =============================================================================
@@ -257,10 +332,16 @@ if lagoon_core is not None and lagoon_secrets is not None:
     lagoon_crds = install_lagoon_build_deploy_crds(
         "lagoon-crds",
         provider,
+        context=cluster_config.context_name,
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
         ),
     )
+
+    # Build dependencies for remote - include migrations if available
+    remote_depends = [lagoon_core.release, lagoon_crds]
+    if knex_migrations is not None:
+        remote_depends.append(knex_migrations)
 
     # Install lagoon-remote with build-deploy enabled
     lagoon_remote = install_lagoon_remote(
@@ -272,12 +353,70 @@ if lagoon_core is not None and lagoon_secrets is not None:
         is_production=False,
         namespace_config=namespace_config,
         opts=pulumi.ResourceOptions(
-            depends_on=[lagoon_core.release, lagoon_crds],
+            depends_on=remote_depends,
         ),
     )
 
     pulumi.export("lagoon_remote_namespace", lagoon_remote.namespace)
     pulumi.export("deploy_target_name", config.deploy_target_name)
+
+# =============================================================================
+# Phase 7: Create Deploy Target and Example Project (Optional)
+# =============================================================================
+
+deploy_target = None
+example_project = None
+
+if lagoon_core is not None and config.create_example_project:
+    pulumi.log.info("Creating deploy target and example project...")
+
+    # Determine dependencies for deploy target
+    deploy_target_deps = [lagoon_core.release, keycloak_config]
+    if knex_migrations is not None:
+        deploy_target_deps.append(knex_migrations)
+
+    # Create a deploy target for the single cluster
+    # This registers the Kind cluster as a deploy target in Lagoon
+    deploy_target = lagoon.LagoonDeployTarget(
+        "single-cluster-target",
+        args=lagoon.LagoonDeployTargetArgs(
+            name=config.deploy_target_name,
+            console_url="https://kubernetes.default.svc",  # Internal K8s API
+            cloud_provider="kind",
+            cloud_region="local",
+            ssh_host=lagoon_core.ssh_host,
+            ssh_port="22",
+            # Router pattern determines how routes are generated
+            # Format: ${environment}.${project}.${cluster-domain}
+            router_pattern=f"${{environment}}.${{project}}.{domain_config.base}",
+        ),
+        opts=pulumi.ResourceOptions(
+            depends_on=deploy_target_deps,
+        ),
+    )
+
+    pulumi.export("deploy_target_id", deploy_target.id)
+
+    # Create the example Drupal project
+    example_project = lagoon.LagoonProject(
+        "example-project",
+        args=lagoon.LagoonProjectArgs(
+            name=config.example_project_name,
+            git_url=config.example_project_git_url,
+            deploytarget_id=deploy_target.id.apply(lambda x: int(x)),
+            production_environment="main",
+            # Branch pattern - which branches can be deployed
+            branches="^(main|develop|feature/.*)$",
+            # PR pattern - which PRs can be deployed
+            pullrequests=".*",
+        ),
+        opts=pulumi.ResourceOptions(
+            depends_on=[deploy_target],
+        ),
+    )
+
+    pulumi.export("example_project_id", example_project.id)
+    pulumi.export("example_project_name", config.example_project_name)
 
 # =============================================================================
 # Summary Outputs
@@ -296,4 +435,5 @@ pulumi.export("installation_summary", {
     "harbor_installed": harbor is not None,
     "lagoon_installed": lagoon_core is not None,
     "build_deploy_installed": lagoon_remote is not None,
+    "example_project_created": config.create_example_project and example_project is not None,
 })

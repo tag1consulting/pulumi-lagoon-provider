@@ -12,28 +12,36 @@ lagoon-build-deploy enabled, otherwise the controller will fail to start.
 """
 
 from typing import Optional
+import tempfile
+import os
 
 import pulumi
 import pulumi_kubernetes as k8s
+from pulumi_command import local as command
 
 
 def install_lagoon_build_deploy_crds(
     name: str,
     provider: k8s.Provider,
+    context: Optional[str] = None,
     opts: Optional[pulumi.ResourceOptions] = None,
-) -> k8s.yaml.ConfigGroup:
+) -> command.Command:
     """Install the Lagoon build-deploy CRDs.
 
     These CRDs are required by the lagoon-build-deploy controller and must
     be installed before the lagoon-remote Helm release.
 
+    Uses kubectl apply to install CRDs, which is more reliable than
+    pulumi-kubernetes YAML parsing for complex CRDs.
+
     Args:
         name: Pulumi resource name prefix
-        provider: Kubernetes provider for the target cluster
+        provider: Kubernetes provider for the target cluster (kept for API compat)
+        context: Kubernetes context name (e.g., "kind-lagoon")
         opts: Pulumi resource options
 
     Returns:
-        ConfigGroup containing the CRD resources
+        Command resource that applies the CRDs
     """
     # CRD definitions from lagoon-build-deploy chart v0.39.0
     # Generated with: helm show crds uselagoon/lagoon-build-deploy --version ~0.39.0
@@ -580,11 +588,18 @@ spec:
     subresources: {}
 """
 
-    crds = k8s.yaml.ConfigGroup(
+    # Write CRDs to a temp file and apply with kubectl
+    # This avoids pulumi-kubernetes YAML parsing issues with complex CRDs
+    crd_file = "/tmp/lagoon-crds.yaml"
+
+    # Build the kubectl command with optional context
+    context_flag = f"--context {context}" if context else ""
+    kubectl_cmd = f"cat > {crd_file} << 'EOFCRDS'\n{crd_yaml}\nEOFCRDS\nkubectl apply -f {crd_file} {context_flag}"
+
+    crds = command.Command(
         f"{name}-lagoon-crds",
-        yaml=crd_yaml,
+        create=kubectl_cmd,
         opts=pulumi.ResourceOptions(
-            provider=provider,
             parent=opts.parent if opts else None,
             depends_on=opts.depends_on if opts else None,
         ),

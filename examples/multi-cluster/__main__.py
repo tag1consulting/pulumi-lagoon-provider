@@ -286,8 +286,8 @@ if prod_provider is not None and install_lagoon_components and lagoon_secrets is
         "prod-lagoon",
         prod_provider,
         namespace=lagoon_core.namespace,
-        keycloak_service="prod-core-lagoon-core-keycloak",
-        keycloak_admin_secret="prod-core-lagoon-core-keycloak",
+        keycloak_service="prod-core-keycloak",
+        keycloak_admin_secret="prod-core-keycloak",
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
         ),
@@ -307,6 +307,7 @@ if lagoon_core is not None and lagoon_secrets is not None:
         prod_lagoon_crds = install_lagoon_build_deploy_crds(
             "prod-lagoon-crds",
             prod_provider,
+            context="kind-lagoon-prod",
             opts=pulumi.ResourceOptions(
                 depends_on=[lagoon_core.release],
             ),
@@ -381,6 +382,7 @@ if lagoon_core is not None and lagoon_secrets is not None:
         nonprod_lagoon_crds = install_lagoon_build_deploy_crds(
             "nonprod-lagoon-crds",
             nonprod_provider,
+            context="kind-lagoon-nonprod",
             opts=pulumi.ResourceOptions(
                 depends_on=[nonprod_cluster.cluster_resource],
             ),

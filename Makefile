@@ -29,7 +29,7 @@
 VENV_DIR := venv
 PYTHON := python3
 CLUSTER_NAME := lagoon-test
-TEST_CLUSTER_DIR := test-cluster
+SINGLE_CLUSTER_DIR := examples/single-cluster
 EXAMPLE_DIR := examples/simple-project
 SCRIPTS_DIR := scripts
 
@@ -90,7 +90,7 @@ help:
 	@echo "  ./scripts/ensure-knex-migrations.sh - Check/run Knex migrations"
 	@echo ""
 	@echo "Script Configuration:"
-	@echo "  LAGOON_PRESET=single      - Single-cluster (default, test-cluster)"
+	@echo "  LAGOON_PRESET=single      - Single-cluster (default)"
 	@echo "  LAGOON_PRESET=multi-prod  - Multi-cluster production"
 	@echo "  LAGOON_PRESET=multi-nonprod - Multi-cluster non-production"
 	@echo ""
@@ -161,27 +161,27 @@ provider-test: venv
 	@. $(VENV_DIR)/bin/activate && pytest tests/ -v
 
 #==============================================================================
-# Kind Cluster + Lagoon (Single-cluster via test-cluster)
+# Kind Cluster + Lagoon (Single-cluster)
 #==============================================================================
 
 cluster-up: venv
 	@echo "Setting up Kind cluster and Lagoon..."
 	@echo "This will take approximately 10-15 minutes."
 	@echo ""
-	@cd $(TEST_CLUSTER_DIR) && \
+	@cd $(SINGLE_CLUSTER_DIR) && \
 		if [ ! -d "venv" ]; then \
 			$(PYTHON) -m venv venv; \
 		fi && \
 		. venv/bin/activate && \
 		pip install -q -r requirements.txt && \
 		pulumi stack select dev 2>/dev/null || pulumi stack init dev && \
-		pulumi up --yes
+		pulumi up --yes --skip-preview
 	@echo ""
 	@echo "Kind cluster and Lagoon deployed successfully!"
 
 cluster-down:
 	@echo "Destroying Kind cluster..."
-	@cd $(TEST_CLUSTER_DIR) && \
+	@cd $(SINGLE_CLUSTER_DIR) && \
 		. venv/bin/activate 2>/dev/null && \
 		pulumi destroy --yes 2>/dev/null || true
 	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
@@ -335,5 +335,5 @@ clean:
 
 clean-all: clean cluster-down
 	@rm -rf $(VENV_DIR) 2>/dev/null || true
-	@rm -rf $(TEST_CLUSTER_DIR)/venv 2>/dev/null || true
+	@rm -rf $(SINGLE_CLUSTER_DIR)/venv 2>/dev/null || true
 	@echo "Full cleanup complete."
