@@ -47,6 +47,7 @@ from lagoon import (
     generate_lagoon_secrets,
     install_lagoon_core,
     install_lagoon_remote,
+    install_lagoon_build_deploy_crds,
     create_rabbitmq_nodeport_service,
     configure_keycloak_for_cli_auth,
     create_deploy_targets,
@@ -302,6 +303,15 @@ if lagoon_core is not None and lagoon_secrets is not None:
     if prod_provider is not None:
         pulumi.log.info("Installing Lagoon remote on production cluster...")
 
+        # Install Lagoon build-deploy CRDs first (required before Helm release)
+        prod_lagoon_crds = install_lagoon_build_deploy_crds(
+            "prod-lagoon-crds",
+            prod_provider,
+            opts=pulumi.ResourceOptions(
+                depends_on=[lagoon_core.release],
+            ),
+        )
+
         prod_remote = install_lagoon_remote(
             "prod-lagoon-remote",
             prod_provider,
@@ -311,7 +321,7 @@ if lagoon_core is not None and lagoon_secrets is not None:
             is_production=True,
             namespace_config=namespace_config,
             opts=pulumi.ResourceOptions(
-                depends_on=[lagoon_core.release],
+                depends_on=[lagoon_core.release, prod_lagoon_crds],
             ),
         )
 
@@ -367,6 +377,15 @@ if lagoon_core is not None and lagoon_secrets is not None:
             lambda ip: f"{ip}:{lagoon_core.rabbitmq_nodeport}"
         )
 
+        # Install Lagoon build-deploy CRDs on nonprod cluster
+        nonprod_lagoon_crds = install_lagoon_build_deploy_crds(
+            "nonprod-lagoon-crds",
+            nonprod_provider,
+            opts=pulumi.ResourceOptions(
+                depends_on=[nonprod_cluster.cluster_resource],
+            ),
+        )
+
         nonprod_remote = install_lagoon_remote(
             "nonprod-lagoon-remote",
             nonprod_provider,
@@ -377,7 +396,7 @@ if lagoon_core is not None and lagoon_secrets is not None:
             namespace_config=namespace_config,
             external_rabbitmq_host=external_rabbitmq_host,
             opts=pulumi.ResourceOptions(
-                depends_on=[lagoon_core.release, nonprod_ingress.service, nonprod_coredns],
+                depends_on=[lagoon_core.release, nonprod_ingress.service, nonprod_coredns, nonprod_lagoon_crds],
             ),
         )
 
