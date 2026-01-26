@@ -11,18 +11,18 @@ Uses the `pulumi_lagoon` provider to create:
 
 ## Prerequisites
 
-- A running Lagoon instance (see `test-cluster/` or `examples/multi-cluster/`)
+- A running Lagoon instance (see `examples/single-cluster/` or `examples/multi-cluster/`)
 - Python 3.8+ with the provider installed: `pip install -e ../..`
 - `curl` and `jq` for the helper scripts
 
 ## Quick Start
 
 ```bash
-# 1. Ensure Lagoon is running (use test-cluster or multi-cluster)
-cd ../../test-cluster && pulumi up
+# 1. Ensure Lagoon is running (use single-cluster or multi-cluster)
+cd ../single-cluster && pulumi up
 
 # 2. Come back to this example
-cd ../examples/simple-project
+cd ../simple-project
 
 # 3. Initialize Pulumi stack
 pulumi stack init test

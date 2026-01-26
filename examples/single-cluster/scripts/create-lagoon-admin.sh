@@ -1,1 +1,0 @@
-../../../scripts/create-lagoon-admin.sh

@@ -1,6 +1,6 @@
-name: lagoon-single-cluster
-description: Single-cluster Lagoon deployment for development and testing
+name: single-cluster-lagoon
 runtime:
   name: python
   options:
-    virtualenv: venv
+    virtualenv: ../../venv
+description: Single-cluster Lagoon deployment example

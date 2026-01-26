@@ -140,10 +140,9 @@ pulumi.export("production_url", prod_env.route)
 
 See the `examples/` directory for complete examples:
 
-- `simple-project/` - Basic project setup with a single deploy target
-- `multi-cluster/` - Multiple Kind clusters for prod/nonprod deploy targets
-- `multi-environment/` - Project with multiple environments (coming soon)
-- `with-eks/` - Integration with Pulumi EKS (coming soon)
+- `simple-project/` - Use the Lagoon provider to create projects/environments/variables via API
+- `single-cluster/` - Deploy complete Lagoon stack to a single Kind cluster
+- `multi-cluster/` - Production-like deployment with separate prod/nonprod Kind clusters
 
 ## Development
 
@@ -230,7 +229,7 @@ pytest tests/
 
 ```
 pulumi-lagoon-provider/
-├── pulumi_lagoon/           # Main package
+├── pulumi_lagoon/           # Main provider package
 │   ├── __init__.py         # Package exports
 │   ├── client.py           # Lagoon GraphQL API client
 │   ├── config.py           # Provider configuration
@@ -241,19 +240,19 @@ pulumi-lagoon-provider/
 │   ├── variable.py         # LagoonVariable resource
 │   └── deploytarget.py     # LagoonDeployTarget resource
 ├── examples/
-│   ├── simple-project/     # Basic example with automation scripts
-│   │   ├── __main__.py     # Pulumi program
-│   │   ├── scripts/        # Helper scripts (run-pulumi.sh, etc.)
-│   │   └── Makefile        # Convenience targets
-│   └── multi-cluster/      # Multi-cluster deploy targets example
-│       ├── __main__.py     # Pulumi program
-│       ├── config/         # Kind cluster configs
-│       └── scripts/        # Helper scripts
-├── test-cluster/           # Kind + Lagoon Pulumi program
-│   ├── __main__.py         # Creates complete test environment
-│   └── config/             # Kind and Helm values
-├── scripts/
-│   └── setup-complete.sh   # Unified setup script
+│   ├── simple-project/     # API usage example (assumes Lagoon exists)
+│   │   ├── __main__.py     # Creates projects/environments/variables
+│   │   └── scripts/        # Helper scripts
+│   ├── single-cluster/     # Single Kind cluster deployment
+│   │   ├── __main__.py     # Deploys full Lagoon stack
+│   │   └── (symlinks)      # Reuses multi-cluster modules
+│   └── multi-cluster/      # Production-like multi-cluster deployment
+│       ├── __main__.py     # Two-cluster deployment
+│       ├── clusters/       # Kind cluster management
+│       ├── infrastructure/ # Ingress, cert-manager, CoreDNS
+│       ├── lagoon/         # Lagoon core and remote
+│       └── registry/       # Harbor installation
+├── scripts/                # Shared operational scripts
 ├── tests/                  # Unit and integration tests
 ├── memory-bank/            # Planning and architecture docs
 ├── Makefile                # Top-level automation

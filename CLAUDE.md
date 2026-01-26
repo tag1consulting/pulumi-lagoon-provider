@@ -70,21 +70,21 @@ pulumi-lagoon-provider/
 │   ├── fix-rabbitmq-password.sh # Fix RabbitMQ auth issues
 │   └── ...                 # Other operational scripts
 │
-├── test-cluster/            # Single-cluster infrastructure (legacy)
-│   └── __main__.py         # Deploys Kind + Lagoon
-│
 ├── examples/
 │   ├── simple-project/     # Provider usage example (uses pulumi_lagoon)
 │   │   ├── __main__.py     # Creates Lagoon projects/envs/vars via API
-│   │   └── scripts/        # Symlinks to ../scripts/
+│   │   └── scripts/        # Helper scripts
 │   │
-│   ├── single-cluster/     # Placeholder for single-cluster deployment
-│   │   └── (will use multi-cluster modules after merge)
+│   ├── single-cluster/     # Single Kind cluster with full Lagoon stack
+│   │   ├── __main__.py     # Deploys complete Lagoon to one cluster
+│   │   ├── config.py       # Single-cluster configuration
+│   │   └── (symlinks)      # Reuses modules from multi-cluster
 │   │
-│   └── multi-cluster/      # Multi-cluster deployment (on branch)
+│   └── multi-cluster/      # Production-like multi-cluster deployment
 │       ├── __main__.py     # Deploys 2 Kind clusters + full Lagoon
+│       ├── config.py       # Multi-cluster configuration
 │       ├── clusters/       # Kind cluster management
-│       ├── infrastructure/ # Ingress, cert-manager, etc.
+│       ├── infrastructure/ # Ingress, cert-manager, CoreDNS
 │       ├── lagoon/         # Core and remote installation
 │       └── registry/       # Harbor installation
 │

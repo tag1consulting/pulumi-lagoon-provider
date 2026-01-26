@@ -1,1 +1,0 @@
-../../../scripts/fix-rabbitmq-password.sh

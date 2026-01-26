@@ -39,17 +39,17 @@
 # Apply presets if specified
 case "${LAGOON_PRESET:-}" in
     single|"")
-        # Single-cluster defaults (test-cluster style)
-        KUBE_CONTEXT="${KUBE_CONTEXT:-kind-lagoon-test}"
-        LAGOON_NAMESPACE="${LAGOON_NAMESPACE:-lagoon}"
-        KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-lagoon-test}"
-        KEYCLOAK_SVC="${KEYCLOAK_SVC:-lagoon-core-keycloak}"
-        API_SVC="${API_SVC:-lagoon-core-api}"
-        KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-lagoon-core-keycloak}"
-        CORE_SECRETS="${CORE_SECRETS:-lagoon-core-secrets}"
-        BROKER_SECRET="${BROKER_SECRET:-lagoon-core-broker}"
-        REMOTE_SECRET="${REMOTE_SECRET:-lagoon-remote}"
-        REMOTE_DEPLOYMENT="${REMOTE_DEPLOYMENT:-lagoon-remote-kubernetes-build-deploy}"
+        # Single-cluster defaults (examples/single-cluster)
+        KUBE_CONTEXT="${KUBE_CONTEXT:-kind-lagoon}"
+        LAGOON_NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
+        KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-lagoon}"
+        KEYCLOAK_SVC="${KEYCLOAK_SVC:-lagoon-core-lagoon-core-keycloak}"
+        API_SVC="${API_SVC:-lagoon-core-lagoon-core-api}"
+        KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-lagoon-core-lagoon-core-keycloak}"
+        CORE_SECRETS="${CORE_SECRETS:-lagoon-core-lagoon-core-secrets}"
+        BROKER_SECRET="${BROKER_SECRET:-lagoon-core-lagoon-core-broker}"
+        REMOTE_SECRET="${REMOTE_SECRET:-lagoon-remote-lagoon-remote}"
+        REMOTE_DEPLOYMENT="${REMOTE_DEPLOYMENT:-lagoon-remote-lagoon-build-deploy}"
         ;;
     multi-prod)
         # Multi-cluster production defaults

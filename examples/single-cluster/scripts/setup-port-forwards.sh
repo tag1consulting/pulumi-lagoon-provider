@@ -1,1 +1,0 @@
-../../../scripts/setup-port-forwards.sh

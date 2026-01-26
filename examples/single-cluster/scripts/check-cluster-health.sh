@@ -1,1 +1,0 @@
-../../../scripts/check-cluster-health.sh

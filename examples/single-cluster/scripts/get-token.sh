@@ -1,1 +1,0 @@
-../../../scripts/get-token.sh
