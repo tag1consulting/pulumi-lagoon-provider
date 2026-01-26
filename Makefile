@@ -181,10 +181,11 @@ cluster-up: venv
 
 cluster-down:
 	@echo "Destroying Kind cluster..."
+	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
+	@echo "Refreshing Pulumi state..."
 	@cd $(SINGLE_CLUSTER_DIR) && \
 		. venv/bin/activate 2>/dev/null && \
-		pulumi destroy --yes 2>/dev/null || true
-	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
+		pulumi refresh --yes 2>/dev/null || true
 	@echo "Cluster destroyed."
 
 cluster-status:
