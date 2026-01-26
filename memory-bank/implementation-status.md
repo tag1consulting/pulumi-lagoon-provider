@@ -181,17 +181,19 @@ Token Handling:
    - Suggested fix: Rename `import pulumi_lagoon as lagoon` to just `import pulumi_lagoon`
    - Then use `pulumi_lagoon.LagoonDeployTarget(...)` instead of `lagoon.LagoonDeployTarget(...)`
 
-### Testing (Optional for Phase 1)
-**Status**: ⏸️ NOT STARTED
+### Testing
+**Status**: ✅ COMPLETE (2026-01-26)
 
-Pending test files:
-1. `tests/test_client.py` - GraphQL client tests
-2. `tests/test_config.py` - Configuration tests
-3. `tests/test_project.py` - Project resource tests (new file)
-4. `tests/test_environment.py` - Environment resource tests (new file)
-5. `tests/test_variable.py` - Variable resource tests (new file)
+All unit tests implemented and passing (240 tests):
+- `tests/unit/test_client.py` - GraphQL client tests (386 lines)
+- `tests/unit/test_config.py` - Configuration tests (146 lines)
+- `tests/unit/test_project.py` - Project resource tests (366 lines)
+- `tests/unit/test_environment.py` - Environment resource tests (389 lines)
+- `tests/unit/test_variable.py` - Variable resource tests (521 lines)
+- `tests/unit/test_deploytarget.py` - Deploy target tests (411 lines)
+- `tests/unit/test_validators.py` - Validator tests (788 lines)
 
-Current test files contain only template code and TODOs.
+Run tests with: `pytest tests/unit/ -v`
 
 ### Documentation Updates
 **Status**: ⏸️ PENDING
