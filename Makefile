@@ -28,7 +28,7 @@
 # Variables
 VENV_DIR := venv
 PYTHON := python3
-CLUSTER_NAME := lagoon-test
+CLUSTER_NAME := lagoon
 SINGLE_CLUSTER_DIR := examples/single-cluster
 EXAMPLE_DIR := examples/simple-project
 SCRIPTS_DIR := scripts
