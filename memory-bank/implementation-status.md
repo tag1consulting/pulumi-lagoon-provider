@@ -181,6 +181,19 @@ Token Handling:
    - Suggested fix: Rename `import pulumi_lagoon as lagoon` to just `import pulumi_lagoon`
    - Then use `pulumi_lagoon.LagoonDeployTarget(...)` instead of `lagoon.LagoonDeployTarget(...)`
 
+### Provider Features
+**Status**: ⏸️ TODO
+
+1. **Add import functionality** (Phase 2+)
+   - Allow importing existing Lagoon resources into Pulumi state
+   - Requires implementing `read()` method to fetch resources by ID
+   - Use case: Adopting IaC for existing Lagoon projects
+
+2. **Add SSH key authentication** (Phase 2+)
+   - Currently only JWT token authentication is supported
+   - SSH key auth would enable service account workflows
+   - Would require changes to `pulumi_lagoon/config.py` and `client.py`
+
 ### Testing
 **Status**: ✅ COMPLETE (2026-01-26)
 
@@ -368,10 +381,10 @@ Implement Phase 1: Core resource providers
 
 ## Known Limitations
 
-1. **No unit tests yet** - Provider is untested against mocked API
+1. ~~**No unit tests yet**~~ ✅ 240 tests passing (2026-01-26)
 2. ~~**Not tested against real Lagoon**~~ ✅ Tested and working
 3. **No import functionality** - Cannot import existing Lagoon resources yet
-4. **Limited validation** - Input validation is minimal
+4. ~~**Limited validation**~~ ✅ Comprehensive validation in validators.py (470 lines)
 5. **Token-based auth only** - SSH key authentication not supported
 
 ## Questions Answered
