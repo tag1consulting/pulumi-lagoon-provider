@@ -15,6 +15,9 @@ from .deploytarget_config import LagoonDeployTargetConfig, LagoonDeployTargetCon
 # Client (for advanced use cases)
 from .client import LagoonClient
 
+# Import utilities
+from .import_utils import ImportIdParser
+
 # Exceptions (centralized)
 from .exceptions import (
     LagoonAPIError,
@@ -40,6 +43,8 @@ __all__ = [
     "LagoonDeployTargetConfigArgs",
     # Client
     "LagoonClient",
+    # Import utilities
+    "ImportIdParser",
     # Exceptions
     "LagoonAPIError",
     "LagoonConnectionError",

@@ -519,3 +519,126 @@ class TestLagoonVariableProviderValidation:
         # Should raise - connection errors should propagate
         with pytest.raises(LagoonConnectionError):
             provider.update("p1_VAR", old_inputs, new_inputs)
+
+
+class TestLagoonVariableProviderImport:
+    """Tests for import functionality in LagoonVariableProvider."""
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_read_import_environment_variable(self, mock_config_class, sample_variable):
+        """Test read() during import of environment-level variable."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        env_variable = sample_variable.copy()
+        env_variable["environment"] = {"id": 456, "name": "main"}
+
+        mock_client = Mock()
+        mock_client.get_env_variable_by_name.return_value = env_variable
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonVariableProvider()
+
+        # Import scenario: composite ID, empty props
+        result = provider.read("123:456:DATABASE_HOST", {})
+
+        assert result is not None
+        assert result.outs["name"] == "DATABASE_HOST"
+        mock_client.get_env_variable_by_name.assert_called_once_with(
+            name="DATABASE_HOST", project=123, environment=456
+        )
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_read_import_project_variable(self, mock_config_class, sample_variable):
+        """Test read() during import of project-level variable (empty env_id)."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        mock_client = Mock()
+        mock_client.get_env_variable_by_name.return_value = sample_variable
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonVariableProvider()
+
+        # Import scenario: project-level variable with double colon
+        result = provider.read("123::API_KEY", {})
+
+        assert result is not None
+        mock_client.get_env_variable_by_name.assert_called_once_with(
+            name="API_KEY", project=123, environment=None
+        )
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_read_refresh_scenario_uses_props(self, mock_config_class, sample_variable):
+        """Test read() during refresh uses props, not ID parsing."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        mock_client = Mock()
+        mock_client.get_env_variable_by_name.return_value = sample_variable
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonVariableProvider()
+
+        # Refresh scenario: generated ID with full props
+        props = {"name": "DATABASE_HOST", "project_id": 1}
+        result = provider.read("p1_DATABASE_HOST", props)
+
+        assert result is not None
+        mock_client.get_env_variable_by_name.assert_called_once_with(
+            name="DATABASE_HOST", project=1, environment=None
+        )
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_read_import_not_found(self, mock_config_class):
+        """Test read() during import when variable doesn't exist."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        mock_client = Mock()
+        mock_client.get_env_variable_by_name.return_value = None
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonVariableProvider()
+
+        result = provider.read("999::NONEXISTENT", {})
+
+        assert result is None
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_read_import_invalid_format(self, mock_config_class):
+        """Test read() during import with invalid ID format."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+        from pulumi_lagoon.exceptions import LagoonValidationError
+
+        provider = LagoonVariableProvider()
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.read("invalid-format", {})
+        assert "project_id:env_id:var_name" in str(exc.value)
+
+    @patch("pulumi_lagoon.variable.LagoonConfig")
+    def test_read_import_with_special_var_name(self, mock_config_class, sample_variable):
+        """Test read() during import with variable name containing underscores."""
+        from pulumi_lagoon.variable import LagoonVariableProvider
+
+        sample_variable["name"] = "MY_SPECIAL_VAR_NAME"
+
+        mock_client = Mock()
+        mock_client.get_env_variable_by_name.return_value = sample_variable
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonVariableProvider()
+
+        result = provider.read("1:2:MY_SPECIAL_VAR_NAME", {})
+
+        assert result is not None
+        mock_client.get_env_variable_by_name.assert_called_once_with(
+            name="MY_SPECIAL_VAR_NAME", project=1, environment=2
+        )

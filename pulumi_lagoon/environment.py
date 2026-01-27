@@ -167,15 +167,27 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
         client.delete_environment(name=props["name"], project=project_id, execute=True)
 
     def read(self, id, props):
-        """Read/refresh a Lagoon environment from API."""
+        """Read/refresh a Lagoon environment from API.
+
+        Supports both refresh (props available) and import (props empty).
+        For import, the ID format is: project_id:env_name
+        """
+        from .import_utils import ImportIdParser
+
         client = self._get_client()
 
-        # Ensure project_id is an integer
-        project_id = int(props["project_id"])
+        # Detect import vs refresh scenario
+        if ImportIdParser.is_import_scenario(id, props, ["name", "project_id"]):
+            # Import: parse composite ID
+            project_id, env_name = ImportIdParser.parse_environment_id(id)
+        else:
+            # Refresh: use props from state
+            project_id = int(props["project_id"])
+            env_name = props["name"]
 
         # Query current state
         result = client.get_environment_by_name(
-            name=props["name"], project_id=project_id
+            name=env_name, project_id=project_id
         )
 
         if not result:

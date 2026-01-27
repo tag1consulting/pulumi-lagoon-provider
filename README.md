@@ -144,6 +144,57 @@ See the `examples/` directory for complete examples:
 - `single-cluster/` - Deploy complete Lagoon stack to a single Kind cluster
 - `multi-cluster/` - Production-like deployment with separate prod/nonprod Kind clusters
 
+## Importing Existing Resources
+
+You can import existing Lagoon resources into Pulumi state using `pulumi import`. This is useful when adopting infrastructure-as-code for existing Lagoon projects.
+
+### Import ID Formats
+
+| Resource | Import ID Format | Example |
+|----------|-----------------|---------|
+| `LagoonProject` | `{numeric_id}` | `pulumi import lagoon:index:Project my-project 123` |
+| `LagoonDeployTarget` | `{numeric_id}` | `pulumi import lagoon:index:DeployTarget my-target 1` |
+| `LagoonEnvironment` | `{project_id}:{env_name}` | `pulumi import lagoon:index:Environment my-env 123:main` |
+| `LagoonVariable` | `{project_id}:{env_id}:{var_name}` | `pulumi import lagoon:index:Variable my-var 123:456:DATABASE_HOST` |
+| `LagoonVariable` (project-level) | `{project_id}::{var_name}` | `pulumi import lagoon:index:Variable my-var 123::API_KEY` |
+| `LagoonDeployTargetConfig` | `{project_id}:{config_id}` | `pulumi import lagoon:index:DeployTargetConfig my-config 123:5` |
+
+### Finding Resource IDs
+
+Use the Lagoon CLI to find resource IDs:
+
+```bash
+# List projects and their IDs
+lagoon list projects
+
+# Get project details including environment IDs
+lagoon get project --project my-project
+
+# List variables for a project
+lagoon list variables --project my-project
+```
+
+### Import Examples
+
+```bash
+# Import an existing project (ID 123)
+pulumi import lagoon:index:Project my-site 123
+
+# Import an environment named "main" from project 123
+pulumi import lagoon:index:Environment prod-env 123:main
+
+# Import a project-level variable
+pulumi import lagoon:index:Variable api-key 123::API_KEY
+
+# Import an environment-level variable (project 123, environment 456)
+pulumi import lagoon:index:Variable db-host 123:456:DATABASE_HOST
+
+# Import a deploy target config
+pulumi import lagoon:index:DeployTargetConfig routing-config 123:5
+```
+
+After importing, you'll need to add the corresponding resource definition to your Pulumi code.
+
 ## Development
 
 ### Prerequisites

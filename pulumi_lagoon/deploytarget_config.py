@@ -129,11 +129,26 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
         client.delete_deploy_target_config(int(id), props["project_id"])
 
     def read(self, id, props):
-        """Read/refresh a deploy target configuration from API."""
+        """Read/refresh a deploy target configuration from API.
+
+        Supports both refresh (props available) and import (props empty).
+        For import, the ID format is: project_id:config_id
+        """
+        from .import_utils import ImportIdParser
+
         client = self._get_client()
 
+        # Detect import vs refresh scenario
+        if ImportIdParser.is_import_scenario(id, props, ["project_id"]):
+            # Import: parse composite ID
+            project_id, config_id = ImportIdParser.parse_deploy_target_config_id(id)
+        else:
+            # Refresh: use props from state, ID is the config_id
+            config_id = int(id)
+            project_id = int(props["project_id"])
+
         # Query current state
-        result = client.get_deploy_target_config_by_id(int(id), props["project_id"])
+        result = client.get_deploy_target_config_by_id(config_id, project_id)
 
         if not result:
             # Config no longer exists
