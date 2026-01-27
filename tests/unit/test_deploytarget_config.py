@@ -50,7 +50,9 @@ class TestLagoonDeployTargetConfigProviderCreate:
         mock_client.add_deploy_target_config.assert_called_once()
 
     @patch("pulumi_lagoon.deploytarget_config.LagoonConfig")
-    def test_create_with_all_options(self, mock_config_class, sample_deploy_target_config):
+    def test_create_with_all_options(
+        self, mock_config_class, sample_deploy_target_config
+    ):
         """Test creating a deploy target config with all options."""
         from pulumi_lagoon.deploytarget_config import LagoonDeployTargetConfigProvider
 
@@ -150,7 +152,9 @@ class TestLagoonDeployTargetConfigProviderRead:
         from pulumi_lagoon.deploytarget_config import LagoonDeployTargetConfigProvider
 
         mock_client = Mock()
-        mock_client.get_deploy_target_config_by_id.return_value = sample_deploy_target_config
+        mock_client.get_deploy_target_config_by_id.return_value = (
+            sample_deploy_target_config
+        )
         mock_config = Mock()
         mock_config.get_client.return_value = mock_client
         mock_config_class.return_value = mock_config
@@ -194,12 +198,16 @@ class TestLagoonDeployTargetConfigProviderImport:
     """Tests for import functionality in LagoonDeployTargetConfigProvider."""
 
     @patch("pulumi_lagoon.deploytarget_config.LagoonConfig")
-    def test_read_import_scenario_empty_props(self, mock_config_class, sample_deploy_target_config):
+    def test_read_import_scenario_empty_props(
+        self, mock_config_class, sample_deploy_target_config
+    ):
         """Test read() during import with empty props."""
         from pulumi_lagoon.deploytarget_config import LagoonDeployTargetConfigProvider
 
         mock_client = Mock()
-        mock_client.get_deploy_target_config_by_id.return_value = sample_deploy_target_config
+        mock_client.get_deploy_target_config_by_id.return_value = (
+            sample_deploy_target_config
+        )
         mock_config = Mock()
         mock_config.get_client.return_value = mock_client
         mock_config_class.return_value = mock_config
@@ -215,12 +223,16 @@ class TestLagoonDeployTargetConfigProviderImport:
         mock_client.get_deploy_target_config_by_id.assert_called_once_with(5, 123)
 
     @patch("pulumi_lagoon.deploytarget_config.LagoonConfig")
-    def test_read_refresh_scenario_uses_props(self, mock_config_class, sample_deploy_target_config):
+    def test_read_refresh_scenario_uses_props(
+        self, mock_config_class, sample_deploy_target_config
+    ):
         """Test read() during refresh uses props, not ID parsing."""
         from pulumi_lagoon.deploytarget_config import LagoonDeployTargetConfigProvider
 
         mock_client = Mock()
-        mock_client.get_deploy_target_config_by_id.return_value = sample_deploy_target_config
+        mock_client.get_deploy_target_config_by_id.return_value = (
+            sample_deploy_target_config
+        )
         mock_config = Mock()
         mock_config.get_client.return_value = mock_client
         mock_config_class.return_value = mock_config
@@ -265,7 +277,9 @@ class TestLagoonDeployTargetConfigProviderImport:
         assert "project_id:config_id" in str(exc.value)
 
     @patch("pulumi_lagoon.deploytarget_config.LagoonConfig")
-    def test_read_import_large_ids(self, mock_config_class, sample_deploy_target_config):
+    def test_read_import_large_ids(
+        self, mock_config_class, sample_deploy_target_config
+    ):
         """Test read() during import with large ID values."""
         from pulumi_lagoon.deploytarget_config import LagoonDeployTargetConfigProvider
 
@@ -284,7 +298,9 @@ class TestLagoonDeployTargetConfigProviderImport:
         result = provider.read("888888:999999", {})
 
         assert result is not None
-        mock_client.get_deploy_target_config_by_id.assert_called_once_with(999999, 888888)
+        mock_client.get_deploy_target_config_by_id.assert_called_once_with(
+            999999, 888888
+        )
 
 
 class TestLagoonDeployTargetConfigArgs:

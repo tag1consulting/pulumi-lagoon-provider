@@ -34,9 +34,7 @@ class ImportIdParser:
     """
 
     @staticmethod
-    def is_import_scenario(
-        id: str, props: dict, required_props: List[str]
-    ) -> bool:
+    def is_import_scenario(id: str, props: dict, required_props: List[str]) -> bool:
         """Detect if this is an import scenario vs a normal refresh.
 
         During import, props will be empty or missing required fields.

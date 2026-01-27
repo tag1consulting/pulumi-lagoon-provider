@@ -186,9 +186,7 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
             env_name = props["name"]
 
         # Query current state
-        result = client.get_environment_by_name(
-            name=env_name, project_id=project_id
-        )
+        result = client.get_environment_by_name(name=env_name, project_id=project_id)
 
         if not result:
             # Environment no longer exists

@@ -393,7 +393,9 @@ class TestLagoonEnvironmentProviderImport:
     """Tests for import functionality in LagoonEnvironmentProvider."""
 
     @patch("pulumi_lagoon.environment.LagoonConfig")
-    def test_read_import_scenario_empty_props(self, mock_config_class, sample_environment):
+    def test_read_import_scenario_empty_props(
+        self, mock_config_class, sample_environment
+    ):
         """Test read() during import with empty props."""
         from pulumi_lagoon.environment import LagoonEnvironmentProvider
 
@@ -415,7 +417,9 @@ class TestLagoonEnvironmentProviderImport:
         )
 
     @patch("pulumi_lagoon.environment.LagoonConfig")
-    def test_read_import_scenario_with_branch_name(self, mock_config_class, sample_environment):
+    def test_read_import_scenario_with_branch_name(
+        self, mock_config_class, sample_environment
+    ):
         """Test read() during import with branch-style environment name."""
         from pulumi_lagoon.environment import LagoonEnvironmentProvider
 
@@ -437,7 +441,9 @@ class TestLagoonEnvironmentProviderImport:
         )
 
     @patch("pulumi_lagoon.environment.LagoonConfig")
-    def test_read_refresh_scenario_uses_props(self, mock_config_class, sample_environment):
+    def test_read_refresh_scenario_uses_props(
+        self, mock_config_class, sample_environment
+    ):
         """Test read() during refresh uses props, not ID parsing."""
         from pulumi_lagoon.environment import LagoonEnvironmentProvider
 

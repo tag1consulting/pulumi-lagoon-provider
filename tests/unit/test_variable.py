@@ -622,7 +622,9 @@ class TestLagoonVariableProviderImport:
         assert "project_id:env_id:var_name" in str(exc.value)
 
     @patch("pulumi_lagoon.variable.LagoonConfig")
-    def test_read_import_with_special_var_name(self, mock_config_class, sample_variable):
+    def test_read_import_with_special_var_name(
+        self, mock_config_class, sample_variable
+    ):
         """Test read() during import with variable name containing underscores."""
         from pulumi_lagoon.variable import LagoonVariableProvider
 
