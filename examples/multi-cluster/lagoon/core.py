@@ -350,13 +350,13 @@ def install_lagoon_core(
     )
 
     # RabbitMQ is exposed internally via service and externally via NodePort
-    # Service name follows pattern: {release_name}-broker
-    rabbitmq_host = f"{release_name}-broker.{namespace}.svc.cluster.local"
+    # Service name follows pattern: {release_name}-lagoon-core-broker
+    rabbitmq_host = f"{release_name}-lagoon-core-broker.{namespace}.svc.cluster.local"
     rabbitmq_nodeport = 30672  # Matches amqpNodePort in helm values
 
     # SSH service for build connections
-    # Service name follows pattern: {release_name}-ssh
-    ssh_host = f"{release_name}-ssh.{namespace}.svc.cluster.local"
+    # Service name follows pattern: {release_name}-lagoon-core-ssh
+    ssh_host = f"{release_name}-lagoon-core-ssh.{namespace}.svc.cluster.local"
 
     return LagoonCoreOutputs(
         release=release,
