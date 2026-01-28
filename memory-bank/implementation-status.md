@@ -1,7 +1,7 @@
 # Pulumi Lagoon Provider - Implementation Status
 
-**Last Updated**: 2026-01-26
-**Status**: Phase 2 In Progress - LagoonDeployTarget + Multi-Cluster Example (Debugged)
+**Last Updated**: 2026-01-28
+**Status**: Phase 2 Complete - LagoonDeployTarget + Multi-Cluster Example (Working)
 
 ---
 
@@ -26,7 +26,7 @@ GraphQL Operations:
 - `delete_kubernetes()` - Delete deploy target
 
 ### Multi-Cluster Example
-**Status**: ✅ OPERATIONAL (2026-01-20)
+**Status**: ✅ COMPLETE (2026-01-28)
 
 Location: `examples/multi-cluster/`
 
@@ -40,6 +40,9 @@ Components:
 - `registry/` - Harbor container registry
 - `lagoon/` - Lagoon core and remote (build-deploy)
 
+Issues Fixed (2026-01-28):
+- Keycloak config job secret name: Changed `prod-core-keycloak` to `prod-core-lagoon-core-keycloak`
+
 Issues Fixed (2026-01-20):
 - RabbitMQ CrashLoopBackOff: Cleared corrupted Mnesia data by deleting PVCs
 - Service selector bug in `lagoon/core.py`: Changed selector to match actual pod labels
@@ -51,11 +54,13 @@ New Features:
   - Enables Direct Access Grants for lagoon-ui client (OAuth password grant)
   - Creates lagoonadmin user with platform-owner role
 - Dynamic IP refresh: Cluster IPs now automatically refresh when Kind clusters change
+- Port-forwarding make targets: `make port-forwards-all`, `make test-ui`
 
 Completed:
 - All code fixes applied via `pulumi up`
-- Browser authentication tested and working
+- Port-forwarding access to Lagoon UI tested and working
 - CLI authentication via OAuth password grant tested and working
+- Browser authentication setup documented (requires hosts file entry)
 
 **Branch**: `deploytarget-multi-cluster`
 **PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/10 (Draft)

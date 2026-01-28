@@ -14,8 +14,9 @@
 #   make clean         - Delete Kind clusters directly
 
 .PHONY: help setup preview up down refresh status clusters clean \
-        port-forwards token check fix-rabbitmq ensure-lagoon-admin \
-        deploy verify wait-for-pods test-api
+        port-forwards port-forwards-all port-forwards-stop \
+        token check fix-rabbitmq ensure-lagoon-admin \
+        deploy verify wait-for-pods test-api test-ui
 
 # Default target
 help:
@@ -41,12 +42,15 @@ help:
 	@echo "  make clean              - Delete Kind clusters without Pulumi"
 	@echo ""
 	@echo "Utility targets:"
-	@echo "  make port-forwards      - Start kubectl port-forwards"
+	@echo "  make port-forwards      - Start port-forwards for API and Keycloak"
+	@echo "  make port-forwards-all  - Start port-forwards for all services (API, Keycloak, UI)"
+	@echo "  make port-forwards-stop - Stop all port-forwards"
 	@echo "  make token              - Get a fresh OAuth token"
 	@echo "  make ensure-lagoon-admin - Create lagoonadmin user in Keycloak"
 	@echo "  make fix-rabbitmq       - Fix RabbitMQ password mismatch"
 	@echo "  make wait-for-pods      - Wait for all Lagoon pods to be running"
 	@echo "  make test-api           - Test Lagoon API access"
+	@echo "  make test-ui            - Test Lagoon UI access via port-forward"
 	@echo ""
 	@echo "Note: 'make deploy' handles Helm timeouts automatically by running"
 	@echo "      refresh + up cycles until all resources are deployed."
@@ -67,7 +71,7 @@ setup:
 check:
 	./scripts/check-cluster-health.sh
 
-# Start port-forwards
+# Start port-forwards (API and Keycloak only)
 port-forwards:
 	@echo "Starting port-forwards to prod cluster..."
 	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
@@ -77,6 +81,33 @@ port-forwards:
 	@echo "Port-forwards started:"
 	@echo "  Keycloak: http://localhost:8080/auth"
 	@echo "  API:      http://localhost:7080/graphql"
+	@echo ""
+	@echo "To also start the UI port-forward, run: make port-forwards-all"
+
+# Start port-forwards for all services (API, Keycloak, UI)
+port-forwards-all:
+	@echo "Starting port-forwards to prod cluster (all services)..."
+	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000 >/dev/null 2>&1 &
+	@sleep 2
+	@echo "Port-forwards started:"
+	@echo "  Keycloak: http://localhost:8080/auth"
+	@echo "  API:      http://localhost:7080/graphql"
+	@echo "  UI:       http://localhost:3000"
+	@echo ""
+	@echo "IMPORTANT: For browser-based authentication, add this to /etc/hosts:"
+	@echo "  127.0.0.1 prod-core-lagoon-core-keycloak.lagoon-core.svc.cluster.local"
+	@echo ""
+	@echo "Then open http://localhost:3000 and login as 'lagoonadmin'"
+
+# Stop all port-forwards
+port-forwards-stop:
+	@echo "Stopping port-forwards..."
+	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@pkill -f "port-forward.*harbor" 2>/dev/null || true
+	@echo "Port-forwards stopped."
 
 # Get fresh token (must be sourced to export variables)
 token:
@@ -218,9 +249,10 @@ verify: check
 	@echo "Your multi-cluster Lagoon environment is ready."
 	@echo ""
 	@echo "Next steps:"
-	@echo "  1. Access the Lagoon UI: make port-forwards && open http://localhost:8080"
-	@echo "  2. Create a project using the Pulumi provider"
-	@echo "  3. Check the README.md for more examples"
+	@echo "  1. Start all port-forwards:  make port-forwards-all"
+	@echo "  2. Test UI access:           make test-ui"
+	@echo "  3. Open Lagoon UI:           open http://localhost:3000"
+	@echo "  4. Check the README.md for browser auth setup (hosts file entry)"
 
 # Test Lagoon API access
 test-api:
@@ -256,3 +288,67 @@ test-api:
 		echo "  This might be normal if Keycloak is still initializing."; \
 		echo "  Try running: make ensure-lagoon-admin"; \
 	fi
+
+# Test Lagoon UI access via port-forward
+test-ui:
+	@echo "=========================================="
+	@echo "Testing Lagoon UI Port-Forward Access"
+	@echo "=========================================="
+	@echo ""
+	@echo "Starting port-forwards..."
+	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000 >/dev/null 2>&1 &
+	@sleep 3
+	@echo ""
+	@echo "Testing UI accessibility..."
+	@HTTP_CODE=$$(curl -s -o /dev/null -w "%{http_code}" -L http://localhost:3000 2>/dev/null); \
+	if [ "$$HTTP_CODE" = "200" ]; then \
+		echo "  UI accessible: http://localhost:3000 -> HTTP 200"; \
+	else \
+		echo "  UI response: HTTP $$HTTP_CODE"; \
+	fi
+	@echo ""
+	@echo "Testing API accessibility..."
+	@HTTP_CODE=$$(curl -s -o /dev/null -w "%{http_code}" http://localhost:7080/graphql 2>/dev/null); \
+	if [ "$$HTTP_CODE" = "401" ] || [ "$$HTTP_CODE" = "200" ]; then \
+		echo "  API accessible: http://localhost:7080/graphql -> HTTP $$HTTP_CODE (401=auth required, 200=OK)"; \
+	else \
+		echo "  API response: HTTP $$HTTP_CODE"; \
+	fi
+	@echo ""
+	@echo "Testing Keycloak accessibility..."
+	@HTTP_CODE=$$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/auth/realms/lagoon 2>/dev/null); \
+	if [ "$$HTTP_CODE" = "200" ]; then \
+		echo "  Keycloak accessible: http://localhost:8080/auth -> HTTP 200"; \
+	else \
+		echo "  Keycloak response: HTTP $$HTTP_CODE"; \
+	fi
+	@echo ""
+	@echo "Testing OAuth token acquisition..."
+	@PASSWORD=$$(kubectl --context kind-lagoon-prod -n lagoon-core get secret prod-core-lagoon-core-keycloak -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d); \
+	TOKEN=$$(curl -sf "http://localhost:8080/auth/realms/lagoon/protocol/openid-connect/token" \
+		-d "grant_type=password" \
+		-d "client_id=lagoon-ui" \
+		-d "username=lagoonadmin" \
+		-d "password=$$PASSWORD" 2>/dev/null | jq -r '.access_token // empty'); \
+	if [ -n "$$TOKEN" ]; then \
+		echo "  OAuth token: OK (length=$$(echo $$TOKEN | wc -c) chars)"; \
+	else \
+		echo "  OAuth token: FAILED"; \
+	fi
+	@echo ""
+	@echo "=========================================="
+	@echo "Port-Forward Test Summary"
+	@echo "=========================================="
+	@echo ""
+	@echo "Services accessible via localhost:"
+	@echo "  - Lagoon UI:   http://localhost:3000"
+	@echo "  - Lagoon API:  http://localhost:7080/graphql"
+	@echo "  - Keycloak:    http://localhost:8080/auth"
+	@echo ""
+	@echo "For browser-based authentication, add to /etc/hosts:"
+	@echo "  127.0.0.1 prod-core-lagoon-core-keycloak.lagoon-core.svc.cluster.local"
+	@echo ""
+	@echo "Then open http://localhost:3000 and login as 'lagoonadmin'"

@@ -56,46 +56,97 @@ make multi-cluster-preview  # Check what's pending
 
 ### Option 1: Port Forwarding (Recommended)
 
-From the repository root, use the make target to start port-forwards:
+#### Quick Start
 
 ```bash
-# Start port-forwards for API and Keycloak
-make multi-cluster-port-forwards
+# Start port-forwards for all services (API, Keycloak, UI)
+make port-forwards-all
 
-# Or from this directory:
-make port-forwards
+# Test that everything is accessible
+make test-ui
 ```
 
-This starts port-forwards to:
-- **Keycloak**: http://localhost:8080/auth
-- **Lagoon API**: http://localhost:7080/graphql
+#### Available Make Targets
 
-For additional services, you can manually add port-forwards:
+| Target | Description |
+|--------|-------------|
+| `make port-forwards` | Start API and Keycloak port-forwards only |
+| `make port-forwards-all` | Start all port-forwards (API, Keycloak, UI) |
+| `make port-forwards-stop` | Stop all port-forwards |
+| `make test-ui` | Test all services via port-forward |
+| `make test-api` | Test API with authentication |
+
+#### Service URLs
+
+| Service | URL | Notes |
+|---------|-----|-------|
+| Lagoon UI | http://localhost:3000 | Web interface |
+| Lagoon API | http://localhost:7080/graphql | GraphQL endpoint |
+| Keycloak | http://localhost:8080/auth | Authentication server |
+| Harbor | http://localhost:8081 | Container registry (manual port-forward) |
+
+#### Browser Authentication Setup (Required for UI Login)
+
+The Lagoon UI redirects browsers to an internal Kubernetes service URL for Keycloak authentication. For browser-based login to work, you must add a hosts file entry:
+
+**Step 1: Add hosts file entry**
 
 ```bash
-# Lagoon UI (http://localhost:3000)
-kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000
+# Linux/Mac: Edit /etc/hosts (requires sudo)
+sudo sh -c 'echo "127.0.0.1 prod-core-lagoon-core-keycloak.lagoon-core.svc.cluster.local" >> /etc/hosts'
 
+# Windows: Edit C:\Windows\System32\drivers\etc\hosts (as Administrator)
+# Add this line:
+# 127.0.0.1 prod-core-lagoon-core-keycloak.lagoon-core.svc.cluster.local
+```
+
+**Step 2: Start port-forwards**
+
+```bash
+make port-forwards-all
+```
+
+**Step 3: Access the UI**
+
+Open http://localhost:3000 in your browser and log in as `lagoonadmin`.
+
+To get the password:
+```bash
+kubectl --context kind-lagoon-prod -n lagoon-core get secret prod-core-lagoon-core-keycloak \
+  -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d && echo
+```
+
+#### Verifying Port-Forward Setup
+
+Run the test target to verify everything is working:
+
+```bash
+make test-ui
+```
+
+Expected output:
+```
+Testing UI accessibility...
+  UI accessible: http://localhost:3000 -> HTTP 200
+
+Testing API accessibility...
+  API accessible: http://localhost:7080/graphql -> HTTP 401 (401=auth required, 200=OK)
+
+Testing Keycloak accessibility...
+  Keycloak accessible: http://localhost:8080/auth -> HTTP 200
+
+Testing OAuth token acquisition...
+  OAuth token: OK (length=1255 chars)
+```
+
+#### Manual Port-Forwards
+
+For services not included in `make port-forwards-all`:
+
+```bash
 # Harbor (http://localhost:8081)
-kubectl --context kind-lagoon-prod port-forward -n harbor svc/prod-harbor-portal 8081:80
+kubectl --context kind-lagoon-prod port-forward -n harbor svc/prod-harbor-portal 8081:80 &
 ```
-
-**Important**: For browser-based authentication (login via UI), you must add this hosts file entry:
-
-```bash
-# Add to /etc/hosts (Linux/Mac) or C:\Windows\System32\drivers\etc\hosts (Windows)
-127.0.0.1 prod-core-lagoon-core-keycloak.lagoon-core.svc.cluster.local
-```
-
-This is required because the Lagoon UI redirects the browser to the internal Keycloak URL for authentication. Without this entry, the browser cannot resolve the internal Kubernetes service name.
-
-**Service URLs with port-forwarding:**
-| Service | URL | Make Target |
-|---------|-----|-------------|
-| Lagoon API | http://localhost:7080/graphql | `make port-forwards` |
-| Keycloak | http://localhost:8080/auth | `make port-forwards` |
-| Lagoon UI | http://localhost:3000 | Manual |
-| Harbor | http://localhost:8081 | Manual |
 
 ### Option 2: Host File Entries
 

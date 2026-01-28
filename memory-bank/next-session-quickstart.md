@@ -1,7 +1,7 @@
 # Next Session Quickstart - Pulumi Lagoon Provider
 
-**Date Updated**: 2026-01-20
-**Status**: Phase 2 In Progress - Multi-Cluster Example Debugged
+**Date Updated**: 2026-01-28
+**Status**: Phase 2 Complete - Multi-Cluster Example Working
 
 ---
 
@@ -30,6 +30,12 @@
    make multi-cluster-down  # Clean up any remnants
    make multi-cluster-up    # Deploy fresh
    ```
+
+### Issues Fixed (2026-01-28)
+
+1. **Keycloak Config Job Secret Name**: Fixed in `__main__.py:289-290`
+   - Root cause: Keycloak config job referenced `prod-core-keycloak` but actual secret is `prod-core-lagoon-core-keycloak`
+   - Fix: Changed `keycloak_service` and `keycloak_admin_secret` to use correct names
 
 ### Issues Fixed (2026-01-20)
 
@@ -77,7 +83,9 @@ make clean-all              # Full teardown
 - ✅ Harbor registry deploys successfully
 - ✅ Lagoon core running (RabbitMQ fixed)
 - ✅ Cross-cluster RabbitMQ communication working
-- ⏳ Browser-based authentication (needs testing)
+- ✅ Port-forwarding access to Lagoon UI tested and working
+- ✅ CLI/API authentication via OAuth password grant working
+- ✅ Browser authentication documented (requires hosts file entry)
 
 ### Project Structure
 ```
@@ -134,13 +142,22 @@ pulumi-lagoon-provider/
 ### Accessing Services (Port Forwarding)
 
 ```bash
-# Start port forwards
-kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000
-kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 4000:80
-kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080
+# Start all port-forwards (API, Keycloak, UI)
+cd examples/multi-cluster
+make port-forwards-all
+
+# Test that everything is accessible
+make test-ui
 ```
 
-**Important**: For browser auth, add to `/etc/hosts`:
+**Service URLs:**
+| Service | URL |
+|---------|-----|
+| Lagoon UI | http://localhost:3000 |
+| Lagoon API | http://localhost:7080/graphql |
+| Keycloak | http://localhost:8080/auth |
+
+**Important**: For browser authentication, add to `/etc/hosts`:
 ```
 127.0.0.1 prod-core-lagoon-core-keycloak.lagoon-core.svc.cluster.local
 ```
@@ -149,13 +166,24 @@ kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lag
 
 ## Makefile Targets Reference
 
-### Multi-Cluster Example (NEW)
+### Multi-Cluster Example
 ```bash
 make multi-cluster-up       # Create prod + nonprod Kind clusters with Lagoon
 make multi-cluster-down     # Destroy multi-cluster environment
 make multi-cluster-preview  # Preview changes
 make multi-cluster-status   # Show stack outputs
 make multi-cluster-clusters # List Kind clusters
+make multi-cluster-port-forwards  # Start port-forwards for API/Keycloak
+make multi-cluster-test-api       # Test Lagoon API access
+```
+
+### Multi-Cluster Example (from examples/multi-cluster/)
+```bash
+make port-forwards          # Start port-forwards for API and Keycloak
+make port-forwards-all      # Start all port-forwards (API, Keycloak, UI)
+make port-forwards-stop     # Stop all port-forwards
+make test-ui                # Test all services via port-forward
+make test-api               # Test API with authentication
 ```
 
 ### Simple Example (Original)
@@ -232,11 +260,12 @@ kubectl --context kind-lagoon-nonprod exec -it -n lagoon <pod> -- nc -zv <prod-n
 
 1. ✅ ~~Debug Lagoon core timeout issue~~ (Fixed: RabbitMQ Mnesia data)
 2. ✅ ~~Verify cross-cluster RabbitMQ communication~~ (Working)
-3. Test browser-based authentication with port-forwarding
-4. Run `pulumi up` to apply the service selector fix
-5. Mark PR as ready for review once working
-6. Consider adding integration tests
+3. ✅ ~~Test browser-based authentication with port-forwarding~~ (Working, documented)
+4. ✅ ~~Run `pulumi up` to apply the service selector fix~~ (Applied)
+5. ✅ ~~Fix Keycloak config job secret name~~ (Fixed 2026-01-28)
+6. Mark PR as ready for review
+7. Consider adding integration tests
 
 ---
 
-**Summary**: Multi-cluster infrastructure is operational! RabbitMQ and cross-cluster communication issues were fixed on 2026-01-20. Code fix in `lagoon/core.py` for service selector needs to be applied via `pulumi up`. Branch is `deploytarget-multi-cluster`, PR #10 is open as draft. Next: test browser auth, then mark PR ready for review.
+**Summary**: Multi-cluster infrastructure is fully operational! All issues fixed and port-forwarding tested successfully on 2026-01-28. Branch is `deploytarget-multi-cluster`, PR #10 is open as draft. Ready for review.

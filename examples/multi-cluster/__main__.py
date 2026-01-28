@@ -286,8 +286,8 @@ if prod_provider is not None and install_lagoon_components and lagoon_secrets is
         "prod-lagoon",
         prod_provider,
         namespace=lagoon_core.namespace,
-        keycloak_service="prod-core-keycloak",
-        keycloak_admin_secret="prod-core-keycloak",
+        keycloak_service="prod-core-lagoon-core-keycloak",
+        keycloak_admin_secret="prod-core-lagoon-core-keycloak",
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
         ),
