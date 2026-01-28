@@ -32,6 +32,7 @@ setup(
     install_requires=[
         "pulumi>=3.0.0,<4.0.0",
         "requests>=2.28.0,<3.0.0",
+        "PyJWT>=2.8.0",  # For admin JWT token generation
     ],
     extras_require={
         "dev": [

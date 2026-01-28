@@ -1,7 +1,0 @@
-name: lagoon-test-cluster
-description: Local Lagoon test environment using kind for provider development
-runtime:
-  name: python
-  options:
-    virtualenv: venv
-main: .

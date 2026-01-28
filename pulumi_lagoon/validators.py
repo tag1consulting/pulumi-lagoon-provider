@@ -313,3 +313,158 @@ def validate_environment_name(name: str) -> None:
             value=name,
             suggestion="Environment name must start and end with alphanumeric characters",
         )
+
+
+# Valid cloud providers for deploy targets
+VALID_CLOUD_PROVIDERS: Set[str] = {
+    "kind",
+    "aws",
+    "gcp",
+    "azure",
+    "openstack",
+    "digitalocean",
+    "linode",
+    "vsphere",
+    "bare_metal",
+    "other",
+}
+
+
+def validate_deploy_target_name(name: str) -> None:
+    """Validate deploy target name.
+
+    Rules:
+    - Must start with a lowercase letter or number
+    - Can only contain lowercase letters, numbers, and hyphens
+    - Cannot end with a hyphen
+    - Maximum 63 characters (Kubernetes limitation)
+
+    Args:
+        name: Deploy target name to validate
+
+    Raises:
+        LagoonValidationError: If name is invalid
+    """
+    validate_required(name, "name")
+
+    # Pattern: starts with lowercase letter or number, contains only lowercase letters,
+    # numbers, and hyphens, ends with lowercase letter or number
+    pattern = r"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+
+    if len(name) > 63:
+        raise LagoonValidationError(
+            "Deploy target name exceeds maximum length of 63 characters",
+            field="name",
+            value=name,
+            suggestion="Use a shorter deploy target name (max 63 characters)",
+        )
+
+    if not re.match(pattern, name):
+        raise LagoonValidationError(
+            "Invalid deploy target name format",
+            field="name",
+            value=name,
+            suggestion="Deploy target name must start with a lowercase letter or number, "
+            "contain only lowercase letters, numbers, and hyphens, and not end with a hyphen",
+        )
+
+
+def validate_console_url(url: str) -> None:
+    """Validate Kubernetes console/API URL.
+
+    Accepts:
+    - HTTPS URLs: https://kubernetes.example.com
+    - HTTP URLs (for development): http://localhost:8080
+
+    Args:
+        url: Kubernetes API URL to validate
+
+    Raises:
+        LagoonValidationError: If URL format is invalid
+    """
+    validate_required(url, "console_url")
+
+    # HTTPS/HTTP URL pattern
+    pattern = r"^https?://[\w.-]+(?::\d+)?(?:/[\w./-]*)?$"
+
+    if not re.match(pattern, url):
+        raise LagoonValidationError(
+            "Invalid Kubernetes console URL format",
+            field="console_url",
+            value=url,
+            suggestion="Use HTTPS format (https://kubernetes.example.com) or "
+            "HTTP format for development (http://localhost:8080)",
+        )
+
+
+def validate_cloud_provider(provider: str) -> str:
+    """Validate cloud provider value.
+
+    Args:
+        provider: The cloud provider to validate
+
+    Returns:
+        The normalized (lowercase) cloud provider
+
+    Raises:
+        LagoonValidationError: If provider is invalid
+    """
+    return validate_enum(provider, "cloud_provider", VALID_CLOUD_PROVIDERS)
+
+
+def validate_ssh_port(port: Any) -> int:
+    """Validate SSH port number.
+
+    Args:
+        port: The port number to validate (can be int or string)
+
+    Returns:
+        The validated port number
+
+    Raises:
+        LagoonValidationError: If port is invalid
+    """
+    try:
+        port_int = int(port)
+    except (ValueError, TypeError):
+        raise LagoonValidationError(
+            "SSH port must be an integer",
+            field="ssh_port",
+            value=port,
+            suggestion="Provide a valid port number (e.g., 22)",
+        )
+
+    if port_int < 1 or port_int > 65535:
+        raise LagoonValidationError(
+            "SSH port must be between 1 and 65535",
+            field="ssh_port",
+            value=port,
+            suggestion="Provide a valid port number (1-65535, typically 22)",
+        )
+
+    return port_int
+
+
+def validate_ssh_host(host: Optional[str]) -> None:
+    """Validate SSH host for builds.
+
+    Args:
+        host: SSH hostname to validate (None is allowed for optional field)
+
+    Raises:
+        LagoonValidationError: If host format is invalid
+    """
+    if host is None:
+        return  # Optional field
+
+    # Hostname pattern: alphanumeric with hyphens and dots, or IP address
+    hostname_pattern = r"^[\w.-]+$"
+    ip_pattern = r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"
+
+    if not (re.match(hostname_pattern, host) or re.match(ip_pattern, host)):
+        raise LagoonValidationError(
+            "Invalid SSH host format",
+            field="ssh_host",
+            value=host,
+            suggestion="Provide a valid hostname (e.g., ssh.lagoon.example.com) or IP address",
+        )

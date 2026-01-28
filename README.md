@@ -21,13 +21,15 @@ This provider enables you to manage Lagoon hosting platform resources (projects,
 
 ## Supported Resources
 
-### Phase 1 (Current Development)
+### Phase 1 (Complete)
 - `LagoonProject` - Manage Lagoon projects
 - `LagoonEnvironment` - Manage environments (branches/PRs)
 - `LagoonVariable` - Manage project and environment variables
 
+### Phase 2 (Current)
+- `LagoonDeployTarget` - Manage Kubernetes cluster deploy targets
+
 ### Planned
-- `LagoonDeployTarget` - Manage Kubernetes cluster targets
 - `LagoonGroup` - Manage user groups and permissions
 - `LagoonNotification` - Manage notification integrations
 - `LagoonTask` - Manage tasks and backups
@@ -52,7 +54,7 @@ make example-up
 ```
 
 **What gets created:**
-- Kind Kubernetes cluster (`lagoon-test`)
+- Kind Kubernetes cluster (`lagoon`)
 - Lagoon Core (API, UI, Keycloak, RabbitMQ, databases)
 - Harbor container registry
 - Ingress controller with TLS
@@ -138,9 +140,60 @@ pulumi.export("production_url", prod_env.route)
 
 See the `examples/` directory for complete examples:
 
-- `simple-project/` - Basic project setup
-- `multi-environment/` - Project with multiple environments (coming soon)
-- `with-eks/` - Integration with Pulumi EKS (coming soon)
+- `simple-project/` - Use the Lagoon provider to create projects/environments/variables via API
+- `single-cluster/` - Deploy complete Lagoon stack to a single Kind cluster
+- `multi-cluster/` - Production-like deployment with separate prod/nonprod Kind clusters
+
+## Importing Existing Resources
+
+You can import existing Lagoon resources into Pulumi state using `pulumi import`. This is useful when adopting infrastructure-as-code for existing Lagoon projects.
+
+### Import ID Formats
+
+| Resource | Import ID Format | Example |
+|----------|-----------------|---------|
+| `LagoonProject` | `{numeric_id}` | `pulumi import lagoon:index:Project my-project 123` |
+| `LagoonDeployTarget` | `{numeric_id}` | `pulumi import lagoon:index:DeployTarget my-target 1` |
+| `LagoonEnvironment` | `{project_id}:{env_name}` | `pulumi import lagoon:index:Environment my-env 123:main` |
+| `LagoonVariable` | `{project_id}:{env_id}:{var_name}` | `pulumi import lagoon:index:Variable my-var 123:456:DATABASE_HOST` |
+| `LagoonVariable` (project-level) | `{project_id}::{var_name}` | `pulumi import lagoon:index:Variable my-var 123::API_KEY` |
+| `LagoonDeployTargetConfig` | `{project_id}:{config_id}` | `pulumi import lagoon:index:DeployTargetConfig my-config 123:5` |
+
+### Finding Resource IDs
+
+Use the Lagoon CLI to find resource IDs:
+
+```bash
+# List projects and their IDs
+lagoon list projects
+
+# Get project details including environment IDs
+lagoon get project --project my-project
+
+# List variables for a project
+lagoon list variables --project my-project
+```
+
+### Import Examples
+
+```bash
+# Import an existing project (ID 123)
+pulumi import lagoon:index:Project my-site 123
+
+# Import an environment named "main" from project 123
+pulumi import lagoon:index:Environment prod-env 123:main
+
+# Import a project-level variable
+pulumi import lagoon:index:Variable api-key 123::API_KEY
+
+# Import an environment-level variable (project 123, environment 456)
+pulumi import lagoon:index:Variable db-host 123:456:DATABASE_HOST
+
+# Import a deploy target config
+pulumi import lagoon:index:DeployTargetConfig routing-config 123:5
+```
+
+After importing, you'll need to add the corresponding resource definition to your Pulumi code.
 
 ## Development
 
@@ -175,12 +228,21 @@ make cluster-down       # Destroy Kind cluster and Lagoon resources
 make ensure-lagoon-admin   # Create lagoonadmin user in Keycloak
 make ensure-deploy-target  # Create deploy target in Lagoon + set Pulumi config
 
-# Example Project
+# Example Project (simple-project)
 make example-setup      # Initialize example Pulumi stack
 make example-preview    # Preview changes (auto token refresh)
 make example-up         # Deploy example resources (auto token refresh)
 make example-down       # Destroy example resources
 make example-output     # Show stack outputs
+
+# Multi-cluster Example
+make multi-cluster-up       # Create prod + nonprod Kind clusters with full Lagoon stack:
+                            #   - prod cluster: lagoon-core + lagoon-remote + Harbor
+                            #   - nonprod cluster: lagoon-remote only (connects to prod core)
+make multi-cluster-down     # Destroy multi-cluster environment
+make multi-cluster-preview  # Preview multi-cluster changes
+make multi-cluster-status   # Show multi-cluster stack outputs
+make multi-cluster-clusters # List all Kind clusters
 
 # Cleanup
 make clean              # Kill port-forwards, remove temp files
@@ -218,24 +280,31 @@ pytest tests/
 
 ```
 pulumi-lagoon-provider/
-├── pulumi_lagoon/           # Main package
+├── pulumi_lagoon/           # Main provider package
 │   ├── __init__.py         # Package exports
 │   ├── client.py           # Lagoon GraphQL API client
 │   ├── config.py           # Provider configuration
+│   ├── exceptions.py       # Custom exceptions
+│   ├── validators.py       # Input validation
 │   ├── project.py          # LagoonProject resource
 │   ├── environment.py      # LagoonEnvironment resource
-│   └── variable.py         # LagoonVariable resource
+│   ├── variable.py         # LagoonVariable resource
+│   └── deploytarget.py     # LagoonDeployTarget resource
 ├── examples/
-│   └── simple-project/     # Example with automation scripts
-│       ├── __main__.py     # Pulumi program
-│       ├── scripts/        # Helper scripts (run-pulumi.sh, etc.)
-│       └── Makefile        # Convenience targets
-├── test-cluster/           # Kind + Lagoon Pulumi program
-│   ├── __main__.py         # Creates complete test environment
-│   └── config/             # Kind and Helm values
-├── scripts/
-│   └── setup-complete.sh   # Unified setup script
-├── tests/                  # Tests
+│   ├── simple-project/     # API usage example (assumes Lagoon exists)
+│   │   ├── __main__.py     # Creates projects/environments/variables
+│   │   └── scripts/        # Helper scripts
+│   ├── single-cluster/     # Single Kind cluster deployment
+│   │   ├── __main__.py     # Deploys full Lagoon stack
+│   │   └── (symlinks)      # Reuses multi-cluster modules
+│   └── multi-cluster/      # Production-like multi-cluster deployment
+│       ├── __main__.py     # Two-cluster deployment
+│       ├── clusters/       # Kind cluster management
+│       ├── infrastructure/ # Ingress, cert-manager, CoreDNS
+│       ├── lagoon/         # Lagoon core and remote
+│       └── registry/       # Harbor installation
+├── scripts/                # Shared operational scripts
+├── tests/                  # Unit and integration tests
 ├── memory-bank/            # Planning and architecture docs
 ├── Makefile                # Top-level automation
 └── README.md              # This file
@@ -263,12 +332,14 @@ For detailed architecture information, see `memory-bank/architecture.md`.
 - [x] Test cluster setup via Pulumi (Kind + Lagoon)
 - [x] Documentation
 
-### Phase 2: Polish
+### Phase 2: Polish (Current)
 - [x] Comprehensive error handling
-- [x] Unit tests (176 tests, 95% coverage)
+- [x] Unit tests (240+ tests, 95% coverage)
 - [x] Integration test framework
 - [x] CI/CD pipeline (GitHub Actions)
-- [ ] Additional resources (DeployTarget, Group, Notification)
+- [x] DeployTarget resource for Kubernetes cluster management
+- [x] Multi-cluster example (prod/nonprod separation)
+- [ ] Additional resources (Group, Notification)
 - [ ] Advanced examples
 
 ### Phase 3: Production Ready

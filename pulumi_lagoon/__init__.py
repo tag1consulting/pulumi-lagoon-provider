@@ -9,9 +9,14 @@ from .config import LagoonConfig
 from .project import LagoonProject, LagoonProjectArgs
 from .environment import LagoonEnvironment, LagoonEnvironmentArgs
 from .variable import LagoonVariable, LagoonVariableArgs
+from .deploytarget import LagoonDeployTarget, LagoonDeployTargetArgs
+from .deploytarget_config import LagoonDeployTargetConfig, LagoonDeployTargetConfigArgs
 
 # Client (for advanced use cases)
 from .client import LagoonClient
+
+# Import utilities
+from .import_utils import ImportIdParser
 
 # Exceptions (centralized)
 from .exceptions import (
@@ -32,8 +37,14 @@ __all__ = [
     "LagoonEnvironmentArgs",
     "LagoonVariable",
     "LagoonVariableArgs",
+    "LagoonDeployTarget",
+    "LagoonDeployTargetArgs",
+    "LagoonDeployTargetConfig",
+    "LagoonDeployTargetConfigArgs",
     # Client
     "LagoonClient",
+    # Import utilities
+    "ImportIdParser",
     # Exceptions
     "LagoonAPIError",
     "LagoonConnectionError",

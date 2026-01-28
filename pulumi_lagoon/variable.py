@@ -196,18 +196,32 @@ class LagoonVariableProvider(dynamic.ResourceProvider):
         client.delete_env_variable(**delete_args)
 
     def read(self, id, props):
-        """Read/refresh a Lagoon variable from API."""
+        """Read/refresh a Lagoon variable from API.
+
+        Supports both refresh (props available) and import (props empty).
+        For import, the ID format is:
+          - Environment-level: project_id:env_id:var_name
+          - Project-level: project_id::var_name (empty env_id)
+        """
+        from .import_utils import ImportIdParser
+
         client = self._get_client()
 
-        # Ensure IDs are integers (Pulumi may pass them as strings)
-        project_id = int(props["project_id"])
-        environment_id = (
-            int(props["environment_id"]) if props.get("environment_id") else None
-        )
+        # Detect import vs refresh scenario
+        if ImportIdParser.is_import_scenario(id, props, ["name", "project_id"]):
+            # Import: parse composite ID
+            project_id, environment_id, var_name = ImportIdParser.parse_variable_id(id)
+        else:
+            # Refresh: use props from state
+            project_id = int(props["project_id"])
+            environment_id = (
+                int(props["environment_id"]) if props.get("environment_id") else None
+            )
+            var_name = props["name"]
 
         # Query current state
         result = client.get_env_variable_by_name(
-            name=props["name"], project=project_id, environment=environment_id
+            name=var_name, project=project_id, environment=environment_id
         )
 
         if not result:

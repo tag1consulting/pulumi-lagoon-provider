@@ -531,3 +531,385 @@ class LagoonClient:
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("deleteEnvVariable", "")
+
+    # Deploy target (Kubernetes) operations
+    def add_kubernetes(
+        self,
+        name: str,
+        console_url: str,
+        cloud_provider: str = "kind",
+        cloud_region: str = "local",
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Add a Kubernetes deploy target.
+
+        Args:
+            name: Deploy target name
+            console_url: Kubernetes API URL
+            cloud_provider: Cloud provider (e.g., "aws", "gcp", "kind")
+            cloud_region: Cloud region (e.g., "us-east-1", "local")
+            **kwargs: Additional properties (sshHost, sshPort, buildImage, disabled, etc.)
+
+        Returns:
+            Deploy target data
+        """
+        mutation = """
+        mutation AddKubernetes($input: AddKubernetesInput!) {
+            addKubernetes(input: $input) {
+                id
+                name
+                consoleUrl
+                cloudProvider
+                cloudRegion
+                sshHost
+                sshPort
+                buildImage
+                disabled
+                routerPattern
+                created
+            }
+        }
+        """
+
+        input_data = {
+            "name": name,
+            "consoleUrl": console_url,
+            "cloudProvider": cloud_provider,
+            "cloudRegion": cloud_region,
+            **kwargs,
+        }
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addKubernetes", {})
+
+    def get_all_kubernetes(self) -> list:
+        """
+        Get all Kubernetes deploy targets.
+
+        Returns:
+            List of deploy target data
+        """
+        query = """
+        query AllKubernetes {
+            allKubernetes {
+                id
+                name
+                consoleUrl
+                cloudProvider
+                cloudRegion
+                sshHost
+                sshPort
+                buildImage
+                disabled
+                routerPattern
+                created
+            }
+        }
+        """
+
+        result = self._execute(query)
+        return result.get("allKubernetes", [])
+
+    def get_kubernetes_by_id(self, k8s_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get Kubernetes deploy target by ID.
+
+        Args:
+            k8s_id: Kubernetes/deploy target ID
+
+        Returns:
+            Deploy target data or None if not found
+        """
+        query = """
+        query KubernetesById($id: Int!) {
+            kubernetes(id: $id) {
+                id
+                name
+                consoleUrl
+                cloudProvider
+                cloudRegion
+                sshHost
+                sshPort
+                buildImage
+                disabled
+                routerPattern
+                created
+            }
+        }
+        """
+
+        result = self._execute(query, {"id": k8s_id})
+        return result.get("kubernetes")
+
+    def get_kubernetes_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get Kubernetes deploy target by name.
+
+        Args:
+            name: Deploy target name
+
+        Returns:
+            Deploy target data or None if not found
+        """
+        # Lagoon doesn't have a direct query for Kubernetes by name,
+        # so we get all and filter
+        all_k8s = self.get_all_kubernetes()
+
+        for k8s in all_k8s:
+            if k8s.get("name") == name:
+                return k8s
+
+        return None
+
+    def update_kubernetes(self, k8s_id: int, **kwargs) -> Dict[str, Any]:
+        """
+        Update a Kubernetes deploy target.
+
+        Args:
+            k8s_id: Kubernetes/deploy target ID
+            **kwargs: Properties to update
+
+        Returns:
+            Updated deploy target data
+        """
+        mutation = """
+        mutation UpdateKubernetes($input: UpdateKubernetesInput!) {
+            updateKubernetes(input: $input) {
+                id
+                name
+                consoleUrl
+                cloudProvider
+                cloudRegion
+                sshHost
+                sshPort
+                buildImage
+                disabled
+                routerPattern
+            }
+        }
+        """
+
+        input_data = {"id": k8s_id, **kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("updateKubernetes", {})
+
+    def delete_kubernetes(self, name: str) -> str:
+        """
+        Delete a Kubernetes deploy target.
+
+        Args:
+            name: Deploy target name
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteKubernetes($input: DeleteKubernetesInput!) {
+            deleteKubernetes(input: $input)
+        }
+        """
+
+        input_data = {"name": name}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteKubernetes", "")
+
+    # Deploy target configuration operations
+    def add_deploy_target_config(
+        self,
+        project: int,
+        deploy_target: int,
+        branches: str = "",
+        pullrequests: str = "false",
+        weight: int = 1,
+        deploy_target_project_pattern: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Add a deploy target configuration to route specific branches/PRs to a cluster.
+
+        Deploy target configurations allow routing different branches or pull requests
+        to different Kubernetes clusters. Higher weight configurations take priority.
+
+        Args:
+            project: Project ID
+            deploy_target: Deploy target (Kubernetes) ID
+            branches: Regex pattern for branches to match (e.g., "main", "^feature/.*$")
+            pullrequests: Whether to handle PRs ("true" or "false")
+            weight: Priority weight (higher = more priority)
+            deploy_target_project_pattern: Optional namespace pattern
+
+        Returns:
+            Deploy target config data
+        """
+        mutation = """
+        mutation AddDeployTargetConfig($input: AddDeployTargetConfigInput!) {
+            addDeployTargetConfig(input: $input) {
+                id
+                weight
+                branches
+                pullrequests
+                deployTargetProjectPattern
+                deployTarget {
+                    id
+                    name
+                }
+                project {
+                    id
+                    name
+                }
+            }
+        }
+        """
+
+        input_data = {
+            "project": project,
+            "deployTarget": deploy_target,
+            "branches": branches,
+            "pullrequests": pullrequests,
+            "weight": weight,
+        }
+
+        if deploy_target_project_pattern:
+            input_data["deployTargetProjectPattern"] = deploy_target_project_pattern
+
+        result = self._execute(mutation, {"input": input_data})
+        config = result.get("addDeployTargetConfig", {})
+
+        # Normalize nested objects to IDs for consistency
+        if config.get("deployTarget") and isinstance(config["deployTarget"], dict):
+            config["deployTargetId"] = config["deployTarget"].get("id")
+        if config.get("project") and isinstance(config["project"], dict):
+            config["projectId"] = config["project"].get("id")
+
+        return config
+
+    def get_deploy_target_configs_by_project(self, project: int) -> list:
+        """
+        Get all deploy target configurations for a project.
+
+        Args:
+            project: Project ID
+
+        Returns:
+            List of deploy target config data
+        """
+        query = """
+        query DeployTargetConfigsByProjectId($project: Int!) {
+            deployTargetConfigsByProjectId(project: $project) {
+                id
+                weight
+                branches
+                pullrequests
+                deployTargetProjectPattern
+                deployTarget {
+                    id
+                    name
+                }
+                project {
+                    id
+                    name
+                }
+            }
+        }
+        """
+
+        result = self._execute(query, {"project": project})
+        configs = result.get("deployTargetConfigsByProjectId", [])
+
+        # Normalize nested objects
+        for config in configs:
+            if config.get("deployTarget") and isinstance(config["deployTarget"], dict):
+                config["deployTargetId"] = config["deployTarget"].get("id")
+            if config.get("project") and isinstance(config["project"], dict):
+                config["projectId"] = config["project"].get("id")
+
+        return configs
+
+    def get_deploy_target_config_by_id(
+        self, config_id: int, project: int
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get a deploy target configuration by ID.
+
+        Args:
+            config_id: Deploy target config ID
+            project: Project ID (needed to query configs)
+
+        Returns:
+            Deploy target config data or None if not found
+        """
+        configs = self.get_deploy_target_configs_by_project(project)
+
+        for config in configs:
+            if config.get("id") == config_id:
+                return config
+
+        return None
+
+    def update_deploy_target_config(self, config_id: int, **kwargs) -> Dict[str, Any]:
+        """
+        Update a deploy target configuration.
+
+        Args:
+            config_id: Deploy target config ID
+            **kwargs: Properties to update (branches, pullrequests, weight, etc.)
+
+        Returns:
+            Updated deploy target config data
+        """
+        mutation = """
+        mutation UpdateDeployTargetConfig($input: UpdateDeployTargetConfigInput!) {
+            updateDeployTargetConfig(input: $input) {
+                id
+                weight
+                branches
+                pullrequests
+                deployTargetProjectPattern
+                deployTarget {
+                    id
+                    name
+                }
+                project {
+                    id
+                    name
+                }
+            }
+        }
+        """
+
+        input_data = {"id": config_id, **kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        config = result.get("updateDeployTargetConfig", {})
+
+        # Normalize nested objects
+        if config.get("deployTarget") and isinstance(config["deployTarget"], dict):
+            config["deployTargetId"] = config["deployTarget"].get("id")
+        if config.get("project") and isinstance(config["project"], dict):
+            config["projectId"] = config["project"].get("id")
+
+        return config
+
+    def delete_deploy_target_config(self, config_id: int, project: int) -> str:
+        """
+        Delete a deploy target configuration.
+
+        Args:
+            config_id: Deploy target config ID
+            project: Project ID
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteDeployTargetConfig($input: DeleteDeployTargetConfigInput!) {
+            deleteDeployTargetConfig(input: $input)
+        }
+        """
+
+        input_data = {"id": config_id, "project": project}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteDeployTargetConfig", "")

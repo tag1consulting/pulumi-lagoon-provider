@@ -1,7 +1,71 @@
 # Pulumi Lagoon Provider - Implementation Status
 
-**Last Updated**: 2026-01-20
-**Status**: Phase 1 Complete - Full End-to-End Testing Passed
+**Last Updated**: 2026-01-28
+**Status**: Phase 2 Complete - LagoonDeployTarget + Multi-Cluster Example (Working)
+
+---
+
+## Current Work (2026-01-21)
+
+### LagoonDeployTarget Resource
+**Status**: ✅ COMPLETE (code) | ⏳ TESTING
+
+New resource for managing Kubernetes deploy targets:
+- `pulumi_lagoon/deploytarget.py` - Full CRUD implementation
+- `pulumi_lagoon/validators.py` - Deploy target validators added
+- `pulumi_lagoon/client.py` - Kubernetes GraphQL operations added
+- `tests/unit/test_deploytarget.py` - Unit tests
+- `tests/unit/test_validators.py` - Validator tests
+
+GraphQL Operations:
+- `add_kubernetes()` - Create deploy target
+- `get_all_kubernetes()` - List all deploy targets
+- `get_kubernetes_by_id()` - Query by ID
+- `get_kubernetes_by_name()` - Query by name
+- `update_kubernetes()` - Update deploy target
+- `delete_kubernetes()` - Delete deploy target
+
+### Multi-Cluster Example
+**Status**: ✅ COMPLETE (2026-01-28)
+
+Location: `examples/multi-cluster/`
+
+Architecture:
+- Production cluster (`lagoon-prod`): Lagoon core, Harbor, prod remote controller
+- Non-production cluster (`lagoon-nonprod`): Nonprod remote controller
+
+Components:
+- `clusters/` - Kind cluster creation
+- `infrastructure/` - ingress-nginx, cert-manager, CoreDNS
+- `registry/` - Harbor container registry
+- `lagoon/` - Lagoon core and remote (build-deploy)
+
+Issues Fixed (2026-01-28):
+- Keycloak config job secret name: Changed `prod-core-keycloak` to `prod-core-lagoon-core-keycloak`
+
+Issues Fixed (2026-01-20):
+- RabbitMQ CrashLoopBackOff: Cleared corrupted Mnesia data by deleting PVCs
+- Service selector bug in `lagoon/core.py`: Changed selector to match actual pod labels
+- Cross-cluster RabbitMQ IP: Added dynamic IP refresh using container ID triggers
+- Keycloak Direct Access Grants: Added `lagoon/keycloak.py` for automatic configuration
+
+New Features:
+- `lagoon/keycloak.py`: Kubernetes Job that configures Keycloak for CLI auth
+  - Enables Direct Access Grants for lagoon-ui client (OAuth password grant)
+  - Creates lagoonadmin user with platform-owner role
+- Dynamic IP refresh: Cluster IPs now automatically refresh when Kind clusters change
+- Port-forwarding make targets: `make port-forwards-all`, `make test-ui`
+
+Completed:
+- All code fixes applied via `pulumi up`
+- Port-forwarding access to Lagoon UI tested and working
+- CLI authentication via OAuth password grant tested and working
+- Browser authentication setup documented (requires hosts file entry)
+
+**Branch**: `deploytarget-multi-cluster`
+**PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/10 (Draft)
+
+---
 
 ## Completed Work
 
@@ -111,25 +175,60 @@ Token Handling:
 
 ## Remaining Work
 
-### Testing (Optional for Phase 1)
-**Status**: ⏸️ NOT STARTED
+### Code Cleanup
+**Status**: ⏸️ TODO
 
-Pending test files:
-1. `tests/test_client.py` - GraphQL client tests
-2. `tests/test_config.py` - Configuration tests
-3. `tests/test_project.py` - Project resource tests (new file)
-4. `tests/test_environment.py` - Environment resource tests (new file)
-5. `tests/test_variable.py` - Variable resource tests (new file)
+1. **Clarify lagoon imports in single-cluster example** (2026-01-26)
+   - `examples/single-cluster/__main__.py` has confusing imports:
+     - `from lagoon import ...` - local infrastructure deployment functions
+     - `import pulumi_lagoon as lagoon` - Lagoon API provider
+   - Both end up using `lagoon.` prefix which is confusing
+   - Suggested fix: Rename `import pulumi_lagoon as lagoon` to just `import pulumi_lagoon`
+   - Then use `pulumi_lagoon.LagoonDeployTarget(...)` instead of `lagoon.LagoonDeployTarget(...)`
 
-Current test files contain only template code and TODOs.
+### Provider Features
+**Status**: ✅ PARTIAL
+
+1. **Import functionality** (Phase 2) - ✅ COMPLETE
+   - All resources support `pulumi import` with composite ID formats
+   - LagoonProject: `{numeric_id}`
+   - LagoonDeployTarget: `{numeric_id}`
+   - LagoonEnvironment: `{project_id}:{env_name}`
+   - LagoonVariable: `{project_id}:{env_id}:{var_name}` or `{project_id}::{var_name}`
+   - LagoonDeployTargetConfig: `{project_id}:{config_id}`
+   - Import utilities in `pulumi_lagoon/import_utils.py`
+   - Full unit test coverage in `tests/unit/test_import_utils.py`
+
+2. **Add SSH key authentication** (Phase 2+)
+   - Currently only JWT token authentication is supported
+   - SSH key auth would enable service account workflows
+   - Would require changes to `pulumi_lagoon/config.py` and `client.py`
+
+### Testing
+**Status**: ✅ COMPLETE (2026-01-26)
+
+All unit tests implemented and passing (240 tests):
+- `tests/unit/test_client.py` - GraphQL client tests (386 lines)
+- `tests/unit/test_config.py` - Configuration tests (146 lines)
+- `tests/unit/test_project.py` - Project resource tests (366 lines)
+- `tests/unit/test_environment.py` - Environment resource tests (389 lines)
+- `tests/unit/test_variable.py` - Variable resource tests (521 lines)
+- `tests/unit/test_deploytarget.py` - Deploy target tests (411 lines)
+- `tests/unit/test_validators.py` - Validator tests (788 lines)
+
+Run tests with: `pytest tests/unit/ -v`
 
 ### Documentation Updates
-**Status**: ⏸️ PENDING
+**Status**: ✅ COMPLETE (2026-01-26)
 
-Still needed:
-- Update main README.md with complete usage examples
-- Add testing instructions
-- Document discovered API quirks (if any after real-world testing)
+README.md includes:
+- Complete usage examples (LagoonProject, LagoonEnvironment, LagoonVariable)
+- Testing instructions (`pytest tests/`)
+- Make targets documentation
+- Project structure overview
+- Examples directory descriptions
+
+No significant API quirks discovered during testing.
 
 ## How to Use Right Now
 
@@ -199,9 +298,12 @@ pulumi config set lagoon:token YOUR_TOKEN --secret
    - API quirks discovered during testing
    - Advanced usage examples
 
-### Phase 2 (Future)
-- Additional resources (DeployTarget, Group, Notification)
-- Integration tests against test Lagoon instance
+### Phase 2 (In Progress)
+- ✅ LagoonDeployTarget resource implemented
+- ✅ Multi-cluster example code complete
+- ⏳ Multi-cluster example debugging (timeout issue)
+- ⏳ Integration tests against test Lagoon instance
+- Additional resources (Group, Notification)
 - CI/CD pipeline
 - PyPI publication
 
@@ -289,10 +391,10 @@ Implement Phase 1: Core resource providers
 
 ## Known Limitations
 
-1. **No unit tests yet** - Provider is untested against mocked API
+1. ~~**No unit tests yet**~~ ✅ 240+ tests passing (2026-01-26)
 2. ~~**Not tested against real Lagoon**~~ ✅ Tested and working
-3. **No import functionality** - Cannot import existing Lagoon resources yet
-4. **Limited validation** - Input validation is minimal
+3. ~~**No import functionality**~~ ✅ Import support complete (2026-01-26)
+4. ~~**Limited validation**~~ ✅ Comprehensive validation in validators.py (470 lines)
 5. **Token-based auth only** - SSH key authentication not supported
 
 ## Questions Answered

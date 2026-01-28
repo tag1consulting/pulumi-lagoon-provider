@@ -41,6 +41,21 @@ SAMPLE_VARIABLE = {
     "environment": None,
 }
 
+SAMPLE_DEPLOY_TARGET = {
+    "id": 1,
+    "name": "prod-cluster",
+    "consoleUrl": "https://kubernetes.example.com:6443",
+    "cloudProvider": "aws",
+    "cloudRegion": "us-east-1",
+    "sshHost": "ssh.lagoon.example.com",
+    "sshPort": "22",
+    "buildImage": None,
+    "disabled": False,
+    "routerPattern": None,
+    "sharedBastionSecret": None,
+    "created": "2024-01-01T00:00:00Z",
+}
+
 
 @pytest.fixture
 def mock_session():
@@ -115,6 +130,12 @@ def sample_environment():
 def sample_variable():
     """Return sample variable data."""
     return SAMPLE_VARIABLE.copy()
+
+
+@pytest.fixture
+def sample_deploy_target():
+    """Return sample deploy target data."""
+    return SAMPLE_DEPLOY_TARGET.copy()
 
 
 @pytest.fixture

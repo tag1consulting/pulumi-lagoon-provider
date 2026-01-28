@@ -1,0 +1,29 @@
+# Kind cluster configuration for non-production deploy target
+# Remote deploy target - connects to lagoon-core on prod cluster
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: lagoon-nonprod
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.31.0
+    labels:
+      ingress-ready: "true"
+    extraPortMappings:
+      # HTTP port for ingress
+      - containerPort: 80
+        hostPort: 9080
+        protocol: TCP
+      # HTTPS port for ingress
+      - containerPort: 443
+        hostPort: 9443
+        protocol: TCP
+      # NodePort range for deployed application services
+      - containerPort: 30200
+        hostPort: 30200
+        protocol: TCP
+      - containerPort: 30201
+        hostPort: 30201
+        protocol: TCP
+      - containerPort: 30202
+        hostPort: 30202
+        protocol: TCP
