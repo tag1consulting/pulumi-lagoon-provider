@@ -13,9 +13,9 @@
 #   make clusters      - List Kind clusters
 #   make clean         - Delete Kind clusters directly
 
-.PHONY: help setup preview up down refresh status clusters clean \
+.PHONY: help setup preview up down refresh status clusters clean clean-all \
         port-forwards port-forwards-all port-forwards-stop \
-        token check fix-rabbitmq ensure-lagoon-admin \
+        token check fix-rabbitmq fix-migration-lock ensure-lagoon-admin \
         deploy verify wait-for-pods test-api test-ui
 
 # Default target
@@ -40,6 +40,7 @@ help:
 	@echo "Cluster Management:"
 	@echo "  make clusters           - List all Kind clusters"
 	@echo "  make clean              - Delete Kind clusters without Pulumi"
+	@echo "  make clean-all          - Delete clusters and remove Pulumi state"
 	@echo ""
 	@echo "Utility targets:"
 	@echo "  make port-forwards      - Start port-forwards for API and Keycloak"
@@ -48,6 +49,7 @@ help:
 	@echo "  make token              - Get a fresh OAuth token"
 	@echo "  make ensure-lagoon-admin - Create lagoonadmin user in Keycloak"
 	@echo "  make fix-rabbitmq       - Fix RabbitMQ password mismatch"
+	@echo "  make fix-migration-lock - Fix API migration lock (CrashLoopBackOff)"
 	@echo "  make wait-for-pods      - Wait for all Lagoon pods to be running"
 	@echo "  make test-api           - Test Lagoon API access"
 	@echo "  make test-ui            - Test Lagoon UI access via port-forward"
@@ -153,6 +155,13 @@ clean:
 	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
 	@echo "Done."
 
+# Full cleanup including Pulumi state
+clean-all: clean
+	@echo "Removing Pulumi state..."
+	@rm -rf .pulumi 2>/dev/null || true
+	@rm -f Pulumi.dev.yaml 2>/dev/null || true
+	@echo "Full cleanup complete."
+
 # Ensure lagoonadmin user exists in Keycloak
 ensure-lagoon-admin:
 	@echo "Ensuring lagoonadmin user exists in Keycloak..."
@@ -169,6 +178,31 @@ fix-rabbitmq:
 	@echo "Fixing RabbitMQ password on both clusters..."
 	./scripts/fix-rabbitmq-password.sh prod || true
 	./scripts/fix-rabbitmq-password.sh nonprod || true
+
+# Fix migration lock if API pods are stuck in CrashLoopBackOff
+# This clears the database migration lock and restarts the API pods
+fix-migration-lock:
+	@echo "Fixing Lagoon API migration lock..."
+	@echo ""
+	@echo "Step 1: Scale down API deployment to stop all pods..."
+	@kubectl --context kind-lagoon-prod scale deployment -n lagoon-core prod-core-lagoon-core-api --replicas=0 || true
+	@sleep 5
+	@echo ""
+	@echo "Step 2: Clear migration lock in database..."
+	@kubectl --context kind-lagoon-prod exec -n lagoon-core prod-core-lagoon-core-api-db-0 -- \
+		mysql -u root -pLag00n infrastructure -e \
+		"DELETE FROM lagoon_migrations_lock WHERE \`index\` > 1; UPDATE lagoon_migrations_lock SET is_locked = 0; SELECT * FROM lagoon_migrations_lock;" \
+		2>/dev/null || echo "  Could not connect to database (may not be running yet)"
+	@echo ""
+	@echo "Step 3: Scale API deployment back to 1 replica..."
+	@kubectl --context kind-lagoon-prod scale deployment -n lagoon-core prod-core-lagoon-core-api --replicas=1 || true
+	@echo ""
+	@echo "Waiting for API pod to start..."
+	@sleep 20
+	@kubectl --context kind-lagoon-prod get pods -n lagoon-core | grep api
+	@echo ""
+	@echo "If the pod is Running (2/2), the migration lock has been fixed."
+	@echo "Run 'make up' or 'make deploy' to continue deployment."
 
 # =============================================================================
 # Automated Deployment Targets
