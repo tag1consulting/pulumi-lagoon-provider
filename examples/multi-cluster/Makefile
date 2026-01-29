@@ -84,7 +84,7 @@ check:
 # Start port-forwards (API and Keycloak only)
 port-forwards:
 	@echo "Starting port-forwards to prod cluster..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
 	@sleep 2
@@ -97,7 +97,7 @@ port-forwards:
 # Start port-forwards for all services (API, Keycloak, UI)
 port-forwards-all:
 	@echo "Starting port-forwards to prod cluster (all services)..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000 >/dev/null 2>&1 &
@@ -115,8 +115,8 @@ port-forwards-all:
 # Stop all port-forwards
 port-forwards-stop:
 	@echo "Stopping port-forwards..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
-	@pkill -f "port-forward.*harbor" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*harbor" | xargs -r kill 2>/dev/null || true
 	@echo "Port-forwards stopped."
 
 # Get fresh token (must be sourced to export variables)
@@ -160,7 +160,7 @@ clean:
 	-kind delete cluster --name lagoon-prod 2>/dev/null
 	-kind delete cluster --name lagoon-nonprod 2>/dev/null
 	@echo "Killing port-forwards..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@echo "Done."
 
 # Full cleanup including Pulumi state
@@ -178,7 +178,7 @@ clean-all: clean
 ensure-lagoon-admin:
 	@echo "Ensuring lagoonadmin user exists in Keycloak..."
 	@echo "Starting temporary port-forward to Keycloak..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 & \
 		PF_PID=$$!; \
 		sleep 2; \
@@ -257,7 +257,9 @@ deploy: setup
 	@echo "=========================================="
 	@echo ""
 	@echo "Starting port-forwards to enable API access..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@# Kill existing port-forwards using specific process matching (avoid matching make itself)
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
+	@sleep 1
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
 	@sleep 3
@@ -369,7 +371,7 @@ verify: check
 # Test Lagoon API access
 test-api:
 	@echo "Starting port-forwards..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
 	@sleep 3
@@ -408,7 +410,7 @@ test-ui:
 	@echo "=========================================="
 	@echo ""
 	@echo "Starting port-forwards..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000 >/dev/null 2>&1 &
