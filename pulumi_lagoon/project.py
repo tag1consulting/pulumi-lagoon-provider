@@ -124,10 +124,11 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
 
         client = self._get_client()
 
-        # Prepare update data
-        update_args = {
-            "id": int(id),
-        }
+        # Store project ID for the API call (passed as positional argument)
+        project_id = int(id)
+
+        # Prepare update data (without id - passed separately to client method)
+        update_args = {}
 
         # Check which fields have changed and include them
         if new_inputs.get("git_url") != old_inputs.get("git_url"):
@@ -155,9 +156,9 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
         if new_inputs.get("storage_calc") != old_inputs.get("storage_calc"):
             update_args["storageCalc"] = new_inputs.get("storage_calc")
 
-        # Only update if there are changes beyond the ID
-        if len(update_args) > 1:
-            result = client.update_project(**update_args)
+        # Only update if there are changes
+        if len(update_args) > 0:
+            result = client.update_project(project_id, **update_args)
 
             # Return updated outputs
             outs = {

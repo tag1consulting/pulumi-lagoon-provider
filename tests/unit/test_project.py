@@ -113,6 +113,11 @@ class TestLagoonProjectProviderUpdate:
         mock_client.update_project.assert_called_once()
         assert result.outs["branches"] == "^(main|develop|staging)$"
 
+        # Verify correct calling convention: project_id as positional arg, not in kwargs
+        call_args, call_kwargs = mock_client.update_project.call_args
+        assert call_args == (1,), "Project ID should be first positional argument"
+        assert "id" not in call_kwargs, "ID should not be in kwargs"
+
     @patch("pulumi_lagoon.project.LagoonConfig")
     def test_update_project_no_changes(self, mock_config_class):
         """Test update with no actual changes returns inputs."""
