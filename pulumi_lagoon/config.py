@@ -36,6 +36,11 @@ class LagoonConfig:
                 "  - Environment variable: LAGOON_JWT_SECRET"
             )
 
+        # Optional SSH key path for alternative authentication
+        self.ssh_key_path = self._get_config_value(
+            config, "sshKeyPath", "LAGOON_SSH_KEY_PATH", default=None, required=False
+        )
+
     def _generate_admin_token(self, jwt_secret: str) -> str:
         """Generate an admin JWT token from the JWT secret.
 
@@ -68,11 +73,6 @@ class LagoonConfig:
             )
         except Exception as e:
             raise ValueError(f"Failed to generate admin token: {e}")
-
-        # Optional SSH key path for alternative authentication
-        self.ssh_key_path = self._get_config_value(
-            config, "sshKeyPath", "LAGOON_SSH_KEY_PATH", default=None, required=False
-        )
 
     def _get_config_value(
         self,
