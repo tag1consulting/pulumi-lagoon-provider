@@ -107,6 +107,10 @@ def install_lagoon_core(
         "apiJWTSecret": "changeme-jwt-secret-for-local-dev-only",
         "api": {
             "enabled": True,
+            # Use single replica to prevent migration lock race condition.
+            # Multiple API pods starting simultaneously can race to acquire
+            # the database migration lock, causing init container failures.
+            "replicaCount": 1,
             "serviceMonitor": {
                 "enabled": False,
             },
