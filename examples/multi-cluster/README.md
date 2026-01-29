@@ -148,23 +148,55 @@ For services not included in `make port-forwards-all`:
 kubectl --context kind-lagoon-prod port-forward -n harbor svc/prod-harbor-portal 8081:80 &
 ```
 
-### Option 2: Host File Entries
+### Option 2: Host File Entries (Direct Browser Access)
 
-Add the following to `/etc/hosts` (replace IP with your Kind node IP):
+This option allows you to access the Lagoon services directly in your browser using the
+configured domain names, without port-forwarding.
+
+#### Step 1: Add hosts file entries
+
+Add the following to your hosts file:
+
+**Linux/Mac:** `/etc/hosts`
+**Windows:** `C:\Windows\System32\drivers\etc\hosts`
 
 ```
-172.21.0.3 ui.lagoon.local api.lagoon.local keycloak.lagoon.local harbor.lagoon.local webhook.lagoon.local
+127.0.0.1 ui.lagoon.local api.lagoon.local keycloak.lagoon.local harbor.lagoon.local webhook.lagoon.local
 ```
 
-Get the node IP:
-```bash
-docker inspect -f '{{.NetworkSettings.Networks.kind.IPAddress}}' lagoon-prod-control-plane
-```
+> **Note for WSL2 users:** Edit the Windows hosts file, not the Linux one, since your
+> browser runs on Windows.
 
-Then access via the configured domains on the Kind cluster ports:
-- https://ui.lagoon.local:8443
-- https://api.lagoon.local:8443/graphql
-- https://keycloak.lagoon.local:8443/auth
+#### Step 2: Accept self-signed certificates for EACH domain
+
+**IMPORTANT:** Before using the UI, you must visit each URL below in your browser and
+accept the certificate warning. The browser needs to trust the self-signed certificate
+for each domain separately, or cross-origin requests (CORS) will silently fail.
+
+Visit these URLs in order and click "Advanced" → "Accept the Risk and Continue" (Firefox)
+or "Advanced" → "Proceed to..." (Chrome):
+
+1. https://keycloak.lagoon.local:8443 - You should see the Keycloak welcome page
+2. https://api.lagoon.local:8443/graphql - You should see `{"errors":[{"message":"Unauthorized - Bearer token required"}]}`
+3. https://ui.lagoon.local:8443 - Now you can log in
+
+If you skip this step, the UI will load but fail to communicate with the API or Keycloak,
+resulting in errors like "TypeError: can't access property 'allProjects'" or CORS failures.
+
+#### Step 3: Log in to the Lagoon UI
+
+Open https://ui.lagoon.local:8443 and log in:
+- **Username:** `lagoonadmin`
+- **Password:** Run `make show-access-info` to get the password
+
+#### Service URLs
+
+| Service | URL |
+|---------|-----|
+| Lagoon UI | https://ui.lagoon.local:8443 |
+| Lagoon API | https://api.lagoon.local:8443/graphql |
+| Keycloak | https://keycloak.lagoon.local:8443 |
+| Harbor | https://harbor.lagoon.local:8443 |
 
 ## Architecture
 
@@ -430,8 +462,10 @@ Both clusters have CoreDNS configured to resolve `*.lagoon.local`:
 
 1. **Browser Authentication**: The Lagoon UI redirects browsers to internal Kubernetes service URLs for Keycloak authentication. When using port-forwarding, you must add a hosts file entry (see "Accessing Services" above).
 
-2. **Self-Signed Certificates**: This example uses self-signed TLS certificates. Browsers will show security warnings.
+2. **Self-Signed Certificates**: This example uses self-signed TLS certificates. Browsers will show security warnings. **Important:** You must accept the certificate for each domain (UI, API, Keycloak) separately before the UI will work. See "Option 2: Host File Entries" for detailed instructions.
 
-3. **S3/MinIO**: File storage (S3) is configured with dummy values. Features requiring file storage (backups, file uploads) are disabled.
+3. **WSL2 Users**: If running on WSL2, edit the Windows hosts file (`C:\Windows\System32\drivers\etc\hosts`), not the Linux one, since browsers run on Windows.
 
-4. **Elasticsearch/Kibana**: Logging integration is configured with placeholder URLs. Log aggregation is disabled.
+4. **S3/MinIO**: File storage (S3) is configured with dummy values. Features requiring file storage (backups, file uploads) are disabled.
+
+5. **Elasticsearch/Kibana**: Logging integration is configured with placeholder URLs. Log aggregation is disabled.

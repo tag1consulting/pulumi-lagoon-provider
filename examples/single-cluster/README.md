@@ -56,17 +56,52 @@ pulumi config set httpsPort 443
 
 ## Accessing Services
 
-After deployment, add these entries to `/etc/hosts`:
+### Step 1: Add hosts file entries
+
+Add these entries to your hosts file:
+
+**Linux/Mac:** `/etc/hosts`
+**Windows:** `C:\Windows\System32\drivers\etc\hosts`
 
 ```
 127.0.0.1 api.lagoon.local ui.lagoon.local keycloak.lagoon.local harbor.lagoon.local
 ```
 
-Then access:
-- **Lagoon UI**: https://ui.lagoon.local:8443
-- **Lagoon API**: https://api.lagoon.local:8443/graphql
-- **Keycloak**: https://keycloak.lagoon.local:8443
-- **Harbor**: https://harbor.lagoon.local:8443
+> **Note for WSL2 users:** Edit the Windows hosts file, not the Linux one, since your
+> browser runs on Windows.
+
+### Step 2: Accept self-signed certificates for EACH domain
+
+**IMPORTANT:** Before using the UI, you must visit each URL below in your browser and
+accept the certificate warning. The browser needs to trust the self-signed certificate
+for each domain separately, or cross-origin requests (CORS) will silently fail.
+
+Visit these URLs in order and click "Advanced" → "Accept the Risk and Continue" (Firefox)
+or "Advanced" → "Proceed to..." (Chrome):
+
+1. https://keycloak.lagoon.local:8443 - You should see the Keycloak welcome page
+2. https://api.lagoon.local:8443/graphql - You should see `{"errors":[{"message":"Unauthorized - Bearer token required"}]}`
+3. https://ui.lagoon.local:8443 - Now you can log in
+
+If you skip this step, the UI will load but fail to communicate with the API or Keycloak,
+resulting in errors like "TypeError: can't access property 'allProjects'" or CORS failures.
+
+### Step 3: Log in to the Lagoon UI
+
+| Service | URL |
+|---------|-----|
+| Lagoon UI | https://ui.lagoon.local:8443 |
+| Lagoon API | https://api.lagoon.local:8443/graphql |
+| Keycloak | https://keycloak.lagoon.local:8443 |
+| Harbor | https://harbor.lagoon.local:8443 |
+
+Login credentials:
+- **Username:** `lagoonadmin`
+- **Password:** Check the Keycloak secret:
+  ```bash
+  kubectl --context kind-lagoon -n lagoon-core get secret lagoon-core-keycloak \
+    -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d && echo
+  ```
 
 ## Architecture
 

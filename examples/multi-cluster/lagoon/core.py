@@ -124,6 +124,12 @@ def install_lagoon_core(
                 "ingressClassName": ingress_class,
                 "annotations": {
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
+                    # CORS headers for UI -> API cross-origin requests
+                    "nginx.ingress.kubernetes.io/enable-cors": "true",
+                    "nginx.ingress.kubernetes.io/cors-allow-origin": "https://*.lagoon.local:8443",
+                    "nginx.ingress.kubernetes.io/cors-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+                    "nginx.ingress.kubernetes.io/cors-allow-headers": "DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,Accept,Origin,Referer",
+                    "nginx.ingress.kubernetes.io/cors-allow-credentials": "true",
                 },
                 "hosts": [
                     {
@@ -183,6 +189,10 @@ def install_lagoon_core(
                         "hosts": [domain_config.lagoon_ui],
                     }
                 ],
+            },
+            "additionalEnvs": {
+                # Disable TLS verification for self-signed certs (server-side API calls)
+                "NODE_TLS_REJECT_UNAUTHORIZED": "0",
             },
             "resources": {
                 "requests": {
