@@ -21,13 +21,14 @@ This provider enables you to manage Lagoon hosting platform resources (projects,
 
 ## Supported Resources
 
-### Phase 1 (Complete)
+### Core Resources (Complete)
 - `LagoonProject` - Manage Lagoon projects
 - `LagoonEnvironment` - Manage environments (branches/PRs)
 - `LagoonVariable` - Manage project and environment variables
 
-### Phase 2 (Current)
+### Deploy Target Resources (Complete)
 - `LagoonDeployTarget` - Manage Kubernetes cluster deploy targets
+- `LagoonDeployTargetConfig` - Configure project deployment routing to specific clusters based on branch patterns
 
 ### Planned
 - `LagoonGroup` - Manage user groups and permissions
@@ -143,6 +144,30 @@ See the `examples/` directory for complete examples:
 - `simple-project/` - Use the Lagoon provider to create projects/environments/variables via API
 - `single-cluster/` - Deploy complete Lagoon stack to a single Kind cluster
 - `multi-cluster/` - Production-like deployment with separate prod/nonprod Kind clusters
+
+### Multi-Cluster Example
+
+The multi-cluster example demonstrates a production-like Lagoon deployment with:
+
+- **Production cluster** (`lagoon-prod`): Lagoon core services, Harbor registry, and production workloads
+- **Non-production cluster** (`lagoon-nonprod`): Development/staging workloads that connect to prod core
+- **Deploy Target Configs**: Route deployments to the appropriate cluster based on branch patterns
+  - `main` branch → production cluster
+  - `develop`, `feature/*` branches → non-production cluster
+  - Pull requests → non-production cluster
+
+```bash
+# Deploy the multi-cluster environment
+make multi-cluster-deploy
+
+# Verify deployment
+make multi-cluster-verify
+
+# Access information (URLs, credentials)
+cd examples/multi-cluster && make show-access-info
+```
+
+The example creates a complete Drupal project with multi-cluster routing configured automatically.
 
 ## Importing Existing Resources
 
@@ -289,7 +314,8 @@ pulumi-lagoon-provider/
 │   ├── project.py          # LagoonProject resource
 │   ├── environment.py      # LagoonEnvironment resource
 │   ├── variable.py         # LagoonVariable resource
-│   └── deploytarget.py     # LagoonDeployTarget resource
+│   ├── deploytarget.py     # LagoonDeployTarget resource
+│   └── deploytarget_config.py  # LagoonDeployTargetConfig resource
 ├── examples/
 │   ├── simple-project/     # API usage example (assumes Lagoon exists)
 │   │   ├── __main__.py     # Creates projects/environments/variables
@@ -302,7 +328,8 @@ pulumi-lagoon-provider/
 │       ├── clusters/       # Kind cluster management
 │       ├── infrastructure/ # Ingress, cert-manager, CoreDNS
 │       ├── lagoon/         # Lagoon core and remote
-│       └── registry/       # Harbor installation
+│       ├── registry/       # Harbor installation
+│       └── tests/          # Unit tests for multi-cluster config (39 tests)
 ├── scripts/                # Shared operational scripts
 ├── tests/                  # Unit and integration tests
 ├── memory-bank/            # Planning and architecture docs
@@ -332,17 +359,21 @@ For detailed architecture information, see `memory-bank/architecture.md`.
 - [x] Test cluster setup via Pulumi (Kind + Lagoon)
 - [x] Documentation
 
-### Phase 2: Polish (Current)
+### Phase 2: Deploy Targets & Multi-Cluster (Complete)
 - [x] Comprehensive error handling
-- [x] Unit tests (240+ tests, 95% coverage)
+- [x] Unit tests (300+ tests, 95% coverage)
 - [x] Integration test framework
 - [x] CI/CD pipeline (GitHub Actions)
 - [x] DeployTarget resource for Kubernetes cluster management
+- [x] DeployTargetConfig resource for branch-based deployment routing
 - [x] Multi-cluster example (prod/nonprod separation)
+- [x] Two-phase deployment pattern (infrastructure first, then API-dependent resources)
+- [x] CORS and TLS configuration for browser access with self-signed certificates
+- [x] Comprehensive documentation for browser access setup
+
+### Phase 3: Production Ready (Current)
 - [ ] Additional resources (Group, Notification)
 - [ ] Advanced examples
-
-### Phase 3: Production Ready
 - [ ] PyPI package publishing
 - [ ] Community feedback integration
 
