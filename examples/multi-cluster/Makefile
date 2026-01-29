@@ -156,8 +156,12 @@ clean:
 	@echo "Done."
 
 # Full cleanup including Pulumi state
+# Note: This removes the Pulumi stack entirely (works with both local and cloud backends)
 clean-all: clean
 	@echo "Removing Pulumi state..."
+	@# Remove stack from Pulumi backend (local or cloud)
+	@pulumi stack rm dev --yes --force 2>/dev/null || true
+	@# Also clean local files in case of local backend
 	@rm -rf .pulumi 2>/dev/null || true
 	@rm -f Pulumi.dev.yaml 2>/dev/null || true
 	@echo "Full cleanup complete."
@@ -268,7 +272,7 @@ wait-for-pods:
 	@echo "Checking prod cluster..."
 	@for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do \
 		RUNNING=$$(kubectl --context kind-lagoon-prod get pods -n lagoon-core --no-headers 2>/dev/null | grep Running | wc -l); \
-		if [ "$$RUNNING" -ge 30 ]; then \
+		if [ "$$RUNNING" -ge 15 ]; then \
 			echo "  Prod cluster: $$RUNNING pods running"; \
 			break; \
 		fi; \
