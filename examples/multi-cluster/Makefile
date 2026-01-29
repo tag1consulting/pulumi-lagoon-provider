@@ -208,28 +208,52 @@ fix-migration-lock:
 # Automated Deployment Targets
 # =============================================================================
 
-# Full deployment with automatic retry on Helm timeout
-# This handles the common case where Lagoon core Helm release times out
-# but pods are actually running successfully
+# Full deployment with two-phase approach
+# Phase 1: Deploy infrastructure and Lagoon core (deploy targets will fail - expected)
+# Phase 2: Start port-forwards and deploy deploy targets + example project
+#
+# This handles the fact that deploy targets require the Lagoon API to be accessible
+# via port-forwards, which can only happen after the infrastructure is running.
 deploy: setup
 	@echo "=========================================="
 	@echo "Multi-cluster Lagoon Deployment"
 	@echo "=========================================="
 	@echo ""
-	@echo "This will deploy the complete multi-cluster Lagoon environment."
-	@echo "The Lagoon core Helm release may timeout (15 min) but pods usually"
-	@echo "start successfully. This script handles that automatically."
+	@echo "This deployment runs in two phases:"
+	@echo "  Phase 1: Infrastructure, Lagoon core, Lagoon remote"
+	@echo "  Phase 2: Deploy targets + example project (requires port-forwards)"
 	@echo ""
-	@# Initial deployment attempt
+	@echo "=========================================="
+	@echo "Phase 1: Deploying infrastructure..."
+	@echo "=========================================="
+	@echo ""
+	@echo "Note: Deploy target and example project errors are EXPECTED in Phase 1."
+	@echo "      These require the Lagoon API which isn't accessible until Phase 2."
+	@echo ""
+	@# Phase 1: Deploy infrastructure (deploy targets will fail - expected)
 	./scripts/run-pulumi.sh up --yes || true
 	@echo ""
-	@echo "Checking if deployment completed..."
-	@# Wait for pods to be ready
+	@echo "Checking if infrastructure is ready..."
 	@$(MAKE) wait-for-pods
-	@# Refresh state and complete any remaining resources
 	@echo ""
-	@echo "Refreshing Pulumi state and completing deployment..."
+	@# Refresh state after Helm timeout recovery
+	@echo "Refreshing Pulumi state..."
 	./scripts/run-pulumi.sh refresh --yes || true
+	@echo ""
+	@echo "=========================================="
+	@echo "Phase 2: Deploying deploy targets..."
+	@echo "=========================================="
+	@echo ""
+	@echo "Starting port-forwards to enable API access..."
+	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
+	@sleep 3
+	@echo "  Port-forwards active:"
+	@echo "    Keycloak: http://localhost:8080/auth"
+	@echo "    API:      http://localhost:7080/graphql"
+	@echo ""
+	@echo "Completing deployment with deploy targets..."
 	./scripts/run-pulumi.sh up --yes || true
 	@echo ""
 	@echo "=========================================="

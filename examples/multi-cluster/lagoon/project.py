@@ -41,6 +41,8 @@ def create_deploy_targets(
     domain_config: DomainConfig,
     ssh_host: str,
     ssh_port: str = "22",
+    api_url: Optional[pulumi.Input[str]] = None,
+    jwt_secret: Optional[pulumi.Input[str]] = None,
     opts: Optional[pulumi.ResourceOptions] = None,
 ) -> DeployTargetPair:
     """
@@ -56,6 +58,8 @@ def create_deploy_targets(
         domain_config: Domain configuration for router patterns
         ssh_host: SSH host for Lagoon builds (the SSH service)
         ssh_port: SSH port (default: "22")
+        api_url: Lagoon API URL (for dynamic token generation)
+        jwt_secret: JWT secret for generating admin tokens
         opts: Pulumi resource options
 
     Returns:
@@ -76,6 +80,9 @@ def create_deploy_targets(
             # Router pattern determines how routes are generated
             # Format: ${environment}.${project}.${cluster-domain}
             router_pattern=f"${{environment}}.${{project}}.{domain_config.base}",
+            # API configuration for dynamic token generation
+            api_url=api_url,
+            jwt_secret=jwt_secret,
         ),
         opts=opts,
     )
@@ -91,6 +98,9 @@ def create_deploy_targets(
             ssh_host=ssh_host,
             ssh_port=ssh_port,
             router_pattern=f"${{environment}}.${{project}}.{domain_config.base}",
+            # API configuration for dynamic token generation
+            api_url=api_url,
+            jwt_secret=jwt_secret,
         ),
         opts=opts,
     )
@@ -106,6 +116,8 @@ def create_example_drupal_project(
     deploy_targets: DeployTargetPair,
     git_url: str = "https://github.com/lagoon-examples/drupal-base.git",
     production_environment: str = "main",
+    api_url: Optional[pulumi.Input[str]] = None,
+    jwt_secret: Optional[pulumi.Input[str]] = None,
     opts: Optional[pulumi.ResourceOptions] = None,
 ) -> ExampleProjectOutputs:
     """
@@ -120,6 +132,8 @@ def create_example_drupal_project(
         deploy_targets: The deploy target pair (prod/nonprod)
         git_url: Git repository URL (default: Lagoon's Drupal example)
         production_environment: Name of the production branch (default: "main")
+        api_url: Lagoon API URL (for dynamic token generation)
+        jwt_secret: JWT secret for generating admin tokens
         opts: Pulumi resource options
 
     Returns:
@@ -140,6 +154,9 @@ def create_example_drupal_project(
             branches="^(main|develop|feature/.*)$",
             # PR pattern - which PRs can be deployed
             pullrequests=".*",
+            # API configuration for dynamic token generation
+            api_url=api_url,
+            jwt_secret=jwt_secret,
         ),
         opts=pulumi.ResourceOptions(
             depends_on=[deploy_targets.prod_target, deploy_targets.nonprod_target],
@@ -157,6 +174,9 @@ def create_example_drupal_project(
             branches=production_environment,  # Only match 'main' (or configured prod branch)
             pullrequests="false",  # Production doesn't accept PRs
             weight=10,  # Higher priority - matches first for 'main'
+            # API configuration for dynamic token generation
+            api_url=api_url,
+            jwt_secret=jwt_secret,
         ),
         opts=pulumi.ResourceOptions(
             depends_on=[project],
@@ -174,6 +194,9 @@ def create_example_drupal_project(
             branches=".*",  # Match all branches (fallback)
             pullrequests="true",  # Accept all PRs
             weight=1,  # Lower priority - only used when prod config doesn't match
+            # API configuration for dynamic token generation
+            api_url=api_url,
+            jwt_secret=jwt_secret,
         ),
         opts=pulumi.ResourceOptions(
             depends_on=[project],
