@@ -13,10 +13,11 @@
 #   make clusters      - List Kind clusters
 #   make clean         - Delete Kind clusters directly
 
-.PHONY: help setup preview up down refresh status clusters clean \
+.PHONY: help setup preview up down refresh status clusters clean clean-all \
         port-forwards port-forwards-all port-forwards-stop \
-        token check fix-rabbitmq ensure-lagoon-admin \
-        deploy verify wait-for-pods test-api test-ui
+        token check fix-rabbitmq fix-migration-lock ensure-lagoon-admin \
+        deploy verify wait-for-pods test-api test-ui show-access-info \
+        test test-unit test-config test-cors test-operational
 
 # Default target
 help:
@@ -40,6 +41,7 @@ help:
 	@echo "Cluster Management:"
 	@echo "  make clusters           - List all Kind clusters"
 	@echo "  make clean              - Delete Kind clusters without Pulumi"
+	@echo "  make clean-all          - Delete clusters and remove Pulumi state"
 	@echo ""
 	@echo "Utility targets:"
 	@echo "  make port-forwards      - Start port-forwards for API and Keycloak"
@@ -48,9 +50,17 @@ help:
 	@echo "  make token              - Get a fresh OAuth token"
 	@echo "  make ensure-lagoon-admin - Create lagoonadmin user in Keycloak"
 	@echo "  make fix-rabbitmq       - Fix RabbitMQ password mismatch"
+	@echo "  make fix-migration-lock - Fix API migration lock (CrashLoopBackOff)"
 	@echo "  make wait-for-pods      - Wait for all Lagoon pods to be running"
 	@echo "  make test-api           - Test Lagoon API access"
 	@echo "  make test-ui            - Test Lagoon UI access via port-forward"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test               - Run all unit tests"
+	@echo "  make test-unit          - Run unit tests only"
+	@echo "  make test-config        - Test configuration classes"
+	@echo "  make test-cors          - Test CORS/ingress configuration"
+	@echo "  make test-operational   - Run operational tests (requires running cluster)"
 	@echo ""
 	@echo "Note: 'make deploy' handles Helm timeouts automatically by running"
 	@echo "      refresh + up cycles until all resources are deployed."
@@ -74,7 +84,7 @@ check:
 # Start port-forwards (API and Keycloak only)
 port-forwards:
 	@echo "Starting port-forwards to prod cluster..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
 	@sleep 2
@@ -87,7 +97,7 @@ port-forwards:
 # Start port-forwards for all services (API, Keycloak, UI)
 port-forwards-all:
 	@echo "Starting port-forwards to prod cluster (all services)..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000 >/dev/null 2>&1 &
@@ -105,8 +115,8 @@ port-forwards-all:
 # Stop all port-forwards
 port-forwards-stop:
 	@echo "Stopping port-forwards..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
-	@pkill -f "port-forward.*harbor" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*harbor" | xargs -r kill 2>/dev/null || true
 	@echo "Port-forwards stopped."
 
 # Get fresh token (must be sourced to export variables)
@@ -150,14 +160,25 @@ clean:
 	-kind delete cluster --name lagoon-prod 2>/dev/null
 	-kind delete cluster --name lagoon-nonprod 2>/dev/null
 	@echo "Killing port-forwards..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@echo "Done."
+
+# Full cleanup including Pulumi state
+# Note: This removes the Pulumi stack entirely (works with both local and cloud backends)
+clean-all: clean
+	@echo "Removing Pulumi state..."
+	@# Remove stack from Pulumi backend (local or cloud)
+	@pulumi stack rm dev --yes --force 2>/dev/null || true
+	@# Also clean local files in case of local backend
+	@rm -rf .pulumi 2>/dev/null || true
+	@rm -f Pulumi.dev.yaml 2>/dev/null || true
+	@echo "Full cleanup complete."
 
 # Ensure lagoonadmin user exists in Keycloak
 ensure-lagoon-admin:
 	@echo "Ensuring lagoonadmin user exists in Keycloak..."
 	@echo "Starting temporary port-forward to Keycloak..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 & \
 		PF_PID=$$!; \
 		sleep 2; \
@@ -170,38 +191,131 @@ fix-rabbitmq:
 	./scripts/fix-rabbitmq-password.sh prod || true
 	./scripts/fix-rabbitmq-password.sh nonprod || true
 
+# Fix migration lock if API pods are stuck in CrashLoopBackOff
+# This clears the database migration lock and restarts the API pods
+fix-migration-lock:
+	@echo "Fixing Lagoon API migration lock..."
+	@echo ""
+	@echo "Step 1: Scale down API deployment to stop all pods..."
+	@kubectl --context kind-lagoon-prod scale deployment -n lagoon-core prod-core-lagoon-core-api --replicas=0 || true
+	@sleep 5
+	@echo ""
+	@echo "Step 2: Clear migration lock in database..."
+	@kubectl --context kind-lagoon-prod exec -n lagoon-core prod-core-lagoon-core-api-db-0 -- \
+		mysql -u root -pLag00n infrastructure -e \
+		"DELETE FROM lagoon_migrations_lock WHERE \`index\` > 1; UPDATE lagoon_migrations_lock SET is_locked = 0; SELECT * FROM lagoon_migrations_lock;" \
+		2>/dev/null || echo "  Could not connect to database (may not be running yet)"
+	@echo ""
+	@echo "Step 3: Scale API deployment back to 1 replica..."
+	@kubectl --context kind-lagoon-prod scale deployment -n lagoon-core prod-core-lagoon-core-api --replicas=1 || true
+	@echo ""
+	@echo "Waiting for API pod to start..."
+	@sleep 20
+	@kubectl --context kind-lagoon-prod get pods -n lagoon-core | grep api
+	@echo ""
+	@echo "If the pod is Running (2/2), the migration lock has been fixed."
+	@echo "Run 'make up' or 'make deploy' to continue deployment."
+
 # =============================================================================
 # Automated Deployment Targets
 # =============================================================================
 
-# Full deployment with automatic retry on Helm timeout
-# This handles the common case where Lagoon core Helm release times out
-# but pods are actually running successfully
+# Full deployment with two-phase approach
+# Phase 1: Deploy infrastructure and Lagoon core (deploy targets will fail - expected)
+# Phase 2: Start port-forwards and deploy deploy targets + example project
+#
+# This handles the fact that deploy targets require the Lagoon API to be accessible
+# via port-forwards, which can only happen after the infrastructure is running.
 deploy: setup
 	@echo "=========================================="
 	@echo "Multi-cluster Lagoon Deployment"
 	@echo "=========================================="
 	@echo ""
-	@echo "This will deploy the complete multi-cluster Lagoon environment."
-	@echo "The Lagoon core Helm release may timeout (15 min) but pods usually"
-	@echo "start successfully. This script handles that automatically."
+	@echo "This deployment runs in two phases:"
+	@echo "  Phase 1: Infrastructure, Lagoon core, Lagoon remote"
+	@echo "  Phase 2: Deploy targets + example project (requires port-forwards)"
 	@echo ""
-	@# Initial deployment attempt
+	@echo "=========================================="
+	@echo "Phase 1: Deploying infrastructure..."
+	@echo "=========================================="
+	@echo ""
+	@echo "Note: Deploy target and example project errors are EXPECTED in Phase 1."
+	@echo "      These require the Lagoon API which isn't accessible until Phase 2."
+	@echo ""
+	@# Phase 1: Deploy infrastructure (deploy targets will fail - expected)
 	./scripts/run-pulumi.sh up --yes || true
 	@echo ""
-	@echo "Checking if deployment completed..."
-	@# Wait for pods to be ready
+	@echo "Checking if infrastructure is ready..."
 	@$(MAKE) wait-for-pods
-	@# Refresh state and complete any remaining resources
 	@echo ""
-	@echo "Refreshing Pulumi state and completing deployment..."
+	@# Refresh state after Helm timeout recovery
+	@echo "Refreshing Pulumi state..."
 	./scripts/run-pulumi.sh refresh --yes || true
+	@echo ""
+	@echo "=========================================="
+	@echo "Phase 2: Deploying deploy targets..."
+	@echo "=========================================="
+	@echo ""
+	@echo "Starting port-forwards to enable API access..."
+	@# Kill existing port-forwards using specific process matching (avoid matching make itself)
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
+	@sleep 1
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
+	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
+	@sleep 3
+	@echo "  Port-forwards active:"
+	@echo "    Keycloak: http://localhost:8080/auth"
+	@echo "    API:      http://localhost:7080/graphql"
+	@echo ""
+	@echo "Completing deployment with deploy targets..."
 	./scripts/run-pulumi.sh up --yes || true
 	@echo ""
 	@echo "=========================================="
 	@echo "Deployment complete! Running verification..."
 	@echo "=========================================="
 	@$(MAKE) verify
+	@echo ""
+	@$(MAKE) show-access-info
+
+# Show access information for browser testing
+show-access-info:
+	@echo "=========================================="
+	@echo "Browser Access Information"
+	@echo "=========================================="
+	@echo ""
+	@echo "Step 1: Add to /etc/hosts (or Windows: C:\\Windows\\System32\\drivers\\etc\\hosts):"
+	@echo "  127.0.0.1 keycloak.lagoon.local ui.lagoon.local api.lagoon.local harbor.lagoon.local"
+	@echo ""
+	@echo "Step 2: Accept self-signed certificates for EACH domain"
+	@echo ""
+	@echo "  IMPORTANT: Before using the UI, you must visit each URL below in your browser"
+	@echo "  and accept the certificate warning. The browser needs to trust the self-signed"
+	@echo "  cert for each domain separately, or API/Keycloak requests will silently fail."
+	@echo ""
+	@echo "  Visit these URLs and click 'Advanced' -> 'Accept the Risk and Continue':"
+	@echo "    1. https://keycloak.lagoon.local:8443"
+	@echo "    2. https://api.lagoon.local:8443/graphql"
+	@echo "    3. https://ui.lagoon.local:8443"
+	@echo ""
+	@echo "Step 3: Log in to the Lagoon UI"
+	@echo ""
+	@echo "Browser URLs:"
+	@echo "┌───────────┬───────────────────────────────────────────┐"
+	@echo "│  Service  │                    URL                    │"
+	@echo "├───────────┼───────────────────────────────────────────┤"
+	@echo "│ Lagoon UI │ https://ui.lagoon.local:8443              │"
+	@echo "├───────────┼───────────────────────────────────────────┤"
+	@echo "│ Keycloak  │ https://keycloak.lagoon.local:8443        │"
+	@echo "├───────────┼───────────────────────────────────────────┤"
+	@echo "│ API       │ https://api.lagoon.local:8443/graphql     │"
+	@echo "├───────────┼───────────────────────────────────────────┤"
+	@echo "│ Harbor    │ https://harbor.lagoon.local:8443          │"
+	@echo "└───────────┴───────────────────────────────────────────┘"
+	@echo ""
+	@echo "Login credentials:"
+	@echo "  Username: lagoonadmin"
+	@printf "  Password: "; kubectl --context kind-lagoon-prod -n lagoon-core get secret prod-core-lagoon-core-keycloak -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d; echo ""
+	@echo ""
 
 # Wait for Lagoon pods to be running
 wait-for-pods:
@@ -210,7 +324,7 @@ wait-for-pods:
 	@echo "Checking prod cluster..."
 	@for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do \
 		RUNNING=$$(kubectl --context kind-lagoon-prod get pods -n lagoon-core --no-headers 2>/dev/null | grep Running | wc -l); \
-		if [ "$$RUNNING" -ge 30 ]; then \
+		if [ "$$RUNNING" -ge 15 ]; then \
 			echo "  Prod cluster: $$RUNNING pods running"; \
 			break; \
 		fi; \
@@ -257,7 +371,7 @@ verify: check
 # Test Lagoon API access
 test-api:
 	@echo "Starting port-forwards..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
 	@sleep 3
@@ -296,7 +410,7 @@ test-ui:
 	@echo "=========================================="
 	@echo ""
 	@echo "Starting port-forwards..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-api 7080:80 >/dev/null 2>&1 &
 	@kubectl --context kind-lagoon-prod port-forward -n lagoon-core svc/prod-core-lagoon-core-ui 3000:3000 >/dev/null 2>&1 &
@@ -352,3 +466,58 @@ test-ui:
 	@echo "  127.0.0.1 prod-core-lagoon-core-keycloak.lagoon-core.svc.cluster.local"
 	@echo ""
 	@echo "Then open http://localhost:3000 and login as 'lagoonadmin'"
+
+# =============================================================================
+# Testing Targets
+# =============================================================================
+
+# Run all unit tests
+test: test-unit
+
+# Run unit tests
+test-unit:
+	@echo "Running unit tests..."
+	@cd $(shell pwd) && ./venv/bin/python -m pytest tests/ -v --tb=short
+
+# Test configuration classes
+test-config:
+	@echo "Running configuration tests..."
+	@cd $(shell pwd) && ./venv/bin/python -m pytest tests/test_config.py -v
+
+# Test CORS and ingress configuration
+test-cors:
+	@echo "Running CORS/ingress tests..."
+	@cd $(shell pwd) && ./venv/bin/python -m pytest tests/test_lagoon_core.py -v
+
+# Run operational tests (requires running cluster)
+test-operational:
+	@echo "=========================================="
+	@echo "Running Operational Tests"
+	@echo "=========================================="
+	@echo ""
+	@echo "Checking cluster connectivity..."
+	@kubectl --context kind-lagoon-prod cluster-info >/dev/null 2>&1 && echo "  Prod cluster: OK" || echo "  Prod cluster: NOT RUNNING"
+	@kubectl --context kind-lagoon-nonprod cluster-info >/dev/null 2>&1 && echo "  Nonprod cluster: OK" || echo "  Nonprod cluster: NOT RUNNING"
+	@echo ""
+	@echo "Checking pod status..."
+	@PROD_PODS=$$(kubectl --context kind-lagoon-prod get pods -n lagoon-core --no-headers 2>/dev/null | grep -c Running || echo 0); \
+	echo "  Prod lagoon-core pods running: $$PROD_PODS"
+	@NONPROD_PODS=$$(kubectl --context kind-lagoon-nonprod get pods -n lagoon --no-headers 2>/dev/null | grep -c Running || echo 0); \
+	echo "  Nonprod lagoon pods running: $$NONPROD_PODS"
+	@echo ""
+	@echo "Checking ingress configuration..."
+	@kubectl --context kind-lagoon-prod get ingress -n lagoon-core prod-core-lagoon-core-api -o jsonpath='{.metadata.annotations}' 2>/dev/null | jq -e '."nginx.ingress.kubernetes.io/enable-cors"' >/dev/null 2>&1 && echo "  API CORS enabled: OK" || echo "  API CORS enabled: NOT CONFIGURED"
+	@echo ""
+	@echo "Checking CORS preflight..."
+	@CORS_STATUS=$$(curl -sk -o /dev/null -w "%{http_code}" -X OPTIONS https://api.lagoon.local:8443/graphql -H "Origin: https://ui.lagoon.local:8443" -H "Access-Control-Request-Method: POST" 2>/dev/null); \
+	if [ "$$CORS_STATUS" = "204" ]; then echo "  CORS preflight: OK (HTTP 204)"; else echo "  CORS preflight: FAILED (HTTP $$CORS_STATUS)"; fi
+	@echo ""
+	@echo "Checking UI environment..."
+	@kubectl --context kind-lagoon-prod get deploy -n lagoon-core prod-core-lagoon-core-ui -o jsonpath='{.spec.template.spec.containers[0].env}' 2>/dev/null | jq -e '.[] | select(.name == "NODE_TLS_REJECT_UNAUTHORIZED")' >/dev/null 2>&1 && echo "  UI TLS bypass: OK" || echo "  UI TLS bypass: NOT CONFIGURED"
+	@echo ""
+	@echo "Checking cross-cluster RabbitMQ..."
+	@kubectl --context kind-lagoon-prod get svc -n lagoon-core prod-core-broker-external -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null | grep -q 30672 && echo "  RabbitMQ NodePort (30672): OK" || echo "  RabbitMQ NodePort: NOT FOUND"
+	@echo ""
+	@echo "=========================================="
+	@echo "Operational Tests Complete"
+	@echo "=========================================="

@@ -58,11 +58,11 @@ def install_lagoon_core(
     # Note: Namespace should be created externally before calling this function
     # to ensure certificates can be created in the namespace first
 
-    # Construct Lagoon URLs
-    api_url = f"https://{domain_config.lagoon_api}/graphql"
-    ui_url = f"https://{domain_config.lagoon_ui}"
-    keycloak_url = f"https://{domain_config.lagoon_keycloak}"
-    webhook_url = f"https://{domain_config.lagoon_webhook}"
+    # Construct Lagoon URLs (using DomainConfig URLs which include port if needed)
+    api_url = f"{domain_config.lagoon_api_url}/graphql"
+    ui_url = domain_config.lagoon_ui_url
+    keycloak_url = domain_config.lagoon_keycloak_url
+    webhook_url = f"https://{domain_config.lagoon_webhook}{domain_config._port_suffix}"
 
     # Harbor URL and registry - required by lagoon-core chart
     # Use the provided Harbor or a default
@@ -79,7 +79,12 @@ def install_lagoon_core(
     # Build Helm values
     # Note: lagoon-core requires many configuration values for S3/storage
     helm_values = {
-        # Top-level Keycloak URL configuration - used by API and other services
+        # External URLs (with port for Kind clusters) - used by UI for OAuth redirects
+        "keycloakFrontEndURL": keycloak_url,
+        "lagoonAPIURL": api_url,
+        "lagoonUIURL": ui_url,
+        "lagoonWebhookURL": webhook_url,
+        # Internal Keycloak URL - used by API and other services within cluster
         "keycloakAPIURL": keycloak_internal_url,
         "harborURL": harbor_url,
         "registry": registry,
@@ -107,6 +112,10 @@ def install_lagoon_core(
         "apiJWTSecret": "changeme-jwt-secret-for-local-dev-only",
         "api": {
             "enabled": True,
+            # Use single replica to prevent migration lock race condition.
+            # Multiple API pods starting simultaneously can race to acquire
+            # the database migration lock, causing init container failures.
+            "replicaCount": 1,
             "serviceMonitor": {
                 "enabled": False,
             },
@@ -115,6 +124,12 @@ def install_lagoon_core(
                 "ingressClassName": ingress_class,
                 "annotations": {
                     "nginx.ingress.kubernetes.io/ssl-redirect": "false",
+                    # CORS headers for UI -> API cross-origin requests
+                    "nginx.ingress.kubernetes.io/enable-cors": "true",
+                    "nginx.ingress.kubernetes.io/cors-allow-origin": "https://*.lagoon.local:8443",
+                    "nginx.ingress.kubernetes.io/cors-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+                    "nginx.ingress.kubernetes.io/cors-allow-headers": "DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,Accept,Origin,Referer",
+                    "nginx.ingress.kubernetes.io/cors-allow-credentials": "true",
                 },
                 "hosts": [
                     {
@@ -174,6 +189,10 @@ def install_lagoon_core(
                         "hosts": [domain_config.lagoon_ui],
                     }
                 ],
+            },
+            "additionalEnvs": {
+                # Disable TLS verification for self-signed certs (server-side API calls)
+                "NODE_TLS_REJECT_UNAUTHORIZED": "0",
             },
             "resources": {
                 "requests": {

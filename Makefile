@@ -23,7 +23,7 @@
         port-forwards check-health \
         multi-cluster-up multi-cluster-down multi-cluster-preview multi-cluster-status multi-cluster-clusters \
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
-        multi-cluster-test-api multi-cluster-test-ui \
+        multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
         clean clean-all venv
 
 # Variables
@@ -185,10 +185,6 @@ cluster-up: venv
 cluster-down:
 	@echo "Destroying Kind cluster..."
 	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
-	@if [ -f "$(SINGLE_CLUSTER_DIR)/venv/bin/activate" ]; then \
-		echo "Refreshing Pulumi state..."; \
-		cd $(SINGLE_CLUSTER_DIR) && . venv/bin/activate && pulumi refresh --yes 2>/dev/null || true; \
-	fi
 	@echo "Cluster destroyed."
 
 cluster-status:
@@ -312,7 +308,7 @@ MULTI_CLUSTER_DIR := examples/multi-cluster
 
 multi-cluster-up: venv provider-install
 	@echo "Creating multi-cluster environment (prod + nonprod)..."
-	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) up
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) deploy
 
 multi-cluster-deploy: venv provider-install
 	@echo "Deploying multi-cluster environment with automatic retry..."
@@ -350,6 +346,9 @@ multi-cluster-test-api:
 multi-cluster-test-ui:
 	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) test-ui
 
+multi-cluster-info:
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) show-access-info
+
 #==============================================================================
 # Cleanup
 #==============================================================================
@@ -362,7 +361,37 @@ clean:
 	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
 	@echo "Cleanup complete."
 
-clean-all: clean cluster-down
+clean-all: clean
+	@echo "Destroying Kind cluster(s)..."
+	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
+	@kind delete cluster --name lagoon-prod 2>/dev/null || true
+	@kind delete cluster --name lagoon-nonprod 2>/dev/null || true
+	@echo "Cluster(s) destroyed."
+	@echo ""
+	@echo "Removing Pulumi state..."
+	@# Remove single-cluster Pulumi state
+	@if [ -d "$(SINGLE_CLUSTER_DIR)/.pulumi" ]; then \
+		echo "  Removing single-cluster Pulumi state..."; \
+		rm -rf $(SINGLE_CLUSTER_DIR)/.pulumi; \
+	fi
+	@if [ -d "$(SINGLE_CLUSTER_DIR)/Pulumi.dev.yaml" ]; then \
+		rm -f $(SINGLE_CLUSTER_DIR)/Pulumi.dev.yaml; \
+	fi
+	@# Remove multi-cluster Pulumi state
+	@if [ -d "$(MULTI_CLUSTER_DIR)/.pulumi" ]; then \
+		echo "  Removing multi-cluster Pulumi state..."; \
+		rm -rf $(MULTI_CLUSTER_DIR)/.pulumi; \
+	fi
+	@if [ -f "$(MULTI_CLUSTER_DIR)/Pulumi.dev.yaml" ]; then \
+		rm -f $(MULTI_CLUSTER_DIR)/Pulumi.dev.yaml; \
+	fi
+	@# Remove example project Pulumi state
+	@if [ -d "$(EXAMPLE_DIR)/.pulumi" ]; then \
+		echo "  Removing example project Pulumi state..."; \
+		rm -rf $(EXAMPLE_DIR)/.pulumi; \
+	fi
+	@echo "Pulumi state removed."
+	@echo ""
 	@rm -rf $(VENV_DIR) 2>/dev/null || true
 	@rm -rf $(SINGLE_CLUSTER_DIR)/venv 2>/dev/null || true
 	@echo "Full cleanup complete."

@@ -34,18 +34,62 @@ class LagoonDeployTargetConfigArgs:
     deploy_target_project_pattern: Optional[pulumi.Input[str]] = None
     """Optional namespace pattern for deployments."""
 
+    # API configuration - allows passing token/secret dynamically
+    api_url: Optional[pulumi.Input[str]] = None
+    """Lagoon API URL. If not provided, uses LAGOON_API_URL env var or config."""
+
+    api_token: Optional[pulumi.Input[str]] = None
+    """Lagoon API token. If not provided, uses LAGOON_TOKEN env var or config."""
+
+    jwt_secret: Optional[pulumi.Input[str]] = None
+    """JWT secret for generating admin tokens. Alternative to api_token."""
+
 
 class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
     """Dynamic provider implementation for Lagoon deploy target configurations."""
 
-    def _get_client(self):
-        """Get configured Lagoon API client."""
+    def _get_client(self, inputs=None):
+        """Get configured Lagoon API client.
+
+        If api_url, api_token, or jwt_secret are provided in inputs, use those
+        instead of the default configuration.
+        """
+        from .client import LagoonClient
+
+        if inputs:
+            api_url = inputs.get("api_url")
+            api_token = inputs.get("api_token")
+            jwt_secret = inputs.get("jwt_secret")
+
+            if api_url and (api_token or jwt_secret):
+                if api_token:
+                    return LagoonClient(api_url, api_token)
+                elif jwt_secret:
+                    token = self._generate_admin_token(jwt_secret)
+                    return LagoonClient(api_url, token)
+
         config = LagoonConfig()
         return config.get_client()
 
+    def _generate_admin_token(self, jwt_secret: str) -> str:
+        """Generate an admin JWT token from the JWT secret."""
+        import jwt as pyjwt
+        import time
+
+        now = int(time.time())
+        payload = {
+            "role": "admin",
+            "iss": "lagoon-api",
+            "sub": "lagoonadmin",
+            "aud": "api.dev",
+            "iat": now,
+            "exp": now + 3600,
+        }
+        return pyjwt.encode(payload, jwt_secret, algorithm="HS256")
+
     def create(self, inputs):
         """Create a new deploy target configuration."""
-        client = self._get_client()
+        client = self._get_client(inputs)
 
         # Prepare input data for API call
         create_args = {
@@ -80,7 +124,7 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
 
     def update(self, id, old_inputs, new_inputs):
         """Update an existing deploy target configuration."""
-        client = self._get_client()
+        client = self._get_client(new_inputs)
 
         # Prepare update data
         update_args = {}
@@ -123,7 +167,7 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
 
     def delete(self, id, props):
         """Delete a deploy target configuration."""
-        client = self._get_client()
+        client = self._get_client(props)
 
         # Delete via API
         client.delete_deploy_target_config(int(id), props["project_id"])
@@ -136,7 +180,7 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
         """
         from .import_utils import ImportIdParser
 
-        client = self._get_client()
+        client = self._get_client(props)
 
         # Detect import vs refresh scenario
         if ImportIdParser.is_import_scenario(id, props, ["project_id"]):
@@ -260,6 +304,10 @@ class LagoonDeployTargetConfig(dynamic.Resource):
             "pullrequests": args.pullrequests,
             "weight": args.weight,
             "deploy_target_project_pattern": args.deploy_target_project_pattern,
+            # API configuration (allows dynamic token passing)
+            "api_url": args.api_url,
+            "api_token": args.api_token,
+            "jwt_secret": args.jwt_secret,
             # Output (set by provider)
             "id": None,
         }

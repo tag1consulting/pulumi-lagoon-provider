@@ -262,11 +262,17 @@ main() {
         exit 1
     fi
 
-    # Check cluster connectivity - if cluster doesn't exist yet, skip token refresh
+    # Check cluster connectivity - if cluster doesn't exist yet, use fallback JWT secret
     # (Pulumi will create the cluster on first run)
     if ! kubectl --context "$CONTEXT" cluster-info >/dev/null 2>&1; then
-        log_warn "Cluster '$CONTEXT' not found - running Pulumi without token refresh"
+        log_warn "Cluster '$CONTEXT' not found - using development JWT secret"
         log_warn "This is expected on first run (Pulumi will create the clusters)"
+
+        # Set the development JWT secret so the provider can generate tokens
+        # This must match the apiJWTSecret value in the Helm chart
+        export LAGOON_JWT_SECRET="changeme-jwt-secret-for-local-dev-only"
+        export LAGOON_API_URL="http://localhost:7080/graphql"
+
         log_info "Running: pulumi $*"
         echo ""
         pulumi "$@"

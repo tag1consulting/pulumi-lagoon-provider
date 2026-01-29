@@ -25,6 +25,7 @@ Configuration:
 
 import pulumi
 import pulumi_kubernetes as k8s
+from pulumi_command import local as command
 
 from config import (
     config,
@@ -443,6 +444,11 @@ if lagoon_core is not None and config.create_example_project:
 
     # Create deploy targets for both clusters
     # These register the Kind clusters as deploy targets in Lagoon
+    #
+    # Note: On first run, the Lagoon API isn't accessible yet (no port-forwards).
+    # Use 'make multi-cluster-deploy' which runs pulumi up twice:
+    # 1. First run: Creates clusters and Lagoon core
+    # 2. Second run: Creates deploy targets and example project (with port-forwards)
     deploy_targets = create_deploy_targets(
         "example",
         prod_cluster_name="lagoon-prod",
