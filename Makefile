@@ -23,7 +23,7 @@
         port-forwards check-health \
         multi-cluster-up multi-cluster-down multi-cluster-preview multi-cluster-status multi-cluster-clusters \
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
-        multi-cluster-test-api multi-cluster-test-ui \
+        multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
         clean clean-all venv
 
 # Variables
@@ -308,7 +308,7 @@ MULTI_CLUSTER_DIR := examples/multi-cluster
 
 multi-cluster-up: venv provider-install
 	@echo "Creating multi-cluster environment (prod + nonprod)..."
-	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) up
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) deploy
 
 multi-cluster-deploy: venv provider-install
 	@echo "Deploying multi-cluster environment with automatic retry..."
@@ -345,6 +345,9 @@ multi-cluster-test-api:
 
 multi-cluster-test-ui:
 	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) test-ui
+
+multi-cluster-info:
+	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) show-access-info
 
 #==============================================================================
 # Cleanup

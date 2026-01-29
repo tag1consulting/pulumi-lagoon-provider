@@ -16,7 +16,7 @@
 .PHONY: help setup preview up down refresh status clusters clean clean-all \
         port-forwards port-forwards-all port-forwards-stop \
         token check fix-rabbitmq fix-migration-lock ensure-lagoon-admin \
-        deploy verify wait-for-pods test-api test-ui
+        deploy verify wait-for-pods test-api test-ui show-access-info
 
 # Default target
 help:
@@ -264,6 +264,36 @@ deploy: setup
 	@echo "Deployment complete! Running verification..."
 	@echo "=========================================="
 	@$(MAKE) verify
+	@echo ""
+	@$(MAKE) show-access-info
+
+# Show access information for browser testing
+show-access-info:
+	@echo "=========================================="
+	@echo "Browser Access Information"
+	@echo "=========================================="
+	@echo ""
+	@echo "Add to /etc/hosts:"
+	@echo "  127.0.0.1 keycloak.lagoon.local ui.lagoon.local api.lagoon.local"
+	@echo ""
+	@echo "Browser URLs:"
+	@echo "┌───────────┬───────────────────────────────────────────┐"
+	@echo "│  Service  │                    URL                    │"
+	@echo "├───────────┼───────────────────────────────────────────┤"
+	@echo "│ Lagoon UI │ https://ui.lagoon.local:8443              │"
+	@echo "├───────────┼───────────────────────────────────────────┤"
+	@echo "│ Keycloak  │ https://keycloak.lagoon.local:8443        │"
+	@echo "├───────────┼───────────────────────────────────────────┤"
+	@echo "│ API       │ https://api.lagoon.local:8443/graphql     │"
+	@echo "└───────────┴───────────────────────────────────────────┘"
+	@echo ""
+	@echo "Login credentials:"
+	@echo "  Username: lagoonadmin"
+	@printf "  Password: "; kubectl --context kind-lagoon-prod -n lagoon-core get secret prod-core-lagoon-core-keycloak -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d; echo ""
+	@echo ""
+	@echo "Note: You'll get a certificate warning since certs are self-signed."
+	@echo "      Click 'Advanced' and proceed anyway."
+	@echo ""
 
 # Wait for Lagoon pods to be running
 wait-for-pods:
