@@ -25,6 +25,7 @@ Configuration:
 
 import pulumi
 import pulumi_kubernetes as k8s
+from pulumi_command import local as command
 
 from config import (
     config,
@@ -436,43 +437,136 @@ example_project = None
 if lagoon_core is not None and config.create_example_project:
     pulumi.log.info("Creating example Drupal project with multi-cluster routing...")
 
-    # Determine dependencies for deploy targets
-    deploy_target_deps = [lagoon_core.release, keycloak_config_job]
+    # Create deploy targets and example project via a Command resource
+    # This approach uses kubectl port-forward and curl to create resources via the
+    # Lagoon GraphQL API, avoiding the need for the provider to have a pre-configured
+    # token on first run.
+    #
+    # The Command:
+    # 1. Starts port-forwards to the API
+    # 2. Generates an admin JWT token using the JWTSECRET
+    # 3. Creates deploy targets for prod and nonprod clusters
+    # 4. Creates the example Drupal project with deploy target configurations
+    example_setup_deps = [lagoon_core.release, keycloak_config_job]
     if knex_migrations is not None:
-        deploy_target_deps.append(knex_migrations)
+        example_setup_deps.append(knex_migrations)
 
-    # Create deploy targets for both clusters
-    # These register the Kind clusters as deploy targets in Lagoon
-    deploy_targets = create_deploy_targets(
-        "example",
-        prod_cluster_name="lagoon-prod",
-        nonprod_cluster_name="lagoon-nonprod",
-        domain_config=domain_config,
-        # SSH host is the Lagoon SSH service in the prod cluster
-        ssh_host=lagoon_core.ssh_host,
+    example_setup = command.Command(
+        "create-deploy-targets-and-project",
+        create=f'''
+#!/bin/bash
+set -e
+
+CONTEXT="kind-lagoon-prod"
+NAMESPACE="lagoon-core"
+API_SVC="prod-core-lagoon-core-api"
+CORE_SECRETS="prod-core-lagoon-core-secrets"
+SSH_HOST="{lagoon_core.ssh_host}"
+ROUTER_PATTERN="${{environment}}.${{project}}.{domain_config.base}"
+PROJECT_NAME="{config.example_project_name}"
+GIT_URL="{config.example_project_git_url}"
+
+echo "Setting up Lagoon deploy targets and example project..."
+
+# Start port-forward to API (run in background, will be cleaned up when script exits)
+kubectl --context "$CONTEXT" port-forward -n "$NAMESPACE" "svc/$API_SVC" 7070:80 &
+PF_PID=$!
+trap "kill $PF_PID 2>/dev/null || true" EXIT
+
+# Wait for port-forward to be ready
+for i in $(seq 1 15); do
+    if curl -sf "http://localhost:7070/" >/dev/null 2>&1; then
+        echo "Port-forward ready"
+        break
+    fi
+    sleep 1
+done
+
+# Get JWTSECRET and generate admin token
+JWT_SECRET=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret "$CORE_SECRETS" -o jsonpath='{{.data.JWTSECRET}}' | base64 -d)
+TOKEN=$(python3 -c "
+import jwt, time
+payload = {{'role': 'admin', 'iss': 'lagoon-api', 'sub': 'lagoonadmin', 'aud': 'api.dev', 'iat': int(time.time()), 'exp': int(time.time()) + 3600}}
+print(jwt.encode(payload, '$JWT_SECRET', algorithm='HS256'))
+")
+
+API_URL="http://localhost:7070/graphql"
+
+# Function to call GraphQL API
+graphql() {{
+    curl -sf "$API_URL" \\
+        -H "Authorization: Bearer $TOKEN" \\
+        -H "Content-Type: application/json" \\
+        -d "$1"
+}}
+
+# Create nonprod deploy target
+echo "Creating nonprod deploy target..."
+NONPROD_RESULT=$(graphql '{{"query": "mutation {{ addKubernetes(input: {{ name: \\"lagoon-nonprod\\", consoleUrl: \\"https://kubernetes.default.svc\\", cloudProvider: \\"kind\\", cloudRegion: \\"local\\", sshHost: \\"'"$SSH_HOST"'\\", sshPort: \\"22\\", routerPattern: \\"'"$ROUTER_PATTERN"'\\" }}) {{ id name }} }}"}}')
+NONPROD_ID=$(echo "$NONPROD_RESULT" | jq -r '.data.addKubernetes.id // empty')
+if [ -z "$NONPROD_ID" ]; then
+    # Check if it already exists
+    NONPROD_ID=$(graphql '{{"query": "{{ kubernetes(name: \\"lagoon-nonprod\\") {{ id }} }}"}}' | jq -r '.data.kubernetes.id // empty')
+fi
+echo "Nonprod deploy target ID: $NONPROD_ID"
+
+# Create prod deploy target
+echo "Creating prod deploy target..."
+PROD_RESULT=$(graphql '{{"query": "mutation {{ addKubernetes(input: {{ name: \\"lagoon-prod\\", consoleUrl: \\"https://kubernetes.default.svc\\", cloudProvider: \\"kind\\", cloudRegion: \\"local\\", sshHost: \\"'"$SSH_HOST"'\\", sshPort: \\"22\\", routerPattern: \\"'"$ROUTER_PATTERN"'\\" }}) {{ id name }} }}"}}')
+PROD_ID=$(echo "$PROD_RESULT" | jq -r '.data.addKubernetes.id // empty')
+if [ -z "$PROD_ID" ]; then
+    # Check if it already exists
+    PROD_ID=$(graphql '{{"query": "{{ kubernetes(name: \\"lagoon-prod\\") {{ id }} }}"}}' | jq -r '.data.kubernetes.id // empty')
+fi
+echo "Prod deploy target ID: $PROD_ID"
+
+# Create example project
+echo "Creating example project: $PROJECT_NAME..."
+PROJECT_RESULT=$(graphql '{{"query": "mutation {{ addProject(input: {{ name: \\"'"$PROJECT_NAME"'\\", gitUrl: \\"'"$GIT_URL"'\\", kubernetes: '"$PROD_ID"', branches: \\"^(main|develop|feature/.*)$\\", pullrequests: \\".*\\", productionEnvironment: \\"main\\" }}) {{ id name }} }}"}}')
+PROJECT_ID=$(echo "$PROJECT_RESULT" | jq -r '.data.addProject.id // empty')
+if [ -z "$PROJECT_ID" ]; then
+    # Check if it already exists
+    PROJECT_ID=$(graphql '{{"query": "{{ projectByName(name: \\"'"$PROJECT_NAME"'\\") {{ id }} }}"}}' | jq -r '.data.projectByName.id // empty')
+fi
+echo "Project ID: $PROJECT_ID"
+
+# Add deploy target config for prod (main branch only)
+echo "Configuring production routing..."
+graphql '{{"query": "mutation {{ addDeployTargetConfig(input: {{ project: '"$PROJECT_ID"', deployTarget: '"$PROD_ID"', branches: \\"main\\", pullrequests: \\"false\\", weight: 10 }}) {{ id }} }}"}}'
+
+# Add deploy target config for nonprod (all other branches + PRs)
+echo "Configuring non-production routing..."
+graphql '{{"query": "mutation {{ addDeployTargetConfig(input: {{ project: '"$PROJECT_ID"', deployTarget: '"$NONPROD_ID"', branches: \\".*\\", pullrequests: \\"true\\", weight: 1 }}) {{ id }} }}"}}'
+
+echo ""
+echo "Setup complete!"
+echo "  Nonprod deploy target: $NONPROD_ID"
+echo "  Prod deploy target: $PROD_ID"
+echo "  Project: $PROJECT_NAME (ID: $PROJECT_ID)"
+
+# Output JSON for Pulumi to parse
+echo ""
+echo "PULUMI_OUTPUT_JSON:{{\\"nonprod_id\\": \\"$NONPROD_ID\\", \\"prod_id\\": \\"$PROD_ID\\", \\"project_id\\": \\"$PROJECT_ID\\"}}"
+''',
         opts=pulumi.ResourceOptions(
-            depends_on=deploy_target_deps,
+            depends_on=example_setup_deps,
         ),
     )
 
-    pulumi.export("prod_deploy_target_id", deploy_targets.prod_target.id)
-    pulumi.export("nonprod_deploy_target_id", deploy_targets.nonprod_target.id)
-
-    # Create the example Drupal project with deploy target configurations
-    # - 'main' branch deploys to prod cluster
-    # - All other branches and PRs deploy to nonprod cluster
-    example_project = create_example_drupal_project(
-        config.example_project_name,
-        deploy_targets=deploy_targets,
-        git_url=config.example_project_git_url,
-        production_environment="main",
-        opts=pulumi.ResourceOptions(
-            depends_on=[deploy_targets.prod_target, deploy_targets.nonprod_target],
-        ),
-    )
-
-    pulumi.export("example_project_id", example_project.project_id)
-    pulumi.export("example_project_name", example_project.project_name)
+    # Export the IDs (they'll be available after the command runs)
+    pulumi.export("prod_deploy_target_id", example_setup.stdout.apply(
+        lambda s: next((l.split("PULUMI_OUTPUT_JSON:")[1] for l in s.split("\n") if "PULUMI_OUTPUT_JSON:" in l), "{}")).apply(
+        lambda j: __import__("json").loads(j).get("prod_id", "unknown")
+    ))
+    pulumi.export("nonprod_deploy_target_id", example_setup.stdout.apply(
+        lambda s: next((l.split("PULUMI_OUTPUT_JSON:")[1] for l in s.split("\n") if "PULUMI_OUTPUT_JSON:" in l), "{}")).apply(
+        lambda j: __import__("json").loads(j).get("nonprod_id", "unknown")
+    ))
+    pulumi.export("example_project_id", example_setup.stdout.apply(
+        lambda s: next((l.split("PULUMI_OUTPUT_JSON:")[1] for l in s.split("\n") if "PULUMI_OUTPUT_JSON:" in l), "{}")).apply(
+        lambda j: __import__("json").loads(j).get("project_id", "unknown")
+    ))
+    pulumi.export("example_project_name", config.example_project_name)
 
 
 # =============================================================================
