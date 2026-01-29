@@ -58,11 +58,11 @@ def install_lagoon_core(
     # Note: Namespace should be created externally before calling this function
     # to ensure certificates can be created in the namespace first
 
-    # Construct Lagoon URLs
-    api_url = f"https://{domain_config.lagoon_api}/graphql"
-    ui_url = f"https://{domain_config.lagoon_ui}"
-    keycloak_url = f"https://{domain_config.lagoon_keycloak}"
-    webhook_url = f"https://{domain_config.lagoon_webhook}"
+    # Construct Lagoon URLs (using DomainConfig URLs which include port if needed)
+    api_url = f"{domain_config.lagoon_api_url}/graphql"
+    ui_url = domain_config.lagoon_ui_url
+    keycloak_url = domain_config.lagoon_keycloak_url
+    webhook_url = f"https://{domain_config.lagoon_webhook}{domain_config._port_suffix}"
 
     # Harbor URL and registry - required by lagoon-core chart
     # Use the provided Harbor or a default
@@ -79,7 +79,12 @@ def install_lagoon_core(
     # Build Helm values
     # Note: lagoon-core requires many configuration values for S3/storage
     helm_values = {
-        # Top-level Keycloak URL configuration - used by API and other services
+        # External URLs (with port for Kind clusters) - used by UI for OAuth redirects
+        "keycloakFrontEndURL": keycloak_url,
+        "lagoonAPIURL": api_url,
+        "lagoonUIURL": ui_url,
+        "lagoonWebhookURL": webhook_url,
+        # Internal Keycloak URL - used by API and other services within cluster
         "keycloakAPIURL": keycloak_internal_url,
         "harborURL": harbor_url,
         "registry": registry,
