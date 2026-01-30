@@ -1,5 +1,6 @@
 # Pulumi Lagoon Provider
 
+[![PyPI version](https://badge.fury.io/py/pulumi-lagoon.svg)](https://pypi.org/project/pulumi-lagoon/)
 [![Tests](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test.yml)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -10,7 +11,7 @@ A Pulumi dynamic provider for managing [Lagoon](https://www.lagoon.sh/) resource
 
 This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, etc.) using Pulumi, bringing infrastructure-as-code practices to your Lagoon workflows.
 
-**Status**: 🚧 Early Development / Proof of Concept
+**Status**: 🚧 Early Development
 
 ## Features
 
@@ -64,7 +65,15 @@ make example-up
 
 **Total setup time: ~15-20 minutes**
 
-## Installation (Manual)
+## Installation
+
+### From PyPI (Recommended)
+
+```bash
+pip install pulumi-lagoon
+```
+
+### From Source (Development)
 
 ```bash
 # Clone the repository
@@ -372,9 +381,9 @@ For detailed architecture information, see `memory-bank/architecture.md`.
 - [x] Comprehensive documentation for browser access setup
 
 ### Phase 3: Production Ready (Current)
+- [x] PyPI package publishing
 - [ ] Additional resources (Group, Notification)
 - [ ] Advanced examples
-- [ ] PyPI package publishing
 - [ ] Community feedback integration
 
 ### Phase 4: Native Provider (Future)

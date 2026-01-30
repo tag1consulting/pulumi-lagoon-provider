@@ -1,7 +1,7 @@
 # Pulumi Lagoon Provider - Implementation Status
 
-**Last Updated**: 2026-01-28
-**Status**: Phase 2 Complete - LagoonDeployTarget + Multi-Cluster Example (Working)
+**Last Updated**: 2026-01-30
+**Status**: v0.1.0 Released on PyPI - Phase 2 Complete
 
 ---
 
@@ -298,14 +298,13 @@ pulumi config set lagoon:token YOUR_TOKEN --secret
    - API quirks discovered during testing
    - Advanced usage examples
 
-### Phase 2 (In Progress)
+### Phase 2 (Complete)
 - ✅ LagoonDeployTarget resource implemented
-- ✅ Multi-cluster example code complete
-- ⏳ Multi-cluster example debugging (timeout issue)
-- ⏳ Integration tests against test Lagoon instance
-- Additional resources (Group, Notification)
-- CI/CD pipeline
-- PyPI publication
+- ✅ LagoonDeployTargetConfig resource implemented
+- ✅ Multi-cluster example complete and working
+- ✅ CI/CD pipeline (GitHub Actions)
+- ✅ PyPI publication (v0.1.0 released 2026-01-30)
+- ⏳ Additional resources (Group, Notification) - deferred to Phase 3
 
 ### Phase 3 (Long-term)
 - Native Go provider
