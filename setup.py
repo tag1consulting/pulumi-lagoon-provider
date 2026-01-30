@@ -21,17 +21,19 @@ setup(
         "Intended Audience :: System Administrators",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: System :: Systems Administration",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
     python_requires=">=3.8",
     install_requires=[
         "pulumi>=3.0.0,<4.0.0",
         "requests>=2.28.0,<3.0.0",
+        "PyJWT>=2.8.0",  # For admin JWT token generation
     ],
     extras_require={
         "dev": [

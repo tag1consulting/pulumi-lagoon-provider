@@ -1,0 +1,103 @@
+# Lagoon Core Helm Chart Values
+# Configuration for multi-cluster example with kind
+
+# Required Harbor configuration
+harborURL: "https://harbor.lagoon.test"
+harborAdminPassword: "Harbor12345"
+
+# Keycloak frontend URL (for redirects)
+keycloakFrontEndURL: "https://keycloak.lagoon.test"
+
+# S3 configuration (required - using dummy values for local testing)
+s3FilesAccessKeyID: "local-test-key"
+s3FilesSecretAccessKey: "local-test-secret"
+s3FilesBucket: "lagoon-files"
+s3FilesHost: "http://localhost:9000"
+s3FilesRegion: "us-east-1"
+
+# Database credentials (for backups - using dummy values)
+s3BAASAccessKeyID: "local-test-key"
+s3BAASSecretAccessKey: "local-test-secret"
+
+# Elasticsearch configuration (using dummy URL - not actually deployed)
+elasticsearchURL: "http://elasticsearch.lagoon.test:9200"
+
+# Kibana configuration (using dummy URL - not actually deployed)
+kibanaURL: "http://kibana.lagoon.test:5601"
+
+# Global Lagoon settings
+lagoon:
+  baseDomain: "lagoon.test"
+  api:
+    adminUsername: "admin"
+  database:
+    type: "embedded"
+  ssh:
+    enabled: false
+
+# UI configuration
+ui:
+  enabled: true
+  replicaCount: 1
+
+# Configure Lagoon API URL (used by UI)
+lagoonAPIURL: "https://api.lagoon.test/graphql"
+
+# Configure Lagoon webhook URL (used by UI)
+lagoonWebhookURL: "https://webhook-handler.lagoon.test"
+
+# Webhooks handler
+webhooks:
+  enabled: true
+  replicaCount: 1
+
+# Build/task queue (RabbitMQ broker)
+broker:
+  serviceMonitor:
+    enabled: false
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+
+# Keycloak configuration
+keycloak:
+  serviceMonitor:
+    enabled: false
+
+# SSH services
+ssh:
+  serviceMonitor:
+    enabled: false
+
+# Storage
+storage:
+  storageClass: "standard"
+
+# Resource limits - reduced for local development
+resources:
+  api:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  ui:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Disable features not needed for basic provider testing
+backupHandler:
+  enabled: false
+
+metrics:
+  serviceMonitor:
+    enabled: false
+
+debug:
+  enabled: true

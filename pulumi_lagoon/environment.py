@@ -1,11 +1,18 @@
 """Lagoon Environment resource - Dynamic provider for managing Lagoon environments."""
 
+from dataclasses import dataclass
+from typing import Optional
+
 import pulumi
 import pulumi.dynamic as dynamic
-from typing import Optional
-from dataclasses import dataclass
 
 from .config import LagoonConfig
+from .validators import (
+    validate_deploy_type,
+    validate_environment_name,
+    validate_environment_type,
+    validate_positive_int,
+)
 
 
 @dataclass
@@ -50,10 +57,13 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
 
     def create(self, inputs):
         """Create a new Lagoon environment."""
-        client = self._get_client()
+        # Input validation (fail fast)
+        validate_environment_name(inputs.get("name"))
+        project_id = validate_positive_int(inputs.get("project_id"), "project_id")
+        validate_deploy_type(inputs.get("deploy_type"))
+        validate_environment_type(inputs.get("environment_type"))
 
-        # Ensure project_id is an integer (Pulumi may pass it as string)
-        project_id = int(inputs["project_id"])
+        client = self._get_client()
 
         # Prepare input data
         create_args = {
@@ -98,10 +108,13 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
 
     def update(self, id, old_inputs, new_inputs):
         """Update an existing Lagoon environment."""
-        client = self._get_client()
+        # Input validation (fail fast)
+        validate_environment_name(new_inputs.get("name"))
+        project_id = validate_positive_int(new_inputs.get("project_id"), "project_id")
+        validate_deploy_type(new_inputs.get("deploy_type"))
+        validate_environment_type(new_inputs.get("environment_type"))
 
-        # Ensure project_id is an integer (Pulumi may pass it as string)
-        project_id = int(new_inputs["project_id"])
+        client = self._get_client()
 
         # Lagoon uses addOrUpdateEnvironment for both create and update
         update_args = {
@@ -155,16 +168,26 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
         client.delete_environment(name=props["name"], project=project_id, execute=True)
 
     def read(self, id, props):
-        """Read/refresh a Lagoon environment from API."""
+        """Read/refresh a Lagoon environment from API.
+
+        Supports both refresh (props available) and import (props empty).
+        For import, the ID format is: project_id:env_name
+        """
+        from .import_utils import ImportIdParser
+
         client = self._get_client()
 
-        # Ensure project_id is an integer
-        project_id = int(props["project_id"])
+        # Detect import vs refresh scenario
+        if ImportIdParser.is_import_scenario(id, props, ["name", "project_id"]):
+            # Import: parse composite ID
+            project_id, env_name = ImportIdParser.parse_environment_id(id)
+        else:
+            # Refresh: use props from state
+            project_id = int(props["project_id"])
+            env_name = props["name"]
 
         # Query current state
-        result = client.get_environment_by_name(
-            name=props["name"], project_id=project_id
-        )
+        result = client.get_environment_by_name(name=env_name, project_id=project_id)
 
         if not result:
             # Environment no longer exists
@@ -185,7 +208,7 @@ class LagoonEnvironmentProvider(dynamic.ResourceProvider):
         return dynamic.ReadResult(id_=str(result["id"]), outs=outs)
 
 
-class LagoonEnvironment(dynamic.Resource):
+class LagoonEnvironment(dynamic.Resource, module="lagoon", name="Environment"):
     """
     A Lagoon environment resource.
 

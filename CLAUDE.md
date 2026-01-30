@@ -51,7 +51,7 @@ pip install -e .
 
 ```
 pulumi-lagoon-provider/
-├── pulumi_lagoon/           # Main package
+├── pulumi_lagoon/           # Main provider package
 │   ├── __init__.py         # Package exports
 │   ├── client.py           # Lagoon GraphQL API client
 │   ├── config.py           # Provider configuration
@@ -59,16 +59,65 @@ pulumi-lagoon-provider/
 │   ├── environment.py      # LagoonEnvironment resource
 │   ├── variable.py         # LagoonVariable resource
 │   └── deploytarget.py     # LagoonDeployTarget resource
-├── examples/               # Example Pulumi programs
-│   └── simple-project/     # Basic project example
+│
+├── scripts/                 # SHARED operational scripts
+│   ├── common.sh           # Common functions and configuration
+│   ├── run-pulumi.sh       # Wrapper with auto token refresh
+│   ├── get-token.sh        # Get OAuth token
+│   ├── setup-port-forwards.sh  # Start kubectl port-forwards
+│   ├── check-cluster-health.sh # Verify cluster health
+│   ├── create-lagoon-admin.sh  # Create Keycloak admin user
+│   ├── fix-rabbitmq-password.sh # Fix RabbitMQ auth issues
+│   └── ...                 # Other operational scripts
+│
+├── examples/
+│   ├── simple-project/     # Provider usage example (uses pulumi_lagoon)
+│   │   ├── __main__.py     # Creates Lagoon projects/envs/vars via API
+│   │   └── scripts/        # Helper scripts
+│   │
+│   ├── single-cluster/     # Single Kind cluster with full Lagoon stack
+│   │   ├── __main__.py     # Deploys complete Lagoon to one cluster
+│   │   ├── config.py       # Single-cluster configuration
+│   │   └── (symlinks)      # Reuses modules from multi-cluster
+│   │
+│   └── multi-cluster/      # Production-like multi-cluster deployment
+│       ├── __main__.py     # Deploys 2 Kind clusters + full Lagoon
+│       ├── config.py       # Multi-cluster configuration
+│       ├── clusters/       # Kind cluster management
+│       ├── infrastructure/ # Ingress, cert-manager, CoreDNS
+│       ├── lagoon/         # Core and remote installation
+│       └── registry/       # Harbor installation
+│
 ├── tests/                  # Unit and integration tests
 ├── memory-bank/            # Documentation and planning
-│   ├── planning.md         # Initial planning and architecture decisions
-│   └── architecture.md     # Technical architecture notes
 ├── setup.py               # Python package configuration
 ├── requirements.txt       # Python dependencies
+├── Makefile               # Development workflow automation
 └── README.md             # Project documentation
 ```
+
+## Shared Scripts
+
+All operational scripts are in `scripts/` and are parameterized via environment variables:
+
+```bash
+# Single-cluster (test-cluster style - default)
+LAGOON_PRESET=single ./scripts/check-cluster-health.sh
+
+# Multi-cluster production
+LAGOON_PRESET=multi-prod ./scripts/check-cluster-health.sh
+
+# Multi-cluster non-production
+LAGOON_PRESET=multi-nonprod ./scripts/check-cluster-health.sh
+```
+
+The `LAGOON_PRESET` variable configures:
+- Kubernetes context
+- Namespace
+- Service names
+- Secret names
+
+See `scripts/common.sh` for all configuration options.
 
 ## Key Resources
 

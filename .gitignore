@@ -60,6 +60,9 @@ dmypy.json
 .env
 .env.local
 
+# Claude Code
+.claude/
+
 # Logs
 *.log
 

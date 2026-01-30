@@ -1,10 +1,11 @@
 """Unit tests for Lagoon GraphQL client."""
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 import requests
 
-from pulumi_lagoon.client import LagoonClient, LagoonAPIError, LagoonConnectionError
+from pulumi_lagoon.client import LagoonAPIError, LagoonClient, LagoonConnectionError
 
 
 class TestLagoonClientInit:
@@ -13,9 +14,7 @@ class TestLagoonClientInit:
     def test_client_initialization(self):
         """Test client initializes with correct credentials."""
         with patch("requests.Session"):
-            client = LagoonClient(
-                api_url="https://api.test.com/graphql", token="test-token"
-            )
+            client = LagoonClient(api_url="https://api.test.com/graphql", token="test-token")
             assert client.api_url == "https://api.test.com/graphql"
             assert client.token == "test-token"
             assert client.verify_ssl is True
@@ -24,9 +23,7 @@ class TestLagoonClientInit:
         """Test SSL verification can be disabled via environment variable."""
         with patch("requests.Session"):
             with patch.dict("os.environ", {"LAGOON_INSECURE": "true"}):
-                client = LagoonClient(
-                    api_url="https://api.test.com/graphql", token="test-token"
-                )
+                client = LagoonClient(api_url="https://api.test.com/graphql", token="test-token")
                 assert client.verify_ssl is False
 
     def test_client_ssl_verification_explicit(self):
@@ -73,9 +70,7 @@ class TestLagoonClientExecute:
         response = mock_response(data={"test": "value"})
         lagoon_client.session.post.return_value = response
 
-        lagoon_client._execute(
-            "query Test($id: Int!) { test(id: $id) }", variables={"id": 42}
-        )
+        lagoon_client._execute("query Test($id: Int!) { test(id: $id) }", variables={"id": 42})
 
         call_kwargs = lagoon_client.session.post.call_args[1]
         assert call_kwargs["json"]["variables"] == {"id": 42}
@@ -97,9 +92,7 @@ class TestLagoonClientExecute:
 
     def test_execute_connection_error(self, lagoon_client):
         """Test connection error handling."""
-        lagoon_client.session.post.side_effect = requests.ConnectionError(
-            "Connection refused"
-        )
+        lagoon_client.session.post.side_effect = requests.ConnectionError("Connection refused")
 
         with pytest.raises(LagoonConnectionError, match="Connection error"):
             lagoon_client._execute("query { test }")
@@ -189,9 +182,7 @@ class TestProjectOperations:
         response = mock_response(data={"updateProject": updated})
         lagoon_client.session.post.return_value = response
 
-        result = lagoon_client.update_project(
-            project_id=1, branches="^(main|develop|staging)$"
-        )
+        result = lagoon_client.update_project(project_id=1, branches="^(main|develop|staging)$")
 
         assert result["branches"] == "^(main|develop|staging)$"
 
@@ -236,9 +227,7 @@ class TestEnvironmentOperations:
         assert input_data["deployType"] == "BRANCH"
         assert input_data["environmentType"] == "PRODUCTION"
 
-    def test_get_environment_by_name(
-        self, lagoon_client, mock_response, sample_environment
-    ):
+    def test_get_environment_by_name(self, lagoon_client, mock_response, sample_environment):
         """Test getting environment by name."""
         response = mock_response(data={"environmentByName": sample_environment})
         lagoon_client.session.post.return_value = response
@@ -261,9 +250,7 @@ class TestEnvironmentOperations:
         response = mock_response(data={"deleteEnvironment": "success"})
         lagoon_client.session.post.return_value = response
 
-        result = lagoon_client.delete_environment(
-            name="develop", project=1, execute=True
-        )
+        result = lagoon_client.delete_environment(name="develop", project=1, execute=True)
 
         assert result == "success"
 
@@ -288,9 +275,7 @@ class TestVariableOperations:
         assert input_data["type"] == "PROJECT"
         assert input_data["typeId"] == 1
 
-    def test_add_environment_variable(
-        self, lagoon_client, mock_response, sample_variable
-    ):
+    def test_add_environment_variable(self, lagoon_client, mock_response, sample_variable):
         """Test adding an environment-level variable."""
         env_var = sample_variable.copy()
         env_var["environment"] = {"id": 1, "name": "main"}
@@ -311,16 +296,12 @@ class TestVariableOperations:
         assert input_data["type"] == "ENVIRONMENT"
         assert input_data["typeId"] == 1
 
-    def test_add_variable_uppercase_scope(
-        self, lagoon_client, mock_response, sample_variable
-    ):
+    def test_add_variable_uppercase_scope(self, lagoon_client, mock_response, sample_variable):
         """Test that scope is uppercased."""
         response = mock_response(data={"addEnvVariable": sample_variable})
         lagoon_client.session.post.return_value = response
 
-        lagoon_client.add_env_variable(
-            name="TEST", value="value", project=1, scope="build"
-        )
+        lagoon_client.add_env_variable(name="TEST", value="value", project=1, scope="build")
 
         call_kwargs = lagoon_client.session.post.call_args[1]
         input_data = call_kwargs["json"]["variables"]["input"]
@@ -328,9 +309,7 @@ class TestVariableOperations:
 
     def test_get_variable_by_name(self, lagoon_client, mock_response, sample_variable):
         """Test getting variable by name."""
-        response = mock_response(
-            data={"envVariablesByProjectEnvironment": [sample_variable]}
-        )
+        response = mock_response(data={"envVariablesByProjectEnvironment": [sample_variable]})
         lagoon_client.session.post.return_value = response
 
         result = lagoon_client.get_env_variable_by_name(name="DATABASE_HOST", project=1)
@@ -346,18 +325,12 @@ class TestVariableOperations:
 
         assert result is None
 
-    def test_get_variable_with_environment(
-        self, lagoon_client, mock_response, sample_variable
-    ):
+    def test_get_variable_with_environment(self, lagoon_client, mock_response, sample_variable):
         """Test getting environment-scoped variable."""
-        response = mock_response(
-            data={"envVariablesByProjectEnvironment": [sample_variable]}
-        )
+        response = mock_response(data={"envVariablesByProjectEnvironment": [sample_variable]})
         lagoon_client.session.post.return_value = response
 
-        lagoon_client.get_env_variable_by_name(
-            name="DATABASE_HOST", project=1, environment=1
-        )
+        lagoon_client.get_env_variable_by_name(name="DATABASE_HOST", project=1, environment=1)
 
         call_kwargs = lagoon_client.session.post.call_args[1]
         variables = call_kwargs["json"]["variables"]
@@ -377,9 +350,7 @@ class TestVariableOperations:
         response = mock_response(data={"deleteEnvVariable": "success"})
         lagoon_client.session.post.return_value = response
 
-        lagoon_client.delete_env_variable(
-            name="DATABASE_HOST", project=1, environment=1
-        )
+        lagoon_client.delete_env_variable(name="DATABASE_HOST", project=1, environment=1)
 
         call_kwargs = lagoon_client.session.post.call_args[1]
         input_data = call_kwargs["json"]["variables"]["input"]

@@ -1,9 +1,9 @@
 """Shared test fixtures for pulumi-lagoon tests."""
 
-import pytest
-from unittest.mock import Mock, patch
 import os
+from unittest.mock import Mock, patch
 
+import pytest
 
 # Sample data for tests
 SAMPLE_PROJECT = {
@@ -39,6 +39,21 @@ SAMPLE_VARIABLE = {
     "scope": "RUNTIME",
     "project": {"id": 1, "name": "test-project"},
     "environment": None,
+}
+
+SAMPLE_DEPLOY_TARGET = {
+    "id": 1,
+    "name": "prod-cluster",
+    "consoleUrl": "https://kubernetes.example.com:6443",
+    "cloudProvider": "aws",
+    "cloudRegion": "us-east-1",
+    "sshHost": "ssh.lagoon.example.com",
+    "sshPort": "22",
+    "buildImage": None,
+    "disabled": False,
+    "routerPattern": None,
+    "sharedBastionSecret": None,
+    "created": "2024-01-01T00:00:00Z",
 }
 
 
@@ -89,9 +104,7 @@ def lagoon_client(mock_response):
         mock_session.headers.update = Mock()
         mock_session_class.return_value = mock_session
 
-        client = LagoonClient(
-            api_url="https://api.test.lagoon.sh/graphql", token="test-jwt-token"
-        )
+        client = LagoonClient(api_url="https://api.test.lagoon.sh/graphql", token="test-jwt-token")
 
         # Replace the session with our mock
         client.session = mock_session
@@ -115,6 +128,12 @@ def sample_environment():
 def sample_variable():
     """Return sample variable data."""
     return SAMPLE_VARIABLE.copy()
+
+
+@pytest.fixture
+def sample_deploy_target():
+    """Return sample deploy target data."""
+    return SAMPLE_DEPLOY_TARGET.copy()
 
 
 @pytest.fixture

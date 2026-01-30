@@ -240,11 +240,34 @@ wait_for_lagoon() {
         return
     fi
 
-    log_info "Waiting for Lagoon pods..."
+    # First, wait for the api-migratedb job to complete (success or failure)
+    # This prevents blocking on a failed job pod (issue #6)
+    log_info "Waiting for database migration job to complete..."
+    for i in $(seq 1 12); do
+        JOB_STATUS=$(kubectl --context "kind-$CLUSTER_NAME" get job lagoon-core-api-migratedb -n lagoon -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null)
+        JOB_FAILED=$(kubectl --context "kind-$CLUSTER_NAME" get job lagoon-core-api-migratedb -n lagoon -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null)
 
-    # Wait for key pods
+        if [ "$JOB_STATUS" = "True" ]; then
+            log_info "Migration job completed successfully."
+            break
+        elif [ "$JOB_FAILED" = "True" ]; then
+            log_warn "Migration job failed, deleting for retry..."
+            kubectl --context "kind-$CLUSTER_NAME" delete job lagoon-core-api-migratedb -n lagoon 2>/dev/null || true
+            sleep 10
+        else
+            log_info "Waiting for migration job... (attempt $i/12)"
+            sleep 10
+        fi
+    done
+
+    # Now wait for the key deployment pods (excluding completed/failed job pods)
+    log_info "Waiting for Lagoon core pods..."
     kubectl --context "kind-$CLUSTER_NAME" wait --for=condition=ready pod \
-        -l app.kubernetes.io/name=lagoon-core -n lagoon --timeout=300s 2>/dev/null || true
+        -l app.kubernetes.io/name=lagoon-core --field-selector=status.phase=Running -n lagoon --timeout=300s 2>/dev/null || true
+
+    log_info "Waiting for Broker pods..."
+    kubectl --context "kind-$CLUSTER_NAME" wait --for=condition=ready pod \
+        -l app.kubernetes.io/name=broker -n lagoon --timeout=300s 2>/dev/null || true
 
     # Show pod status
     log_info "Current pod status:"

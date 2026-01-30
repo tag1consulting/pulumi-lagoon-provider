@@ -1,0 +1,36 @@
+# Kind cluster configuration for production deploy target
+# Hosts lagoon-core and all its dependencies
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: lagoon-prod
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.31.0
+    labels:
+      ingress-ready: "true"
+    extraPortMappings:
+      # HTTP port for ingress
+      - containerPort: 80
+        hostPort: 8080
+        protocol: TCP
+      # HTTPS port for ingress
+      - containerPort: 443
+        hostPort: 8443
+        protocol: TCP
+      # NodePort range for Lagoon services
+      - containerPort: 30030
+        hostPort: 30030
+        protocol: TCP
+      - containerPort: 30370
+        hostPort: 30370
+        protocol: TCP
+      - containerPort: 30371
+        hostPort: 30371
+        protocol: TCP
+      - containerPort: 31311
+        hostPort: 31311
+        protocol: TCP
+      # RabbitMQ AMQP port (for remote clusters)
+      - containerPort: 30672
+        hostPort: 30672
+        protocol: TCP

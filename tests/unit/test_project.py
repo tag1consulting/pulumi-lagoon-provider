@@ -2,6 +2,10 @@
 
 from unittest.mock import Mock, patch
 
+import pytest
+
+from pulumi_lagoon.exceptions import LagoonValidationError
+
 
 class TestLagoonProjectProviderCreate:
     """Tests for LagoonProjectProvider.create method."""
@@ -109,6 +113,11 @@ class TestLagoonProjectProviderUpdate:
 
         mock_client.update_project.assert_called_once()
         assert result.outs["branches"] == "^(main|develop|staging)$"
+
+        # Verify correct calling convention: project_id as positional arg, not in kwargs
+        call_args, call_kwargs = mock_client.update_project.call_args
+        assert call_args == (1,), "Project ID should be first positional argument"
+        assert "id" not in call_kwargs, "ID should not be in kwargs"
 
     @patch("pulumi_lagoon.project.LagoonConfig")
     def test_update_project_no_changes(self, mock_config_class):
@@ -248,3 +257,116 @@ class TestLagoonProjectArgs:
         assert args.production_environment == "main"
         assert args.branches == "^(main|develop)$"
         assert args.pullrequests == ".*"
+
+
+class TestLagoonProjectProviderValidation:
+    """Tests for input validation in LagoonProjectProvider."""
+
+    @patch("pulumi_lagoon.project.LagoonConfig")
+    def test_create_invalid_project_name_uppercase(self, mock_config_class):
+        """Test that uppercase project names are rejected."""
+        from pulumi_lagoon.project import LagoonProjectProvider
+
+        provider = LagoonProjectProvider()
+
+        inputs = {
+            "name": "Invalid-Name",
+            "git_url": "git@github.com:test/repo.git",
+            "deploytarget_id": 1,
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "name" in str(exc.value).lower()
+
+    @patch("pulumi_lagoon.project.LagoonConfig")
+    def test_create_invalid_git_url(self, mock_config_class):
+        """Test that invalid git URLs are rejected."""
+        from pulumi_lagoon.project import LagoonProjectProvider
+
+        provider = LagoonProjectProvider()
+
+        inputs = {
+            "name": "valid-name",
+            "git_url": "not-a-valid-url",
+            "deploytarget_id": 1,
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "git_url" in str(exc.value)
+
+    @patch("pulumi_lagoon.project.LagoonConfig")
+    def test_create_invalid_deploytarget_id(self, mock_config_class):
+        """Test that invalid deploytarget_id is rejected."""
+        from pulumi_lagoon.project import LagoonProjectProvider
+
+        provider = LagoonProjectProvider()
+
+        inputs = {
+            "name": "valid-name",
+            "git_url": "git@github.com:test/repo.git",
+            "deploytarget_id": -1,
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "deploytarget_id" in str(exc.value)
+
+    @patch("pulumi_lagoon.project.LagoonConfig")
+    def test_create_invalid_branches_regex(self, mock_config_class):
+        """Test that invalid branch regex patterns are rejected."""
+        from pulumi_lagoon.project import LagoonProjectProvider
+
+        provider = LagoonProjectProvider()
+
+        inputs = {
+            "name": "valid-name",
+            "git_url": "git@github.com:test/repo.git",
+            "deploytarget_id": 1,
+            "branches": "[invalid-regex",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "branches" in str(exc.value)
+
+    @patch("pulumi_lagoon.project.LagoonConfig")
+    def test_create_invalid_pullrequests_regex(self, mock_config_class):
+        """Test that invalid pullrequests regex patterns are rejected."""
+        from pulumi_lagoon.project import LagoonProjectProvider
+
+        provider = LagoonProjectProvider()
+
+        inputs = {
+            "name": "valid-name",
+            "git_url": "git@github.com:test/repo.git",
+            "deploytarget_id": 1,
+            "pullrequests": "(unbalanced",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "pullrequests" in str(exc.value)
+
+    @patch("pulumi_lagoon.project.LagoonConfig")
+    def test_update_invalid_git_url(self, mock_config_class):
+        """Test that invalid git URL in update is rejected."""
+        from pulumi_lagoon.project import LagoonProjectProvider
+
+        provider = LagoonProjectProvider()
+
+        old_inputs = {
+            "name": "valid-name",
+            "git_url": "git@github.com:test/repo.git",
+            "deploytarget_id": 1,
+        }
+        new_inputs = {
+            "name": "valid-name",
+            "git_url": "invalid-url",
+            "deploytarget_id": 1,
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.update("1", old_inputs, new_inputs)
+        assert "git_url" in str(exc.value)

@@ -2,6 +2,10 @@
 
 from unittest.mock import Mock, patch
 
+import pytest
+
+from pulumi_lagoon.exceptions import LagoonValidationError
+
 
 class TestLagoonEnvironmentProviderCreate:
     """Tests for LagoonEnvironmentProvider.create method."""
@@ -36,9 +40,7 @@ class TestLagoonEnvironmentProviderCreate:
         mock_client.add_or_update_environment.assert_called_once()
 
     @patch("pulumi_lagoon.environment.LagoonConfig")
-    def test_create_environment_sets_deploy_base_ref(
-        self, mock_config_class, sample_environment
-    ):
+    def test_create_environment_sets_deploy_base_ref(self, mock_config_class, sample_environment):
         """Test that deployBaseRef defaults to environment name."""
         from pulumi_lagoon.environment import LagoonEnvironmentProvider
 
@@ -64,9 +66,7 @@ class TestLagoonEnvironmentProviderCreate:
         assert call_kwargs["deployBaseRef"] == "main"
 
     @patch("pulumi_lagoon.environment.LagoonConfig")
-    def test_create_environment_with_pullrequest(
-        self, mock_config_class, sample_environment
-    ):
+    def test_create_environment_with_pullrequest(self, mock_config_class, sample_environment):
         """Test creating a pull request environment."""
         from pulumi_lagoon.environment import LagoonEnvironmentProvider
 
@@ -101,9 +101,7 @@ class TestLagoonEnvironmentProviderCreate:
         assert call_kwargs["deployTitle"] == "Add new feature"
 
     @patch("pulumi_lagoon.environment.LagoonConfig")
-    def test_create_handles_string_project_id(
-        self, mock_config_class, sample_environment
-    ):
+    def test_create_handles_string_project_id(self, mock_config_class, sample_environment):
         """Test that string project_id is converted to int."""
         from pulumi_lagoon.environment import LagoonEnvironmentProvider
 
@@ -217,9 +215,7 @@ class TestLagoonEnvironmentProviderRead:
 
         assert result.id == "1"
         assert result.outs["name"] == "main"
-        mock_client.get_environment_by_name.assert_called_once_with(
-            name="main", project_id=1
-        )
+        mock_client.get_environment_by_name.assert_called_once_with(name="main", project_id=1)
 
     @patch("pulumi_lagoon.environment.LagoonConfig")
     def test_read_environment_not_found(self, mock_config_class):
@@ -282,3 +278,200 @@ class TestLagoonEnvironmentArgs:
         assert args.deploy_base_ref == "main"
         assert args.deploy_head_ref == "feature"
         assert args.deploy_title == "New feature"
+
+
+class TestLagoonEnvironmentProviderValidation:
+    """Tests for input validation in LagoonEnvironmentProvider."""
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_create_invalid_environment_name(self, mock_config_class):
+        """Test that invalid environment names are rejected."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        provider = LagoonEnvironmentProvider()
+
+        inputs = {
+            "name": "-invalid-name",
+            "project_id": 1,
+            "deploy_type": "branch",
+            "environment_type": "production",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "name" in str(exc.value).lower()
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_create_invalid_project_id(self, mock_config_class):
+        """Test that invalid project_id is rejected."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        provider = LagoonEnvironmentProvider()
+
+        inputs = {
+            "name": "main",
+            "project_id": -1,
+            "deploy_type": "branch",
+            "environment_type": "production",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "project_id" in str(exc.value)
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_create_invalid_deploy_type(self, mock_config_class):
+        """Test that invalid deploy_type is rejected."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        provider = LagoonEnvironmentProvider()
+
+        inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "invalid_type",
+            "environment_type": "production",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "deploy_type" in str(exc.value)
+        assert "branch" in str(exc.value)
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_create_invalid_environment_type(self, mock_config_class):
+        """Test that invalid environment_type is rejected."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        provider = LagoonEnvironmentProvider()
+
+        inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "branch",
+            "environment_type": "staging",  # Invalid - should be production/development/standby
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.create(inputs)
+        assert "environment_type" in str(exc.value)
+        assert "production" in str(exc.value)
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_update_invalid_deploy_type(self, mock_config_class):
+        """Test that invalid deploy_type in update is rejected."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        provider = LagoonEnvironmentProvider()
+
+        old_inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "branch",
+            "environment_type": "production",
+        }
+        new_inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "invalid",
+            "environment_type": "production",
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.update("1", old_inputs, new_inputs)
+        assert "deploy_type" in str(exc.value)
+
+
+class TestLagoonEnvironmentProviderImport:
+    """Tests for import functionality in LagoonEnvironmentProvider."""
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_read_import_scenario_empty_props(self, mock_config_class, sample_environment):
+        """Test read() during import with empty props."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        mock_client = Mock()
+        mock_client.get_environment_by_name.return_value = sample_environment
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonEnvironmentProvider()
+
+        # Import scenario: composite ID, empty props
+        result = provider.read("1:main", {})
+
+        assert result is not None
+        assert result.outs["name"] == "main"
+        mock_client.get_environment_by_name.assert_called_once_with(name="main", project_id=1)
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_read_import_scenario_with_branch_name(self, mock_config_class, sample_environment):
+        """Test read() during import with branch-style environment name."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        sample_environment["name"] = "feature-branch"
+
+        mock_client = Mock()
+        mock_client.get_environment_by_name.return_value = sample_environment
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonEnvironmentProvider()
+
+        result = provider.read("123:feature-branch", {})
+
+        assert result is not None
+        mock_client.get_environment_by_name.assert_called_once_with(
+            name="feature-branch", project_id=123
+        )
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_read_refresh_scenario_uses_props(self, mock_config_class, sample_environment):
+        """Test read() during refresh uses props, not ID parsing."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        mock_client = Mock()
+        mock_client.get_environment_by_name.return_value = sample_environment
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonEnvironmentProvider()
+
+        # Refresh scenario: numeric ID with full props
+        props = {"name": "main", "project_id": 1}
+        result = provider.read("1", props)
+
+        assert result is not None
+        mock_client.get_environment_by_name.assert_called_once_with(name="main", project_id=1)
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_read_import_not_found(self, mock_config_class):
+        """Test read() during import when environment doesn't exist."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        mock_client = Mock()
+        mock_client.get_environment_by_name.return_value = None
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonEnvironmentProvider()
+
+        result = provider.read("999:nonexistent", {})
+
+        assert result is None
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_read_import_invalid_format(self, mock_config_class):
+        """Test read() during import with invalid ID format."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+        from pulumi_lagoon.exceptions import LagoonValidationError
+
+        provider = LagoonEnvironmentProvider()
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.read("invalid-no-colon", {})
+        assert "project_id:env_name" in str(exc.value)
