@@ -12,7 +12,7 @@ Uses the `pulumi_lagoon` provider to create:
 ## Prerequisites
 
 - A running Lagoon instance (see `examples/single-cluster/` or `examples/multi-cluster/`)
-- Python 3.8+ with the provider installed: `pip install -e ../..`
+- Python 3.8+ with the provider installed: `pip install pulumi-lagoon`
 - `curl` and `jq` for the helper scripts
 
 ## Quick Start
