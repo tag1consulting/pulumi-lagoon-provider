@@ -10,9 +10,9 @@ This provider allows you to declaratively manage Lagoon hosting platform resourc
 
 ## Project Status
 
-**Status**: Initial Development / Proof of Concept
+**Status**: v0.1.0 Released (Early Development)
 
-This project is in early development. We're starting with a Python-based dynamic provider to validate the concept before potentially building a full native provider in Go.
+The initial release is available on PyPI (`pip install pulumi-lagoon`). This is a Python-based dynamic provider. A native Go provider may be built in the future.
 
 ## Architecture
 
@@ -211,23 +211,24 @@ export LAGOON_TOKEN=<your-token>
 
 ## Goals
 
-### Short-term (Phase 1)
-- [ ] Implement core resources (Project, Environment, Variable)
-- [ ] GraphQL client with proper error handling
-- [ ] Working examples
-- [ ] Basic documentation
-- [ ] Unit tests
+### Short-term (Phase 1) - Complete
+- [x] Implement core resources (Project, Environment, Variable)
+- [x] GraphQL client with proper error handling
+- [x] Working examples
+- [x] Basic documentation
+- [x] Unit tests
 
-### Medium-term (Phase 2)
-- [ ] Additional resources (Groups, Notifications, Tasks)
-- [ ] Integration tests
-- [ ] Comprehensive documentation
-- [ ] Published to PyPI
+### Medium-term (Phase 2) - Complete
+- [x] Deploy target resources (DeployTarget, DeployTargetConfig)
+- [x] Multi-cluster example
+- [x] Integration tests
+- [x] Comprehensive documentation
+- [x] Published to PyPI
 
 ### Long-term (Phase 3)
+- [ ] Additional resources (Groups, Notifications, Tasks)
 - [ ] Native Go provider
 - [ ] Multi-language SDK generation
-- [ ] Production-ready release
 - [ ] Community adoption
 
 ## Contributing
