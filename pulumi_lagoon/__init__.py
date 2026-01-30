@@ -22,8 +22,21 @@ from .exceptions import (
 # Import utilities
 from .import_utils import ImportIdParser
 
+# Notification resources
+from .notification_email import LagoonNotificationEmail, LagoonNotificationEmailArgs
+from .notification_microsoftteams import (
+    LagoonNotificationMicrosoftTeams,
+    LagoonNotificationMicrosoftTeamsArgs,
+)
+from .notification_rocketchat import (
+    LagoonNotificationRocketChat,
+    LagoonNotificationRocketChatArgs,
+)
+from .notification_slack import LagoonNotificationSlack, LagoonNotificationSlackArgs
+
 # Resources
 from .project import LagoonProject, LagoonProjectArgs
+from .project_notification import LagoonProjectNotification, LagoonProjectNotificationArgs
 from .variable import LagoonVariable, LagoonVariableArgs
 
 __all__ = [
@@ -40,6 +53,17 @@ __all__ = [
     "LagoonDeployTargetArgs",
     "LagoonDeployTargetConfig",
     "LagoonDeployTargetConfigArgs",
+    # Notification resources
+    "LagoonNotificationSlack",
+    "LagoonNotificationSlackArgs",
+    "LagoonNotificationRocketChat",
+    "LagoonNotificationRocketChatArgs",
+    "LagoonNotificationEmail",
+    "LagoonNotificationEmailArgs",
+    "LagoonNotificationMicrosoftTeams",
+    "LagoonNotificationMicrosoftTeamsArgs",
+    "LagoonProjectNotification",
+    "LagoonProjectNotificationArgs",
     # Client
     "LagoonClient",
     # Import utilities

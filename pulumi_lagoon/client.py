@@ -898,3 +898,623 @@ class LagoonClient:
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("deleteDeployTargetConfig", "")
+
+    # Notification operations - Slack
+
+    def add_notification_slack(self, name: str, webhook: str, channel: str) -> Dict[str, Any]:
+        """
+        Add a Slack notification.
+
+        Args:
+            name: Notification name
+            webhook: Slack webhook URL
+            channel: Slack channel (e.g., "#alerts")
+
+        Returns:
+            Notification data
+        """
+        mutation = """
+        mutation AddNotificationSlack($input: AddNotificationSlackInput!) {
+            addNotificationSlack(input: $input) {
+                id
+                name
+                webhook
+                channel
+            }
+        }
+        """
+
+        input_data = {"name": name, "webhook": webhook, "channel": channel}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addNotificationSlack", {})
+
+    def get_all_notification_slack(self) -> list:
+        """
+        Get all Slack notifications.
+
+        Returns:
+            List of Slack notification data
+        """
+        query = """
+        query AllNotificationsSlack {
+            allNotificationSlack {
+                id
+                name
+                webhook
+                channel
+            }
+        }
+        """
+
+        result = self._execute(query)
+        return result.get("allNotificationSlack", [])
+
+    def get_notification_slack_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get Slack notification by name.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Notification data or None if not found
+        """
+        all_notifications = self.get_all_notification_slack()
+
+        for notification in all_notifications:
+            if notification.get("name") == name:
+                return notification
+
+        return None
+
+    def update_notification_slack(self, name: str, **kwargs) -> Dict[str, Any]:
+        """
+        Update a Slack notification.
+
+        Args:
+            name: Notification name (used to identify the notification)
+            **kwargs: Properties to update (webhook, channel)
+
+        Returns:
+            Updated notification data
+        """
+        mutation = """
+        mutation UpdateNotificationSlack($input: UpdateNotificationSlackInput!) {
+            updateNotificationSlack(input: $input) {
+                id
+                name
+                webhook
+                channel
+            }
+        }
+        """
+
+        input_data = {"name": name, **kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("updateNotificationSlack", {})
+
+    def delete_notification_slack(self, name: str) -> str:
+        """
+        Delete a Slack notification.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteNotificationSlack($input: DeleteNotificationSlackInput!) {
+            deleteNotificationSlack(input: $input)
+        }
+        """
+
+        input_data = {"name": name}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteNotificationSlack", "")
+
+    # Notification operations - RocketChat
+
+    def add_notification_rocketchat(self, name: str, webhook: str, channel: str) -> Dict[str, Any]:
+        """
+        Add a RocketChat notification.
+
+        Args:
+            name: Notification name
+            webhook: RocketChat webhook URL
+            channel: RocketChat channel (e.g., "#alerts")
+
+        Returns:
+            Notification data
+        """
+        mutation = """
+        mutation AddNotificationRocketChat($input: AddNotificationRocketChatInput!) {
+            addNotificationRocketChat(input: $input) {
+                id
+                name
+                webhook
+                channel
+            }
+        }
+        """
+
+        input_data = {"name": name, "webhook": webhook, "channel": channel}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addNotificationRocketChat", {})
+
+    def get_all_notification_rocketchat(self) -> list:
+        """
+        Get all RocketChat notifications.
+
+        Returns:
+            List of RocketChat notification data
+        """
+        query = """
+        query AllNotificationsRocketChat {
+            allNotificationRocketChat {
+                id
+                name
+                webhook
+                channel
+            }
+        }
+        """
+
+        result = self._execute(query)
+        return result.get("allNotificationRocketChat", [])
+
+    def get_notification_rocketchat_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get RocketChat notification by name.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Notification data or None if not found
+        """
+        all_notifications = self.get_all_notification_rocketchat()
+
+        for notification in all_notifications:
+            if notification.get("name") == name:
+                return notification
+
+        return None
+
+    def update_notification_rocketchat(self, name: str, **kwargs) -> Dict[str, Any]:
+        """
+        Update a RocketChat notification.
+
+        Args:
+            name: Notification name (used to identify the notification)
+            **kwargs: Properties to update (webhook, channel)
+
+        Returns:
+            Updated notification data
+        """
+        mutation = """
+        mutation UpdateNotificationRocketChat($input: UpdateNotificationRocketChatInput!) {
+            updateNotificationRocketChat(input: $input) {
+                id
+                name
+                webhook
+                channel
+            }
+        }
+        """
+
+        input_data = {"name": name, **kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("updateNotificationRocketChat", {})
+
+    def delete_notification_rocketchat(self, name: str) -> str:
+        """
+        Delete a RocketChat notification.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteNotificationRocketChat($input: DeleteNotificationRocketChatInput!) {
+            deleteNotificationRocketChat(input: $input)
+        }
+        """
+
+        input_data = {"name": name}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteNotificationRocketChat", "")
+
+    # Notification operations - Email
+
+    def add_notification_email(self, name: str, email_address: str) -> Dict[str, Any]:
+        """
+        Add an Email notification.
+
+        Args:
+            name: Notification name
+            email_address: Email address to send notifications to
+
+        Returns:
+            Notification data
+        """
+        mutation = """
+        mutation AddNotificationEmail($input: AddNotificationEmailInput!) {
+            addNotificationEmail(input: $input) {
+                id
+                name
+                emailAddress
+            }
+        }
+        """
+
+        input_data = {"name": name, "emailAddress": email_address}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addNotificationEmail", {})
+
+    def get_all_notification_email(self) -> list:
+        """
+        Get all Email notifications.
+
+        Returns:
+            List of Email notification data
+        """
+        query = """
+        query AllNotificationsEmail {
+            allNotificationEmail {
+                id
+                name
+                emailAddress
+            }
+        }
+        """
+
+        result = self._execute(query)
+        return result.get("allNotificationEmail", [])
+
+    def get_notification_email_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get Email notification by name.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Notification data or None if not found
+        """
+        all_notifications = self.get_all_notification_email()
+
+        for notification in all_notifications:
+            if notification.get("name") == name:
+                return notification
+
+        return None
+
+    def update_notification_email(self, name: str, **kwargs) -> Dict[str, Any]:
+        """
+        Update an Email notification.
+
+        Args:
+            name: Notification name (used to identify the notification)
+            **kwargs: Properties to update (emailAddress)
+
+        Returns:
+            Updated notification data
+        """
+        mutation = """
+        mutation UpdateNotificationEmail($input: UpdateNotificationEmailInput!) {
+            updateNotificationEmail(input: $input) {
+                id
+                name
+                emailAddress
+            }
+        }
+        """
+
+        input_data = {"name": name, **kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("updateNotificationEmail", {})
+
+    def delete_notification_email(self, name: str) -> str:
+        """
+        Delete an Email notification.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteNotificationEmail($input: DeleteNotificationEmailInput!) {
+            deleteNotificationEmail(input: $input)
+        }
+        """
+
+        input_data = {"name": name}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteNotificationEmail", "")
+
+    # Notification operations - Microsoft Teams
+
+    def add_notification_microsoftteams(self, name: str, webhook: str) -> Dict[str, Any]:
+        """
+        Add a Microsoft Teams notification.
+
+        Args:
+            name: Notification name
+            webhook: Microsoft Teams webhook URL
+
+        Returns:
+            Notification data
+        """
+        mutation = """
+        mutation AddNotificationMicrosoftTeams($input: AddNotificationMicrosoftTeamsInput!) {
+            addNotificationMicrosoftTeams(input: $input) {
+                id
+                name
+                webhook
+            }
+        }
+        """
+
+        input_data = {"name": name, "webhook": webhook}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addNotificationMicrosoftTeams", {})
+
+    def get_all_notification_microsoftteams(self) -> list:
+        """
+        Get all Microsoft Teams notifications.
+
+        Returns:
+            List of Microsoft Teams notification data
+        """
+        query = """
+        query AllNotificationsMicrosoftTeams {
+            allNotificationMicrosoftTeams {
+                id
+                name
+                webhook
+            }
+        }
+        """
+
+        result = self._execute(query)
+        return result.get("allNotificationMicrosoftTeams", [])
+
+    def get_notification_microsoftteams_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get Microsoft Teams notification by name.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Notification data or None if not found
+        """
+        all_notifications = self.get_all_notification_microsoftteams()
+
+        for notification in all_notifications:
+            if notification.get("name") == name:
+                return notification
+
+        return None
+
+    def update_notification_microsoftteams(self, name: str, **kwargs) -> Dict[str, Any]:
+        """
+        Update a Microsoft Teams notification.
+
+        Args:
+            name: Notification name (used to identify the notification)
+            **kwargs: Properties to update (webhook)
+
+        Returns:
+            Updated notification data
+        """
+        mutation = """
+        mutation UpdateNotificationMicrosoftTeams($input: UpdateNotificationMicrosoftTeamsInput!) {
+            updateNotificationMicrosoftTeams(input: $input) {
+                id
+                name
+                webhook
+            }
+        }
+        """
+
+        input_data = {"name": name, **kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("updateNotificationMicrosoftTeams", {})
+
+    def delete_notification_microsoftteams(self, name: str) -> str:
+        """
+        Delete a Microsoft Teams notification.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteNotificationMicrosoftTeams($input: DeleteNotificationMicrosoftTeamsInput!) {
+            deleteNotificationMicrosoftTeams(input: $input)
+        }
+        """
+
+        input_data = {"name": name}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteNotificationMicrosoftTeams", "")
+
+    # Project notification association operations
+
+    def add_notification_to_project(
+        self, project: str, notification_type: str, notification_name: str
+    ) -> Dict[str, Any]:
+        """
+        Add a notification to a project.
+
+        Args:
+            project: Project name
+            notification_type: Type of notification (slack, rocketchat, email, microsoftteams)
+            notification_name: Name of the notification to add
+
+        Returns:
+            Project data with notifications
+        """
+        mutation = """
+        mutation AddNotificationToProject($input: AddNotificationToProjectInput!) {
+            addNotificationToProject(input: $input) {
+                id
+                name
+            }
+        }
+        """
+
+        input_data = {
+            "project": project,
+            "notificationType": notification_type.upper(),
+            "notificationName": notification_name,
+        }
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addNotificationToProject", {})
+
+    def remove_notification_from_project(
+        self, project: str, notification_type: str, notification_name: str
+    ) -> str:
+        """
+        Remove a notification from a project.
+
+        Args:
+            project: Project name
+            notification_type: Type of notification (slack, rocketchat, email, microsoftteams)
+            notification_name: Name of the notification to remove
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation RemoveNotificationFromProject($input: RemoveNotificationFromProjectInput!) {
+            removeNotificationFromProject(input: $input)
+        }
+        """
+
+        input_data = {
+            "project": project,
+            "notificationType": notification_type.upper(),
+            "notificationName": notification_name,
+        }
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("removeNotificationFromProject", "")
+
+    def get_project_notifications(self, project_name: str) -> Dict[str, Any]:
+        """
+        Get all notifications linked to a project.
+
+        Args:
+            project_name: Project name
+
+        Returns:
+            Dict with notification lists by type
+        """
+        query = """
+        query ProjectByName($name: String!) {
+            projectByName(name: $name) {
+                id
+                name
+                notifications {
+                    ... on NotificationSlack {
+                        __typename
+                        id
+                        name
+                        webhook
+                        channel
+                    }
+                    ... on NotificationRocketChat {
+                        __typename
+                        id
+                        name
+                        webhook
+                        channel
+                    }
+                    ... on NotificationEmail {
+                        __typename
+                        id
+                        name
+                        emailAddress
+                    }
+                    ... on NotificationMicrosoftTeams {
+                        __typename
+                        id
+                        name
+                        webhook
+                    }
+                }
+            }
+        }
+        """
+
+        result = self._execute(query, {"name": project_name})
+        project = result.get("projectByName")
+
+        if not project:
+            return {}
+
+        # Organize notifications by type
+        notifications = {
+            "slack": [],
+            "rocketchat": [],
+            "email": [],
+            "microsoftteams": [],
+        }
+
+        for notification in project.get("notifications", []):
+            typename = notification.get("__typename", "")
+            if typename == "NotificationSlack":
+                notifications["slack"].append(notification)
+            elif typename == "NotificationRocketChat":
+                notifications["rocketchat"].append(notification)
+            elif typename == "NotificationEmail":
+                notifications["email"].append(notification)
+            elif typename == "NotificationMicrosoftTeams":
+                notifications["microsoftteams"].append(notification)
+
+        return notifications
+
+    def check_project_notification_exists(
+        self, project_name: str, notification_type: str, notification_name: str
+    ) -> bool:
+        """
+        Check if a specific notification is linked to a project.
+
+        Args:
+            project_name: Project name
+            notification_type: Type of notification (slack, rocketchat, email, microsoftteams)
+            notification_name: Name of the notification
+
+        Returns:
+            True if the notification is linked to the project
+        """
+        notifications = self.get_project_notifications(project_name)
+        type_notifications = notifications.get(notification_type.lower(), [])
+
+        for notification in type_notifications:
+            if notification.get("name") == notification_name:
+                return True
+
+        return False

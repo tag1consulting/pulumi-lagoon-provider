@@ -10,6 +10,11 @@ Import ID Formats:
     - LagoonEnvironment: {project_id}:{env_name}
     - LagoonVariable: {project_id}:{env_id}:{var_name} or {project_id}::{var_name}
     - LagoonDeployTargetConfig: {project_id}:{config_id}
+    - LagoonNotificationSlack: {name}
+    - LagoonNotificationRocketChat: {name}
+    - LagoonNotificationEmail: {name}
+    - LagoonNotificationMicrosoftTeams: {name}
+    - LagoonProjectNotification: {project_name}:{notification_type}:{notification_name}
 """
 
 from typing import List, Optional, Tuple
@@ -248,3 +253,61 @@ class ImportIdParser:
             )
 
         return project_id, config_id
+
+    @staticmethod
+    def parse_project_notification_id(import_id: str) -> Tuple[str, str, str]:
+        """Parse a project notification import ID.
+
+        Format: {project_name}:{notification_type}:{notification_name}
+        Example: "my-project:slack:deploy-alerts" -> ("my-project", "slack", "deploy-alerts")
+
+        Args:
+            import_id: The import ID in format "project_name:notification_type:notification_name"
+
+        Returns:
+            Tuple of (project_name, notification_type, notification_name)
+
+        Raises:
+            LagoonValidationError: If the format is invalid
+        """
+        from .validators import VALID_NOTIFICATION_TYPES
+
+        parts = import_id.split(":", 2)
+
+        if len(parts) != 3:
+            raise LagoonValidationError(
+                f"Invalid project notification import ID format: '{import_id}'. "
+                f"Expected format: 'project_name:notification_type:notification_name' "
+                f"(e.g., 'my-project:slack:deploy-alerts')"
+            )
+
+        project_name, notification_type, notification_name = parts
+
+        if not project_name:
+            raise LagoonValidationError(
+                f"Invalid project notification import ID: '{import_id}'. "
+                f"Project name cannot be empty."
+            )
+
+        if not notification_type:
+            raise LagoonValidationError(
+                f"Invalid project notification import ID: '{import_id}'. "
+                f"Notification type cannot be empty."
+            )
+
+        if not notification_name:
+            raise LagoonValidationError(
+                f"Invalid project notification import ID: '{import_id}'. "
+                f"Notification name cannot be empty."
+            )
+
+        # Validate notification type
+        notification_type_lower = notification_type.lower()
+        if notification_type_lower not in VALID_NOTIFICATION_TYPES:
+            raise LagoonValidationError(
+                f"Invalid project notification import ID: '{import_id}'. "
+                f"Notification type must be one of: {', '.join(sorted(VALID_NOTIFICATION_TYPES))}. "
+                f"Got '{notification_type}'."
+            )
+
+        return project_name, notification_type_lower, notification_name
