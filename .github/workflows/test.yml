@@ -2,8 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
+    branches: [develop]
   workflow_dispatch:
     inputs:
       python_version:
