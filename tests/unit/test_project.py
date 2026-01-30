@@ -1,7 +1,8 @@
 """Unit tests for LagoonProject provider."""
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from pulumi_lagoon.exceptions import LagoonValidationError
 

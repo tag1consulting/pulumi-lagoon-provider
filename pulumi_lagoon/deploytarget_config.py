@@ -4,10 +4,11 @@ Deploy target configurations route specific branches or pull requests to specifi
 Kubernetes clusters, enabling multi-cluster deployment strategies.
 """
 
+from dataclasses import dataclass
+from typing import Optional
+
 import pulumi
 import pulumi.dynamic as dynamic
-from typing import Optional
-from dataclasses import dataclass
 
 from .config import LagoonConfig
 
@@ -73,8 +74,9 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
 
     def _generate_admin_token(self, jwt_secret: str) -> str:
         """Generate an admin JWT token from the JWT secret."""
-        import jwt as pyjwt
         import time
+
+        import jwt as pyjwt
 
         now = int(time.time())
         payload = {
@@ -101,9 +103,7 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
         }
 
         if inputs.get("deploy_target_project_pattern"):
-            create_args["deploy_target_project_pattern"] = inputs[
-                "deploy_target_project_pattern"
-            ]
+            create_args["deploy_target_project_pattern"] = inputs["deploy_target_project_pattern"]
 
         # Create deploy target config via API
         result = client.add_deploy_target_config(**create_args)
@@ -112,8 +112,7 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
         outs = {
             "id": result["id"],
             "project_id": result.get("projectId") or inputs["project_id"],
-            "deploy_target_id": result.get("deployTargetId")
-            or inputs["deploy_target_id"],
+            "deploy_target_id": result.get("deployTargetId") or inputs["deploy_target_id"],
             "branches": result.get("branches", ""),
             "pullrequests": result.get("pullrequests", "false"),
             "weight": result.get("weight", 1),
@@ -150,14 +149,11 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
             outs = {
                 "id": result["id"],
                 "project_id": result.get("projectId") or new_inputs["project_id"],
-                "deploy_target_id": result.get("deployTargetId")
-                or new_inputs["deploy_target_id"],
+                "deploy_target_id": result.get("deployTargetId") or new_inputs["deploy_target_id"],
                 "branches": result.get("branches", ""),
                 "pullrequests": result.get("pullrequests", "false"),
                 "weight": result.get("weight", 1),
-                "deploy_target_project_pattern": result.get(
-                    "deployTargetProjectPattern"
-                ),
+                "deploy_target_project_pattern": result.get("deployTargetProjectPattern"),
             }
         else:
             # No changes, return new inputs
@@ -202,8 +198,7 @@ class LagoonDeployTargetConfigProvider(dynamic.ResourceProvider):
         outs = {
             "id": result["id"],
             "project_id": result.get("projectId") or props["project_id"],
-            "deploy_target_id": result.get("deployTargetId")
-            or props["deploy_target_id"],
+            "deploy_target_id": result.get("deployTargetId") or props["deploy_target_id"],
             "branches": result.get("branches", ""),
             "pullrequests": result.get("pullrequests", "false"),
             "weight": result.get("weight", 1),
@@ -312,6 +307,4 @@ class LagoonDeployTargetConfig(dynamic.Resource):
             "id": None,
         }
 
-        super().__init__(
-            LagoonDeployTargetConfigProvider(), resource_name, inputs, opts
-        )
+        super().__init__(LagoonDeployTargetConfigProvider(), resource_name, inputs, opts)

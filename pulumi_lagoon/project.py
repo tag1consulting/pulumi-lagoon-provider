@@ -1,15 +1,16 @@
 """Lagoon Project resource - Dynamic provider for managing Lagoon projects."""
 
+from dataclasses import dataclass
+from typing import Optional
+
 import pulumi
 import pulumi.dynamic as dynamic
-from typing import Optional
-from dataclasses import dataclass
 
 from .config import LagoonConfig
 from .validators import (
-    validate_project_name,
     validate_git_url,
     validate_positive_int,
+    validate_project_name,
     validate_regex_pattern,
 )
 
@@ -84,8 +85,9 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
 
     def _generate_admin_token(self, jwt_secret: str) -> str:
         """Generate an admin JWT token from the JWT secret."""
-        import jwt as pyjwt
         import time
+
+        import jwt as pyjwt
 
         now = int(time.time())
         payload = {
@@ -179,12 +181,8 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
             update_args["gitUrl"] = new_inputs["git_url"]
         if new_inputs.get("deploytarget_id") != old_inputs.get("deploytarget_id"):
             update_args["openshift"] = new_inputs["deploytarget_id"]
-        if new_inputs.get("production_environment") != old_inputs.get(
-            "production_environment"
-        ):
-            update_args["productionEnvironment"] = new_inputs.get(
-                "production_environment"
-            )
+        if new_inputs.get("production_environment") != old_inputs.get("production_environment"):
+            update_args["productionEnvironment"] = new_inputs.get("production_environment")
         if new_inputs.get("branches") != old_inputs.get("branches"):
             update_args["branches"] = new_inputs.get("branches")
         if new_inputs.get("pullrequests") != old_inputs.get("pullrequests"):
@@ -192,9 +190,7 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
         if new_inputs.get("openshift_project_pattern") != old_inputs.get(
             "openshift_project_pattern"
         ):
-            update_args["openshiftProjectPattern"] = new_inputs.get(
-                "openshift_project_pattern"
-            )
+            update_args["openshiftProjectPattern"] = new_inputs.get("openshift_project_pattern")
         if new_inputs.get("auto_idle") != old_inputs.get("auto_idle"):
             update_args["autoIdle"] = new_inputs.get("auto_idle")
         if new_inputs.get("storage_calc") != old_inputs.get("storage_calc"):
@@ -213,9 +209,7 @@ class LagoonProjectProvider(dynamic.ResourceProvider):
                 "production_environment": result.get("productionEnvironment"),
                 "branches": result.get("branches"),
                 "pullrequests": result.get("pullrequests"),
-                "created": old_inputs.get(
-                    "created"
-                ),  # Created timestamp doesn't change
+                "created": old_inputs.get("created"),  # Created timestamp doesn't change
             }
         else:
             # No changes, return old inputs

@@ -2,8 +2,8 @@
 
 import pytest
 
-from pulumi_lagoon.import_utils import ImportIdParser
 from pulumi_lagoon.exceptions import LagoonValidationError
+from pulumi_lagoon.import_utils import ImportIdParser
 
 
 class TestIsImportScenario:
@@ -15,37 +15,27 @@ class TestIsImportScenario:
 
     def test_none_props_is_import(self):
         """Test that None props indicates import scenario."""
-        assert ImportIdParser.is_import_scenario(
-            "123:main", None, ["name", "project_id"]
-        )
+        assert ImportIdParser.is_import_scenario("123:main", None, ["name", "project_id"])
 
     def test_missing_required_prop_is_import(self):
         """Test that missing required props indicates import scenario."""
         props = {"name": "main"}  # Missing project_id
-        assert ImportIdParser.is_import_scenario(
-            "123:main", props, ["name", "project_id"]
-        )
+        assert ImportIdParser.is_import_scenario("123:main", props, ["name", "project_id"])
 
     def test_none_required_prop_is_import(self):
         """Test that None value for required prop indicates import scenario."""
         props = {"name": "main", "project_id": None}
-        assert ImportIdParser.is_import_scenario(
-            "123:main", props, ["name", "project_id"]
-        )
+        assert ImportIdParser.is_import_scenario("123:main", props, ["name", "project_id"])
 
     def test_full_props_is_refresh(self):
         """Test that full props indicates refresh scenario."""
         props = {"name": "main", "project_id": 123}
-        assert not ImportIdParser.is_import_scenario(
-            "123:main", props, ["name", "project_id"]
-        )
+        assert not ImportIdParser.is_import_scenario("123:main", props, ["name", "project_id"])
 
     def test_extra_props_is_refresh(self):
         """Test that extra props beyond required still indicates refresh."""
         props = {"name": "main", "project_id": 123, "extra": "value"}
-        assert not ImportIdParser.is_import_scenario(
-            "123:main", props, ["name", "project_id"]
-        )
+        assert not ImportIdParser.is_import_scenario("123:main", props, ["name", "project_id"])
 
     def test_empty_required_list(self):
         """Test with empty required props list."""
@@ -71,17 +61,13 @@ class TestParseEnvironmentId:
 
     def test_env_name_with_special_chars(self):
         """Test that environment name can contain special characters."""
-        project_id, env_name = ImportIdParser.parse_environment_id(
-            "123:feature/JIRA-123"
-        )
+        project_id, env_name = ImportIdParser.parse_environment_id("123:feature/JIRA-123")
         assert project_id == 123
         assert env_name == "feature/JIRA-123"
 
     def test_env_name_with_colon(self):
         """Test that only first colon is used as separator."""
-        project_id, env_name = ImportIdParser.parse_environment_id(
-            "123:name:with:colons"
-        )
+        project_id, env_name = ImportIdParser.parse_environment_id("123:name:with:colons")
         assert project_id == 123
         assert env_name == "name:with:colons"
 
@@ -127,9 +113,7 @@ class TestParseVariableId:
 
     def test_environment_level_variable(self):
         """Test parsing environment-level variable import ID."""
-        project_id, env_id, var_name = ImportIdParser.parse_variable_id(
-            "123:456:DATABASE_HOST"
-        )
+        project_id, env_id, var_name = ImportIdParser.parse_variable_id("123:456:DATABASE_HOST")
         assert project_id == 123
         assert env_id == 456
         assert var_name == "DATABASE_HOST"
@@ -143,16 +127,12 @@ class TestParseVariableId:
 
     def test_var_name_with_underscores(self):
         """Test variable name with underscores."""
-        project_id, env_id, var_name = ImportIdParser.parse_variable_id(
-            "1:2:MY_VAR_NAME"
-        )
+        project_id, env_id, var_name = ImportIdParser.parse_variable_id("1:2:MY_VAR_NAME")
         assert var_name == "MY_VAR_NAME"
 
     def test_var_name_with_colon(self):
         """Test that only first two colons are used as separators."""
-        project_id, env_id, var_name = ImportIdParser.parse_variable_id(
-            "1:2:name:with:colons"
-        )
+        project_id, env_id, var_name = ImportIdParser.parse_variable_id("1:2:name:with:colons")
         assert project_id == 1
         assert env_id == 2
         assert var_name == "name:with:colons"
@@ -229,9 +209,7 @@ class TestParseDeployTargetConfigId:
 
     def test_large_ids(self):
         """Test parsing with large ID values."""
-        project_id, config_id = ImportIdParser.parse_deploy_target_config_id(
-            "999999:888888"
-        )
+        project_id, config_id = ImportIdParser.parse_deploy_target_config_id("999999:888888")
         assert project_id == 999999
         assert config_id == 888888
 

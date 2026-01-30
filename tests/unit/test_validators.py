@@ -2,29 +2,29 @@
 
 import pytest
 
+from pulumi_lagoon.exceptions import LagoonValidationError
 from pulumi_lagoon.validators import (
-    validate_required,
-    validate_project_name,
-    validate_git_url,
-    validate_positive_int,
-    validate_enum,
-    validate_deploy_type,
-    validate_environment_type,
-    validate_scope,
-    validate_regex_pattern,
-    validate_variable_name,
-    validate_environment_name,
-    validate_deploy_target_name,
-    validate_console_url,
-    validate_cloud_provider,
-    validate_ssh_port,
-    validate_ssh_host,
+    VALID_CLOUD_PROVIDERS,
     VALID_DEPLOY_TYPES,
     VALID_ENVIRONMENT_TYPES,
     VALID_SCOPES,
-    VALID_CLOUD_PROVIDERS,
+    validate_cloud_provider,
+    validate_console_url,
+    validate_deploy_target_name,
+    validate_deploy_type,
+    validate_enum,
+    validate_environment_name,
+    validate_environment_type,
+    validate_git_url,
+    validate_positive_int,
+    validate_project_name,
+    validate_regex_pattern,
+    validate_required,
+    validate_scope,
+    validate_ssh_host,
+    validate_ssh_port,
+    validate_variable_name,
 )
-from pulumi_lagoon.exceptions import LagoonValidationError
 
 
 class TestValidateRequired:

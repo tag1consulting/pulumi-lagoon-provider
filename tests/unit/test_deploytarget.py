@@ -1,7 +1,8 @@
 """Unit tests for LagoonDeployTarget provider."""
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from pulumi_lagoon.exceptions import LagoonValidationError
 
@@ -10,9 +11,7 @@ class TestLagoonDeployTargetProviderCreate:
     """Tests for LagoonDeployTargetProvider.create method."""
 
     @patch("pulumi_lagoon.deploytarget.LagoonConfig")
-    def test_create_deploy_target_minimal(
-        self, mock_config_class, sample_deploy_target
-    ):
+    def test_create_deploy_target_minimal(self, mock_config_class, sample_deploy_target):
         """Test creating a deploy target with minimal arguments."""
         from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
 
@@ -75,9 +74,7 @@ class TestLagoonDeployTargetProviderCreate:
         assert call_kwargs["sshHost"] == "ssh.lagoon.example.com"
 
     @patch("pulumi_lagoon.deploytarget.LagoonConfig")
-    def test_create_deploy_target_defaults(
-        self, mock_config_class, sample_deploy_target
-    ):
+    def test_create_deploy_target_defaults(self, mock_config_class, sample_deploy_target):
         """Test that defaults are applied for cloud_provider and cloud_region."""
         from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
 
@@ -110,9 +107,7 @@ class TestLagoonDeployTargetProviderUpdate:
     """Tests for LagoonDeployTargetProvider.update method."""
 
     @patch("pulumi_lagoon.deploytarget.LagoonConfig")
-    def test_update_deploy_target_changes(
-        self, mock_config_class, sample_deploy_target
-    ):
+    def test_update_deploy_target_changes(self, mock_config_class, sample_deploy_target):
         """Test updating a deploy target with changed values."""
         from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
 

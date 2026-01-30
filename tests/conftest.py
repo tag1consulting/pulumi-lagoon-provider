@@ -1,9 +1,9 @@
 """Shared test fixtures for pulumi-lagoon tests."""
 
-import pytest
-from unittest.mock import Mock, patch
 import os
+from unittest.mock import Mock, patch
 
+import pytest
 
 # Sample data for tests
 SAMPLE_PROJECT = {
@@ -104,9 +104,7 @@ def lagoon_client(mock_response):
         mock_session.headers.update = Mock()
         mock_session_class.return_value = mock_session
 
-        client = LagoonClient(
-            api_url="https://api.test.lagoon.sh/graphql", token="test-jwt-token"
-        )
+        client = LagoonClient(api_url="https://api.test.lagoon.sh/graphql", token="test-jwt-token")
 
         # Replace the session with our mock
         client.session = mock_session

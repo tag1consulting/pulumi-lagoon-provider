@@ -12,7 +12,7 @@ Import ID Formats:
     - LagoonDeployTargetConfig: {project_id}:{config_id}
 """
 
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 from .exceptions import LagoonValidationError
 
@@ -85,14 +85,12 @@ class ImportIdParser:
 
         if not project_id_str:
             raise LagoonValidationError(
-                f"Invalid environment import ID: '{import_id}'. "
-                f"Project ID cannot be empty."
+                f"Invalid environment import ID: '{import_id}'. Project ID cannot be empty."
             )
 
         if not env_name:
             raise LagoonValidationError(
-                f"Invalid environment import ID: '{import_id}'. "
-                f"Environment name cannot be empty."
+                f"Invalid environment import ID: '{import_id}'. Environment name cannot be empty."
             )
 
         try:
@@ -143,14 +141,12 @@ class ImportIdParser:
 
         if not project_id_str:
             raise LagoonValidationError(
-                f"Invalid variable import ID: '{import_id}'. "
-                f"Project ID cannot be empty."
+                f"Invalid variable import ID: '{import_id}'. Project ID cannot be empty."
             )
 
         if not var_name:
             raise LagoonValidationError(
-                f"Invalid variable import ID: '{import_id}'. "
-                f"Variable name cannot be empty."
+                f"Invalid variable import ID: '{import_id}'. Variable name cannot be empty."
             )
 
         try:
@@ -220,8 +216,7 @@ class ImportIdParser:
 
         if not config_id_str:
             raise LagoonValidationError(
-                f"Invalid deploy target config import ID: '{import_id}'. "
-                f"Config ID cannot be empty."
+                f"Invalid deploy target config import ID: '{import_id}'. Config ID cannot be empty."
             )
 
         try:

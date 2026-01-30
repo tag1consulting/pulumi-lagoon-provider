@@ -1,9 +1,10 @@
 """GraphQL client for Lagoon API."""
 
-from typing import Dict, Any, Optional
-import requests
 import json
 import os
+from typing import Any, Dict, Optional
+
+import requests
 
 
 class LagoonAPIError(Exception):
@@ -56,9 +57,7 @@ class LagoonClient:
 
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    def _execute(
-        self, query: str, variables: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    def _execute(self, query: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Execute a GraphQL query or mutation.
 
@@ -90,9 +89,7 @@ class LagoonClient:
 
             # Check for GraphQL errors
             if "errors" in data:
-                error_messages = [
-                    error.get("message", str(error)) for error in data["errors"]
-                ]
+                error_messages = [error.get("message", str(error)) for error in data["errors"]]
                 raise LagoonAPIError(f"GraphQL errors: {'; '.join(error_messages)}")
 
             # Return the data portion
@@ -106,9 +103,7 @@ class LagoonClient:
             raise LagoonAPIError(f"Invalid JSON response: {e}")
 
     # Project operations
-    def create_project(
-        self, name: str, git_url: str, openshift: int, **kwargs
-    ) -> Dict[str, Any]:
+    def create_project(self, name: str, git_url: str, openshift: int, **kwargs) -> Dict[str, Any]:
         """
         Create a new Lagoon project.
 
@@ -182,11 +177,7 @@ class LagoonClient:
         project = result.get("projectByName")
 
         # Normalize openshift to just the ID for consistency
-        if (
-            project
-            and project.get("openshift")
-            and isinstance(project["openshift"], dict)
-        ):
+        if project and project.get("openshift") and isinstance(project["openshift"], dict):
             project["openshift"] = project["openshift"].get("id")
 
         return project
@@ -223,11 +214,7 @@ class LagoonClient:
         project = result.get("projectById")
 
         # Normalize openshift to just the ID for consistency
-        if (
-            project
-            and project.get("openshift")
-            and isinstance(project["openshift"], dict)
-        ):
+        if project and project.get("openshift") and isinstance(project["openshift"], dict):
             project["openshift"] = project["openshift"].get("id")
 
         return project
@@ -340,9 +327,7 @@ class LagoonClient:
         result = self._execute(mutation, {"input": input_data})
         return result.get("addOrUpdateEnvironment", {})
 
-    def get_environment_by_name(
-        self, name: str, project_id: int
-    ) -> Optional[Dict[str, Any]]:
+    def get_environment_by_name(self, name: str, project_id: int) -> Optional[Dict[str, Any]]:
         """
         Get environment by name and project.
 

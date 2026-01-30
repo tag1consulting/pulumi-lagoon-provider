@@ -1,16 +1,17 @@
 """Lagoon Environment resource - Dynamic provider for managing Lagoon environments."""
 
+from dataclasses import dataclass
+from typing import Optional
+
 import pulumi
 import pulumi.dynamic as dynamic
-from typing import Optional
-from dataclasses import dataclass
 
 from .config import LagoonConfig
 from .validators import (
-    validate_environment_name,
-    validate_positive_int,
     validate_deploy_type,
+    validate_environment_name,
     validate_environment_type,
+    validate_positive_int,
 )
 
 

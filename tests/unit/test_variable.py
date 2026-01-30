@@ -1,10 +1,11 @@
 """Unit tests for LagoonVariable provider."""
 
-import pytest
 from unittest.mock import Mock, patch
 
-from pulumi_lagoon.exceptions import LagoonValidationError
+import pytest
+
 from pulumi_lagoon.client import LagoonAPIError, LagoonConnectionError
+from pulumi_lagoon.exceptions import LagoonValidationError
 
 
 class TestLagoonVariableProviderCreate:
@@ -71,9 +72,7 @@ class TestLagoonVariableProviderCreate:
         assert call_kwargs["environment"] == 1
 
     @patch("pulumi_lagoon.variable.LagoonConfig")
-    def test_create_variable_handles_string_ids(
-        self, mock_config_class, sample_variable
-    ):
+    def test_create_variable_handles_string_ids(self, mock_config_class, sample_variable):
         """Test that string IDs are converted to int."""
         from pulumi_lagoon.variable import LagoonVariableProvider
 
@@ -176,9 +175,7 @@ class TestLagoonVariableProviderUpdate:
 
         mock_client = Mock()
         # Use LagoonAPIError - this is the type of error that should be caught and ignored
-        mock_client.delete_env_variable.side_effect = LagoonAPIError(
-            "Variable not found"
-        )
+        mock_client.delete_env_variable.side_effect = LagoonAPIError("Variable not found")
         mock_client.add_env_variable.return_value = sample_variable
         mock_config = Mock()
         mock_config.get_client.return_value = mock_client
@@ -459,9 +456,7 @@ class TestLagoonVariableProviderValidation:
         from pulumi_lagoon.variable import LagoonVariableProvider
 
         mock_client = Mock()
-        mock_client.delete_env_variable.side_effect = LagoonAPIError(
-            "Variable not found"
-        )
+        mock_client.delete_env_variable.side_effect = LagoonAPIError("Variable not found")
         mock_client.add_env_variable.return_value = sample_variable
         mock_config = Mock()
         mock_config.get_client.return_value = mock_client
@@ -493,9 +488,7 @@ class TestLagoonVariableProviderValidation:
         from pulumi_lagoon.variable import LagoonVariableProvider
 
         mock_client = Mock()
-        mock_client.delete_env_variable.side_effect = LagoonConnectionError(
-            "Network error"
-        )
+        mock_client.delete_env_variable.side_effect = LagoonConnectionError("Network error")
         mock_config = Mock()
         mock_config.get_client.return_value = mock_client
         mock_config_class.return_value = mock_config
@@ -612,8 +605,8 @@ class TestLagoonVariableProviderImport:
     @patch("pulumi_lagoon.variable.LagoonConfig")
     def test_read_import_invalid_format(self, mock_config_class):
         """Test read() during import with invalid ID format."""
-        from pulumi_lagoon.variable import LagoonVariableProvider
         from pulumi_lagoon.exceptions import LagoonValidationError
+        from pulumi_lagoon.variable import LagoonVariableProvider
 
         provider = LagoonVariableProvider()
 
@@ -622,9 +615,7 @@ class TestLagoonVariableProviderImport:
         assert "project_id:env_id:var_name" in str(exc.value)
 
     @patch("pulumi_lagoon.variable.LagoonConfig")
-    def test_read_import_with_special_var_name(
-        self, mock_config_class, sample_variable
-    ):
+    def test_read_import_with_special_var_name(self, mock_config_class, sample_variable):
         """Test read() during import with variable name containing underscores."""
         from pulumi_lagoon.variable import LagoonVariableProvider
 

@@ -3,6 +3,7 @@
 import os
 import time
 from typing import Optional
+
 import pulumi
 
 
@@ -23,9 +24,7 @@ class LagoonConfig:
 
         # If no token, try to generate one from JWT secret
         if not self.token:
-            jwt_secret = self._get_secret_value(
-                config, "jwtSecret", "LAGOON_JWT_SECRET"
-            )
+            jwt_secret = self._get_secret_value(config, "jwtSecret", "LAGOON_JWT_SECRET")
             if jwt_secret:
                 self.token = self._generate_admin_token(jwt_secret)
 

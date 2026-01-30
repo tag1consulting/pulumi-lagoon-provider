@@ -1,8 +1,9 @@
 """Unit tests for Lagoon provider configuration."""
 
-import pytest
-from unittest.mock import Mock, patch
 import os
+from unittest.mock import Mock, patch
+
+import pytest
 
 
 class TestLagoonConfigEnvVars:

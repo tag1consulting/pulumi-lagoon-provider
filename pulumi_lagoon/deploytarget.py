@@ -1,15 +1,16 @@
 """Lagoon DeployTarget resource - Dynamic provider for managing Lagoon deploy targets."""
 
+from dataclasses import dataclass
+from typing import Optional
+
 import pulumi
 import pulumi.dynamic as dynamic
-from typing import Optional
-from dataclasses import dataclass
 
 from .config import LagoonConfig
 from .validators import (
-    validate_deploy_target_name,
-    validate_console_url,
     validate_cloud_provider,
+    validate_console_url,
+    validate_deploy_target_name,
     validate_ssh_host,
     validate_ssh_port,
 )
@@ -93,8 +94,9 @@ class LagoonDeployTargetProvider(dynamic.ResourceProvider):
 
     def _generate_admin_token(self, jwt_secret: str) -> str:
         """Generate an admin JWT token from the JWT secret."""
-        import jwt as pyjwt
         import time
+
+        import jwt as pyjwt
 
         now = int(time.time())
         payload = {
@@ -214,9 +216,7 @@ class LagoonDeployTargetProvider(dynamic.ResourceProvider):
             update_args["disabled"] = new_inputs.get("disabled")
         if new_inputs.get("router_pattern") != old_inputs.get("router_pattern"):
             update_args["routerPattern"] = new_inputs.get("router_pattern")
-        if new_inputs.get("shared_bastion_secret") != old_inputs.get(
-            "shared_bastion_secret"
-        ):
+        if new_inputs.get("shared_bastion_secret") != old_inputs.get("shared_bastion_secret"):
             update_args["sharedBastionSecret"] = new_inputs.get("shared_bastion_secret")
 
         # Only update if there are changes beyond the ID
@@ -236,9 +236,7 @@ class LagoonDeployTargetProvider(dynamic.ResourceProvider):
                 "disabled": result.get("disabled", False),
                 "router_pattern": result.get("routerPattern"),
                 "shared_bastion_secret": result.get("sharedBastionSecret"),
-                "created": old_inputs.get(
-                    "created"
-                ),  # Created timestamp doesn't change
+                "created": old_inputs.get("created"),  # Created timestamp doesn't change
             }
         else:
             # No changes, return old inputs

@@ -5,7 +5,6 @@ from typing import Any, Optional, Set
 
 from .exceptions import LagoonValidationError
 
-
 # Valid enum values for Lagoon API
 VALID_DEPLOY_TYPES: Set[str] = {"branch", "pullrequest"}
 VALID_ENVIRONMENT_TYPES: Set[str] = {"production", "development", "standby"}
