@@ -929,6 +929,46 @@ class LagoonClient:
         result = self._execute(mutation, {"input": input_data})
         return result.get("addNotificationSlack", {})
 
+    def _get_all_notifications(self) -> list:
+        """
+        Get all notifications of all types.
+
+        Returns:
+            List of notification data with __typename
+        """
+        query = """
+        query AllNotifications {
+            allNotifications {
+                __typename
+                ... on NotificationSlack {
+                    id
+                    name
+                    webhook
+                    channel
+                }
+                ... on NotificationRocketChat {
+                    id
+                    name
+                    webhook
+                    channel
+                }
+                ... on NotificationEmail {
+                    id
+                    name
+                    emailAddress
+                }
+                ... on NotificationMicrosoftTeams {
+                    id
+                    name
+                    webhook
+                }
+            }
+        }
+        """
+
+        result = self._execute(query)
+        return result.get("allNotifications", [])
+
     def get_all_notification_slack(self) -> list:
         """
         Get all Slack notifications.
@@ -936,19 +976,8 @@ class LagoonClient:
         Returns:
             List of Slack notification data
         """
-        query = """
-        query AllNotificationsSlack {
-            allNotificationSlack {
-                id
-                name
-                webhook
-                channel
-            }
-        }
-        """
-
-        result = self._execute(query)
-        return result.get("allNotificationSlack", [])
+        all_notifications = self._get_all_notifications()
+        return [n for n in all_notifications if n.get("__typename") == "NotificationSlack"]
 
     def get_notification_slack_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """
@@ -990,7 +1019,8 @@ class LagoonClient:
         }
         """
 
-        input_data = {"name": name, **kwargs}
+        # Lagoon API uses patch format: {name: "...", patch: {field: value}}
+        input_data = {"name": name, "patch": kwargs}
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("updateNotificationSlack", {})
@@ -1053,19 +1083,8 @@ class LagoonClient:
         Returns:
             List of RocketChat notification data
         """
-        query = """
-        query AllNotificationsRocketChat {
-            allNotificationRocketChat {
-                id
-                name
-                webhook
-                channel
-            }
-        }
-        """
-
-        result = self._execute(query)
-        return result.get("allNotificationRocketChat", [])
+        all_notifications = self._get_all_notifications()
+        return [n for n in all_notifications if n.get("__typename") == "NotificationRocketChat"]
 
     def get_notification_rocketchat_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """
@@ -1107,7 +1126,8 @@ class LagoonClient:
         }
         """
 
-        input_data = {"name": name, **kwargs}
+        # Lagoon API uses patch format: {name: "...", patch: {field: value}}
+        input_data = {"name": name, "patch": kwargs}
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("updateNotificationRocketChat", {})
@@ -1168,18 +1188,8 @@ class LagoonClient:
         Returns:
             List of Email notification data
         """
-        query = """
-        query AllNotificationsEmail {
-            allNotificationEmail {
-                id
-                name
-                emailAddress
-            }
-        }
-        """
-
-        result = self._execute(query)
-        return result.get("allNotificationEmail", [])
+        all_notifications = self._get_all_notifications()
+        return [n for n in all_notifications if n.get("__typename") == "NotificationEmail"]
 
     def get_notification_email_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """
@@ -1220,7 +1230,8 @@ class LagoonClient:
         }
         """
 
-        input_data = {"name": name, **kwargs}
+        # Lagoon API uses patch format: {name: "...", patch: {field: value}}
+        input_data = {"name": name, "patch": kwargs}
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("updateNotificationEmail", {})
@@ -1281,18 +1292,8 @@ class LagoonClient:
         Returns:
             List of Microsoft Teams notification data
         """
-        query = """
-        query AllNotificationsMicrosoftTeams {
-            allNotificationMicrosoftTeams {
-                id
-                name
-                webhook
-            }
-        }
-        """
-
-        result = self._execute(query)
-        return result.get("allNotificationMicrosoftTeams", [])
+        all_notifications = self._get_all_notifications()
+        return [n for n in all_notifications if n.get("__typename") == "NotificationMicrosoftTeams"]
 
     def get_notification_microsoftteams_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """
@@ -1333,7 +1334,8 @@ class LagoonClient:
         }
         """
 
-        input_data = {"name": name, **kwargs}
+        # Lagoon API uses patch format: {name: "...", patch: {field: value}}
+        input_data = {"name": name, "patch": kwargs}
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("updateNotificationMicrosoftTeams", {})
@@ -1395,7 +1397,7 @@ class LagoonClient:
 
     def remove_notification_from_project(
         self, project: str, notification_type: str, notification_name: str
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
         Remove a notification from a project.
 
@@ -1405,11 +1407,14 @@ class LagoonClient:
             notification_name: Name of the notification to remove
 
         Returns:
-            Success message
+            Project data
         """
         mutation = """
         mutation RemoveNotificationFromProject($input: RemoveNotificationFromProjectInput!) {
-            removeNotificationFromProject(input: $input)
+            removeNotificationFromProject(input: $input) {
+                id
+                name
+            }
         }
         """
 
@@ -1420,7 +1425,7 @@ class LagoonClient:
         }
 
         result = self._execute(mutation, {"input": input_data})
-        return result.get("removeNotificationFromProject", "")
+        return result.get("removeNotificationFromProject", {})
 
     def get_project_notifications(self, project_name: str) -> Dict[str, Any]:
         """

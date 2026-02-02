@@ -96,6 +96,7 @@ class DomainConfig:
 # Namespace Configuration
 # =============================================================================
 
+
 @dataclass
 class NamespaceConfig:
     """Kubernetes namespace configuration."""
@@ -110,6 +111,7 @@ class NamespaceConfig:
 # =============================================================================
 # Cluster Configuration
 # =============================================================================
+
 
 @dataclass
 class ClusterConfig:
@@ -153,6 +155,7 @@ DEFAULT_CLUSTERS = {
 # =============================================================================
 # Component Output Dataclasses
 # =============================================================================
+
 
 @dataclass
 class ClusterOutputs:
@@ -230,6 +233,7 @@ class LagoonRemoteOutputs:
 # =============================================================================
 # Pulumi Config Accessors
 # =============================================================================
+
 
 class MultiClusterConfig:
     """Pulumi configuration accessor for multi-cluster example."""

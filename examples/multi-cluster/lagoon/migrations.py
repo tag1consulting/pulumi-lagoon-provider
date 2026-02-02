@@ -38,7 +38,9 @@ def ensure_knex_migrations(
     """
     # Get the script directory (relative to repository root)
     # The script is at scripts/ensure-knex-migrations.sh
-    script_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    script_dir = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    )
     script_path = os.path.join(script_dir, "scripts", "ensure-knex-migrations.sh")
 
     # Build the command to run the migration check
@@ -115,24 +117,24 @@ kubectl --context "$CONTEXT" -n "$NAMESPACE" wait --for=condition=ready pod "$AP
 echo "Checking if base schema exists..."
 RESULT=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" exec "$API_POD" -c api -- \\
     sh -c 'node -e "
-const knex = require(\\"knex\\")(\{{
+const knex = require(\\"knex\\")(\\{{
     client: \\"mysql2\\",
-    connection: \{{
+    connection: \\{{
         host: process.env.API_DB_HOST || \\"mariadb\\",
         port: process.env.API_DB_PORT || 3306,
         user: process.env.API_DB_USER || \\"api\\",
         password: process.env.API_DB_PASSWORD || \\"api\\",
         database: process.env.API_DB_DATABASE || \\"infrastructure\\"
-    \}}
-\}});
+    \\}}
+\\}});
 
-knex.schema.hasTable(\\"openshift\\").then(exists => \{{
+knex.schema.hasTable(\\"openshift\\").then(exists => \\{{
     console.log(exists ? \\"EXISTS\\" : \\"MISSING\\");
     process.exit(0);
-\}}).catch(err => \{{
+\\}}).catch(err => \\{{
     console.error(err.message);
     process.exit(1);
-\}}).finally(() => knex.destroy());
+\\}}).finally(() => knex.destroy());
 "' 2>&1)
 
 if echo "$RESULT" | grep -q "EXISTS"; then
@@ -146,24 +148,24 @@ elif echo "$RESULT" | grep -q "MISSING"; then
     echo "Verifying migrations..."
     VERIFY=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" exec "$API_POD" -c api -- \\
         sh -c 'node -e "
-const knex = require(\\"knex\\")(\{{
+const knex = require(\\"knex\\")(\\{{
     client: \\"mysql2\\",
-    connection: \{{
+    connection: \\{{
         host: process.env.API_DB_HOST || \\"mariadb\\",
         port: process.env.API_DB_PORT || 3306,
         user: process.env.API_DB_USER || \\"api\\",
         password: process.env.API_DB_PASSWORD || \\"api\\",
         database: process.env.API_DB_DATABASE || \\"infrastructure\\"
-    \}}
-\}});
+    \\}}
+\\}});
 
-knex.schema.hasTable(\\"openshift\\").then(exists => \{{
+knex.schema.hasTable(\\"openshift\\").then(exists => \\{{
     console.log(exists ? \\"EXISTS\\" : \\"MISSING\\");
     process.exit(0);
-\}}).catch(err => \{{
+\\}}).catch(err => \\{{
     console.error(err.message);
     process.exit(1);
-\}}).finally(() => knex.destroy());
+\\}}).finally(() => knex.destroy());
 "' 2>&1)
 
     if echo "$VERIFY" | grep -q "EXISTS"; then

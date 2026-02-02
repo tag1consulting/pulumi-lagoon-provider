@@ -8,14 +8,13 @@ from typing import Optional
 
 import pulumi
 import pulumi_kubernetes as k8s
-
 from config import (
     VERSIONS,
     DomainConfig,
-    NamespaceConfig,
-    LagoonSecretsOutputs,
-    LagoonCoreOutputs,
     HarborOutputs,
+    LagoonCoreOutputs,
+    LagoonSecretsOutputs,
+    NamespaceConfig,
 )
 
 
@@ -74,7 +73,9 @@ def install_lagoon_core(
 
     # Internal Keycloak URL for API communication (must include /auth path)
     # Service name follows pattern: {release_name}-keycloak
-    keycloak_internal_url = f"http://{release_name}-keycloak.{namespace}.svc.cluster.local:8080/auth"
+    keycloak_internal_url = (
+        f"http://{release_name}-keycloak.{namespace}.svc.cluster.local:8080/auth"
+    )
 
     # Build Helm values
     # Note: lagoon-core requires many configuration values for S3/storage

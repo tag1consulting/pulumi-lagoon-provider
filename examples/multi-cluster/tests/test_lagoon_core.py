@@ -1,14 +1,12 @@
 """Unit tests for Lagoon core configuration."""
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from config import DomainConfig, NamespaceConfig, LagoonSecretsOutputs
-from unittest.mock import MagicMock, patch
 
 
 class TestCORSConfiguration:
