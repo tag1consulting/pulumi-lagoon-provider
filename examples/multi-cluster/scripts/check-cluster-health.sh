@@ -86,9 +86,9 @@ check_cluster() {
 
     if [ "$cluster_name" = "prod" ]; then
         # Check core services in lagoon-core namespace
-        for COMPONENT in "prod-core-lagoon-core-api" "prod-core-lagoon-core-keycloak" "prod-core-lagoon-core-broker"; do
+        for COMPONENT in "prod-core-api" "prod-core-keycloak" "prod-core-broker"; do
             POD_STATUS=$(kubectl --context "$context" get pods -n "lagoon-core" -l "app.kubernetes.io/component=$COMPONENT" -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
-            DISPLAY_NAME="${COMPONENT##*-lagoon-}"
+            DISPLAY_NAME="${COMPONENT##*-core-}"
             if [ "$POD_STATUS" = "Running" ]; then
                 echo -e "${GREEN}OK${NC} - $DISPLAY_NAME: Running"
             else

@@ -370,13 +370,13 @@ def install_lagoon_core(
     )
 
     # RabbitMQ is exposed internally via service and externally via NodePort
-    # Service name follows pattern: {release_name}-lagoon-core-broker
-    rabbitmq_host = f"{release_name}-lagoon-core-broker.{namespace}.svc.cluster.local"
+    # Service name follows pattern: {release_name}-broker
+    rabbitmq_host = f"{release_name}-broker.{namespace}.svc.cluster.local"
     rabbitmq_nodeport = 30672  # Matches amqpNodePort in helm values
 
     # SSH service for build connections
-    # Service name follows pattern: {release_name}-lagoon-core-ssh
-    ssh_host = f"{release_name}-lagoon-core-ssh.{namespace}.svc.cluster.local"
+    # Service name follows pattern: {release_name}-ssh
+    ssh_host = f"{release_name}-ssh.{namespace}.svc.cluster.local"
 
     return LagoonCoreOutputs(
         release=release,
@@ -437,9 +437,9 @@ def create_rabbitmq_nodeport_service(
                 ),
             ],
             # Select the broker pods using the same labels as the Helm chart
-            # Note: The Helm chart sets component to "{release_name}-lagoon-core-broker"
+            # Note: The Helm chart sets component to "{release_name}-broker"
             selector={
-                "app.kubernetes.io/component": f"{release_name}-lagoon-core-broker",
+                "app.kubernetes.io/component": f"{release_name}-broker",
                 "app.kubernetes.io/instance": release_name,
                 "app.kubernetes.io/name": "lagoon-core",
             },

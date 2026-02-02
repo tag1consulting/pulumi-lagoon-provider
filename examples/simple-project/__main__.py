@@ -104,7 +104,7 @@ slack_notification = lagoon.LagoonNotificationSlack(
     "slack-deploys",
     lagoon.LagoonNotificationSlackArgs(
         name=f"{project_name}-slack-deploys",
-        webhook="https://example.com/slack-webhook-placeholder",
+        webhook="https://example.com/slack-webhook-placeholder",  # Replace with real Slack webhook URL
         channel="#deployments",
     ),
 )

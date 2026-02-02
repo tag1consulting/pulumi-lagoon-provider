@@ -433,15 +433,15 @@ examples/multi-cluster/
 
 ### Service Naming Convention
 
-Lagoon core services follow the pattern: `{release-name}-lagoon-core-{component}`
+Lagoon core services follow the pattern: `{release-name}-{component}`
 
 | Component | Service Name | Port |
 |-----------|-------------|------|
-| API | prod-core-lagoon-core-api | 80 |
-| UI | prod-core-lagoon-core-ui | 3000 |
-| Keycloak | prod-core-lagoon-core-keycloak | 8080 |
-| Broker (RabbitMQ) | prod-core-lagoon-core-broker | 5672 |
-| SSH | prod-core-lagoon-core-ssh | 22 |
+| API | prod-core-api | 80 |
+| UI | prod-core-ui | 3000 |
+| Keycloak | prod-core-keycloak | 8080 |
+| Broker (RabbitMQ) | prod-core-broker | 5672 |
+| SSH | prod-core-ssh | 22 |
 
 ### Cross-Cluster Communication
 
