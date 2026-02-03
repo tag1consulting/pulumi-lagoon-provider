@@ -257,18 +257,18 @@ ensure-migrations:
 ensure-lagoon-admin:
 	@echo "Ensuring lagoonadmin user exists in Keycloak..."
 	@echo "Starting temporary port-forward to Keycloak..."
-	@kubectl --context kind-$(CLUSTER_NAME) port-forward -n lagoon svc/lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 & \
+	@kubectl --context kind-$(CLUSTER_NAME) port-forward -n lagoon-core svc/lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 & \
 		PF_PID=$$!; \
-		sleep 2; \
+		sleep 3; \
 		LAGOON_PRESET=single $(SCRIPTS_DIR)/create-lagoon-admin.sh; \
 		kill $$PF_PID 2>/dev/null || true
 
 ensure-deploy-target:
 	@echo "Ensuring deploy target exists in Lagoon..."
 	@echo "Starting temporary port-forwards..."
-	@kubectl --context kind-$(CLUSTER_NAME) port-forward -n lagoon svc/lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 & \
+	@kubectl --context kind-$(CLUSTER_NAME) port-forward -n lagoon-core svc/lagoon-core-keycloak 8080:8080 >/dev/null 2>&1 & \
 		KC_PID=$$!; \
-		kubectl --context kind-$(CLUSTER_NAME) port-forward -n lagoon svc/lagoon-core-api 7080:80 >/dev/null 2>&1 & \
+		kubectl --context kind-$(CLUSTER_NAME) port-forward -n lagoon-core svc/lagoon-core-api 7080:80 >/dev/null 2>&1 & \
 		API_PID=$$!; \
 		sleep 3; \
 		DEPLOY_TARGET_ID=$$(LAGOON_PRESET=single $(SCRIPTS_DIR)/ensure-deploy-target.sh) || { kill $$KC_PID $$API_PID 2>/dev/null; exit 1; }; \

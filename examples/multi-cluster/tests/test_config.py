@@ -1,13 +1,14 @@
 """Unit tests for multi-cluster configuration."""
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import DomainConfig, NamespaceConfig, ClusterConfig, DEFAULT_CLUSTERS
+from config import DEFAULT_CLUSTERS, ClusterConfig, DomainConfig, NamespaceConfig
 
 
 class TestDomainConfig:

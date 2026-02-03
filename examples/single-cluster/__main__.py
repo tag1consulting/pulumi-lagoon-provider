@@ -20,37 +20,33 @@ see the multi-cluster example.
 import pulumi
 import pulumi_kubernetes as k8s
 
+# Import cluster management
+from clusters import create_k8s_provider, create_kind_cluster
 from config import (
     config,
-    VERSIONS,
-    DomainConfig,
-    NamespaceConfig,
 )
-
-# Import cluster management
-from clusters import create_kind_cluster, create_k8s_provider
 
 # Import infrastructure components
 from infrastructure import (
-    install_ingress_nginx,
-    install_cert_manager,
     create_cluster_issuer,
     create_wildcard_certificate,
+    install_cert_manager,
+    install_ingress_nginx,
 )
 from infrastructure.coredns import patch_coredns_for_lagoon, restart_coredns
 
-# Import registry
-from registry import install_harbor
-
 # Import Lagoon components
 from lagoon import (
-    generate_lagoon_secrets,
-    install_lagoon_core,
-    install_lagoon_remote,
-    install_lagoon_build_deploy_crds,
     configure_keycloak_for_cli_auth,
     ensure_knex_migrations,
+    generate_lagoon_secrets,
+    install_lagoon_build_deploy_crds,
+    install_lagoon_core,
+    install_lagoon_remote,
 )
+
+# Import registry
+from registry import install_harbor
 
 # Import pulumi_lagoon for deploy targets and projects
 import pulumi_lagoon as lagoon
@@ -422,18 +418,24 @@ if lagoon_core is not None and config.create_example_project:
 # Summary Outputs
 # =============================================================================
 
-pulumi.export("domain_config", {
-    "base": domain_config.base,
-    "api": domain_config.lagoon_api,
-    "ui": domain_config.lagoon_ui,
-    "keycloak": domain_config.lagoon_keycloak,
-    "harbor": domain_config.harbor,
-})
+pulumi.export(
+    "domain_config",
+    {
+        "base": domain_config.base,
+        "api": domain_config.lagoon_api,
+        "ui": domain_config.lagoon_ui,
+        "keycloak": domain_config.lagoon_keycloak,
+        "harbor": domain_config.harbor,
+    },
+)
 
-pulumi.export("installation_summary", {
-    "cluster_created": cluster is not None,
-    "harbor_installed": harbor is not None,
-    "lagoon_installed": lagoon_core is not None,
-    "build_deploy_installed": lagoon_remote is not None,
-    "example_project_created": config.create_example_project and example_project is not None,
-})
+pulumi.export(
+    "installation_summary",
+    {
+        "cluster_created": cluster is not None,
+        "harbor_installed": harbor is not None,
+        "lagoon_installed": lagoon_core is not None,
+        "build_deploy_installed": lagoon_remote is not None,
+        "example_project_created": config.create_example_project and example_project is not None,
+    },
+)

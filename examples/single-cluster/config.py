@@ -38,18 +38,40 @@ class DomainConfig:
     """Domain configuration for all services."""
 
     base: str = DEFAULT_BASE_DOMAIN
+    # External HTTPS port (Kind uses 8443, standard is 443)
+    https_port: int = 8443
+
+    @property
+    def _port_suffix(self) -> str:
+        """Return port suffix for URLs (empty string if standard port 443)."""
+        return "" if self.https_port == 443 else f":{self.https_port}"
 
     @property
     def lagoon_api(self) -> str:
         return f"api.{self.base}"
 
     @property
+    def lagoon_api_url(self) -> str:
+        """Full external URL for API."""
+        return f"https://api.{self.base}{self._port_suffix}"
+
+    @property
     def lagoon_ui(self) -> str:
         return f"ui.{self.base}"
 
     @property
+    def lagoon_ui_url(self) -> str:
+        """Full external URL for UI."""
+        return f"https://ui.{self.base}{self._port_suffix}"
+
+    @property
     def lagoon_keycloak(self) -> str:
         return f"keycloak.{self.base}"
+
+    @property
+    def lagoon_keycloak_url(self) -> str:
+        """Full external URL for Keycloak."""
+        return f"https://keycloak.{self.base}{self._port_suffix}"
 
     @property
     def lagoon_webhook(self) -> str:
@@ -72,6 +94,7 @@ class DomainConfig:
 # Namespace Configuration
 # =============================================================================
 
+
 @dataclass
 class NamespaceConfig:
     """Kubernetes namespace configuration."""
@@ -86,6 +109,7 @@ class NamespaceConfig:
 # =============================================================================
 # Cluster Configuration
 # =============================================================================
+
 
 @dataclass
 class ClusterConfig:
@@ -118,6 +142,7 @@ DEFAULT_CLUSTER = ClusterConfig(
 # =============================================================================
 # Component Output Dataclasses
 # =============================================================================
+
 
 @dataclass
 class ClusterOutputs:
@@ -194,6 +219,7 @@ class LagoonRemoteOutputs:
 # =============================================================================
 # Pulumi Config Accessors
 # =============================================================================
+
 
 class SingleClusterConfig:
     """Pulumi configuration accessor for single-cluster example."""
@@ -278,7 +304,7 @@ class SingleClusterConfig:
 
     def get_domain_config(self) -> DomainConfig:
         """Get domain configuration based on Pulumi config."""
-        return DomainConfig(base=self.base_domain)
+        return DomainConfig(base=self.base_domain, https_port=self.https_port)
 
     def get_namespace_config(self) -> NamespaceConfig:
         """Get namespace configuration."""

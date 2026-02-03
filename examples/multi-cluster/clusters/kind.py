@@ -4,14 +4,12 @@ This module provides functions for creating and managing Kind clusters
 for the multi-cluster Lagoon example.
 """
 
-import json
 from typing import Optional
 
 import pulumi
-from pulumi_command import local
 import yaml
-
-from config import ClusterConfig, ClusterOutputs, KIND_NODE_IMAGE
+from config import KIND_NODE_IMAGE, ClusterConfig, ClusterOutputs
+from pulumi_command import local
 
 
 def generate_kind_config(cluster_config: ClusterConfig) -> str:
@@ -37,9 +35,7 @@ nodeRegistration:
   kubeletExtraArgs:
     node-labels: "{labels}"
 """.format(
-                        labels=",".join(
-                            f"{k}={v}" for k, v in cluster_config.node_labels.items()
-                        )
+                        labels=",".join(f"{k}={v}" for k, v in cluster_config.node_labels.items())
                         if cluster_config.node_labels
                         else ""
                     )

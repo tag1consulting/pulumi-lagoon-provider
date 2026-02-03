@@ -4,21 +4,21 @@ This module provides functions for installing and configuring
 Lagoon core and remote (build-deploy) components.
 """
 
-from .secrets import generate_lagoon_secrets
-from .core import install_lagoon_core, create_rabbitmq_nodeport_service
-from .remote import install_lagoon_remote
+from .core import create_rabbitmq_nodeport_service, install_lagoon_core
 from .crds import install_lagoon_build_deploy_crds
 from .keycloak import configure_keycloak_for_cli_auth
+from .migrations import (
+    check_knex_migrations_inline,
+    ensure_knex_migrations,
+)
 from .project import (
-    create_deploy_targets,
-    create_example_drupal_project,
     DeployTargetPair,
     ExampleProjectOutputs,
+    create_deploy_targets,
+    create_example_drupal_project,
 )
-from .migrations import (
-    ensure_knex_migrations,
-    check_knex_migrations_inline,
-)
+from .remote import install_lagoon_remote
+from .secrets import generate_lagoon_secrets
 
 __all__ = [
     "generate_lagoon_secrets",

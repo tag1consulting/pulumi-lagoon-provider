@@ -8,7 +8,6 @@ from typing import List, Optional
 
 import pulumi
 import pulumi_kubernetes as k8s
-
 from config import CertManagerOutputs
 
 

@@ -444,6 +444,131 @@ def validate_ssh_port(port: Any) -> int:
     return port_int
 
 
+# Valid notification types
+VALID_NOTIFICATION_TYPES: Set[str] = {"slack", "rocketchat", "email", "microsoftteams"}
+
+
+def validate_notification_name(name: str) -> None:
+    """Validate notification name.
+
+    Rules:
+    - Must start with a letter
+    - Can only contain letters, numbers, hyphens, and underscores
+    - Maximum 100 characters
+
+    Args:
+        name: Notification name to validate
+
+    Raises:
+        LagoonValidationError: If name is invalid
+    """
+    validate_required(name, "name")
+
+    # Pattern: starts with letter, contains only letters, numbers, hyphens, underscores
+    pattern = r"^[a-zA-Z][a-zA-Z0-9_-]*$"
+
+    if len(name) > 100:
+        raise LagoonValidationError(
+            "Notification name exceeds maximum length of 100 characters",
+            field="name",
+            value=name,
+            suggestion="Use a shorter notification name (max 100 characters)",
+        )
+
+    if not re.match(pattern, name):
+        raise LagoonValidationError(
+            "Invalid notification name format",
+            field="name",
+            value=name,
+            suggestion="Notification name must start with a letter and contain only "
+            "letters, numbers, hyphens, and underscores",
+        )
+
+
+def validate_webhook_url(url: str) -> None:
+    """Validate webhook URL.
+
+    Accepts:
+    - HTTPS URLs only for security
+
+    Args:
+        url: Webhook URL to validate
+
+    Raises:
+        LagoonValidationError: If URL format is invalid
+    """
+    validate_required(url, "webhook")
+
+    # HTTPS URL pattern (webhooks should always be HTTPS)
+    pattern = r"^https://[\w.-]+(?::\d+)?(?:/[\w./?%&=_-]*)?$"
+
+    if not re.match(pattern, url):
+        raise LagoonValidationError(
+            "Invalid webhook URL format",
+            field="webhook",
+            value=url,
+            suggestion="Webhook URL must use HTTPS (e.g., https://hooks.slack.com/services/xxx)",
+        )
+
+
+def validate_email_address(email: str) -> None:
+    """Validate email address format.
+
+    Args:
+        email: Email address to validate
+
+    Raises:
+        LagoonValidationError: If email format is invalid
+    """
+    validate_required(email, "email_address")
+
+    # Basic email pattern (RFC 5322 simplified)
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+
+    if not re.match(pattern, email):
+        raise LagoonValidationError(
+            "Invalid email address format",
+            field="email_address",
+            value=email,
+            suggestion="Provide a valid email address (e.g., ops@example.com)",
+        )
+
+
+def validate_notification_type(notification_type: str) -> str:
+    """Validate notification type enum.
+
+    Args:
+        notification_type: The notification type to validate
+
+    Returns:
+        The normalized (lowercase) notification type
+
+    Raises:
+        LagoonValidationError: If notification_type is invalid
+    """
+    return validate_enum(notification_type, "notification_type", VALID_NOTIFICATION_TYPES)
+
+
+def validate_channel_name(channel: str) -> None:
+    """Validate notification channel name.
+
+    Args:
+        channel: Channel name to validate (e.g., #channel or channel)
+
+    Raises:
+        LagoonValidationError: If channel name is invalid
+    """
+    validate_required(channel, "channel")
+
+    if len(channel) > 100:
+        raise LagoonValidationError(
+            "Channel name exceeds maximum length of 100 characters",
+            field="channel",
+            value=channel,
+            suggestion="Use a shorter channel name (max 100 characters)",
+        )
+
+
 def validate_ssh_host(host: Optional[str]) -> None:
     """Validate SSH host for builds.
 

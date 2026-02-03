@@ -8,9 +8,8 @@ from typing import Optional
 
 import pulumi
 import pulumi_kubernetes as k8s
+from config import VERSIONS, DomainConfig, HarborOutputs, NamespaceConfig
 from pulumi_random import RandomPassword
-
-from config import VERSIONS, HarborOutputs, DomainConfig, NamespaceConfig
 
 
 def install_harbor(
@@ -60,7 +59,6 @@ def install_harbor(
 
     # Harbor URLs
     harbor_url = f"https://{domain_config.harbor}"
-    core_url = f"https://{domain_config.harbor}"
 
     # Generate a short release name
     short_name = name.split("-")[0] if "-" in name else name
