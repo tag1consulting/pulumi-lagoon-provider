@@ -1,7 +1,7 @@
 # Pulumi Lagoon Provider - Implementation Status
 
-**Last Updated**: 2026-01-30
-**Status**: v0.1.0 Released on PyPI - Phase 2 Complete
+**Last Updated**: 2026-02-03
+**Status**: v0.1.1 Released on PyPI - Phase 3 In Progress
 
 ---
 
@@ -176,7 +176,7 @@ Token Handling:
 ## Remaining Work
 
 ### Code Cleanup
-**Status**: ⏸️ TODO
+**Status**: ⏸️ LOW PRIORITY
 
 1. **Clarify lagoon imports in single-cluster example** (2026-01-26)
    - `examples/single-cluster/__main__.py` has confusing imports:
@@ -185,6 +185,7 @@ Token Handling:
    - Both end up using `lagoon.` prefix which is confusing
    - Suggested fix: Rename `import pulumi_lagoon as lagoon` to just `import pulumi_lagoon`
    - Then use `pulumi_lagoon.LagoonDeployTarget(...)` instead of `lagoon.LagoonDeployTarget(...)`
+   - **Note**: This is a minor code style issue that doesn't affect functionality. Deferred to future cleanup.
 
 ### Provider Features
 **Status**: ✅ PARTIAL

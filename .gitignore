@@ -62,6 +62,7 @@ dmypy.json
 
 # Claude Code
 .claude/
+memory-bank/session-summary*.md
 
 # Logs
 *.log
