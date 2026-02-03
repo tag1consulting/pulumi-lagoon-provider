@@ -86,6 +86,7 @@ backup_task = lagoon.LagoonTask("db-backup",
 ## Documentation
 
 - See [docs/notifications.md](docs/notifications.md) for detailed notification resource documentation
+- Task resource documentation and examples are included in the main [README.md](README.md#supported-resources)
 
 ## Requirements
 

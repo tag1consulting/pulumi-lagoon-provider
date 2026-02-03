@@ -289,7 +289,7 @@ waits for all pods to be ready. If you experience timeouts:
 kubectl --context kind-lagoon-prod -n lagoon-core get secret prod-core-lagoon-core-keycloak \
   -o jsonpath='{.data.KEYCLOAK_ADMIN_PASSWORD}' | base64 -d && echo
 
-# Lagoon admin password
+# Lagoon admin password (same command as in Browser Authentication section above)
 kubectl --context kind-lagoon-prod -n lagoon-core get secret prod-core-lagoon-core-keycloak \
   -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d && echo
 ```
@@ -416,7 +416,7 @@ examples/multi-cluster/
 ├── infrastructure/          # Ingress, cert-manager, CoreDNS
 ├── registry/                # Harbor installation
 ├── lagoon/                  # Lagoon core and remote installation
-└── scripts/                 # Helper scripts
+└── scripts/                 # Symlinks to ../../scripts/ (shared repository scripts)
 ```
 
 ## Technical Details

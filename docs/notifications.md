@@ -1,4 +1,4 @@
-# Lagoon Notifications
+# Managing Lagoon Notifications with Pulumi
 
 This guide covers how to manage Lagoon notifications using the Pulumi Lagoon provider.
 

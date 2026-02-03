@@ -201,6 +201,8 @@ See the `examples/` directory for complete examples:
 
 ### Multi-Cluster Example
 
+> **Prerequisites**: Docker, Kind, kubectl, Helm, and Pulumi CLI must be installed. See [Development](#development) for details.
+
 The multi-cluster example demonstrates a production-like Lagoon deployment with:
 
 - **Production cluster** (`lagoon-prod`): Lagoon core services, Harbor registry, and production workloads
@@ -349,8 +351,8 @@ make help               # Show all available targets
 
 **Note**: All targets that interact with Lagoon automatically handle:
 - Port-forward setup (temporary, cleaned up after)
-- Token refresh (5-minute token expiration handled)
-- Direct Access Grants enablement in Keycloak
+- Token refresh (Lagoon OAuth tokens expire after 5 minutes; scripts automatically acquire fresh tokens)
+- Direct Access Grants enablement in Keycloak (required for CLI authentication)
 - User and deploy target creation (if needed)
 
 ### Manual Setup
@@ -447,10 +449,11 @@ For detailed architecture information, see `memory-bank/architecture.md`.
 - [x] CORS and TLS configuration for browser access with self-signed certificates
 - [x] Comprehensive documentation for browser access setup
 
-### Phase 3: Production Ready (Current)
+### Phase 3: Production Ready (In Progress)
 - [x] PyPI package publishing
 - [x] Notification resources (Slack, RocketChat, Email, Microsoft Teams)
 - [x] Project notification associations
+- [x] Task resources (advanced task definitions)
 - [ ] Additional resources (Group)
 - [ ] Advanced examples
 - [ ] Community feedback integration

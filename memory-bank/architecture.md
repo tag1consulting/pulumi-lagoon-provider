@@ -1,5 +1,7 @@
 # Pulumi Lagoon Provider - Architecture
 
+**Last Updated**: 2026-02-03
+
 ## System Architecture
 
 ### High-Level Overview
