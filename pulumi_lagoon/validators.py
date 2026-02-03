@@ -592,3 +592,163 @@ def validate_ssh_host(host: Optional[str]) -> None:
             value=host,
             suggestion="Provide a valid hostname (e.g., ssh.lagoon.example.com) or IP address",
         )
+
+
+# Valid task types for advanced task definitions
+VALID_TASK_TYPES: Set[str] = {"command", "image"}
+
+# Valid permissions for task definitions
+VALID_TASK_PERMISSIONS: Set[str] = {"guest", "developer", "maintainer"}
+
+# Valid argument types for task definition arguments
+VALID_TASK_ARGUMENT_TYPES: Set[str] = {
+    "string",
+    "environment_source_name",
+    "environment_source_name_exclude_self",
+}
+
+
+def validate_task_type(task_type: str) -> str:
+    """Validate task type enum.
+
+    Args:
+        task_type: The task type to validate ("command" or "image")
+
+    Returns:
+        The normalized (lowercase) task type
+
+    Raises:
+        LagoonValidationError: If task_type is invalid
+    """
+    return validate_enum(task_type, "type", VALID_TASK_TYPES)
+
+
+def validate_task_permission(permission: Optional[str]) -> Optional[str]:
+    """Validate task permission enum.
+
+    Args:
+        permission: The permission to validate (None allowed for optional)
+
+    Returns:
+        The normalized (lowercase) permission, or None if not provided
+
+    Raises:
+        LagoonValidationError: If permission is invalid
+    """
+    if permission is None:
+        return None
+    return validate_enum(permission, "permission", VALID_TASK_PERMISSIONS)
+
+
+def validate_task_argument_type(arg_type: str) -> str:
+    """Validate task argument type enum.
+
+    Args:
+        arg_type: The argument type to validate
+
+    Returns:
+        The normalized argument type
+
+    Raises:
+        LagoonValidationError: If arg_type is invalid
+    """
+    return validate_enum(arg_type, "argument type", VALID_TASK_ARGUMENT_TYPES)
+
+
+def validate_task_scope(
+    project_id: Optional[int],
+    environment_id: Optional[int],
+    group_name: Optional[str],
+    system_wide: Optional[bool],
+) -> None:
+    """Validate that exactly one task scope is specified.
+
+    Task definitions must have exactly one scope: project_id, environment_id,
+    group_name, or system_wide=True.
+
+    Args:
+        project_id: Project ID (for project-scoped tasks)
+        environment_id: Environment ID (for environment-scoped tasks)
+        group_name: Group name (for group-scoped tasks)
+        system_wide: If True, task is system-wide
+
+    Raises:
+        LagoonValidationError: If zero or more than one scope is specified
+    """
+    scopes_provided = sum(
+        [
+            project_id is not None,
+            environment_id is not None,
+            group_name is not None,
+            system_wide is True,
+        ]
+    )
+
+    if scopes_provided == 0:
+        raise LagoonValidationError(
+            "Task scope is required",
+            field="scope",
+            value=None,
+            suggestion="Specify exactly one of: project_id, environment_id, group_name, or system_wide=True",
+        )
+
+    if scopes_provided > 1:
+        raise LagoonValidationError(
+            "Multiple task scopes specified",
+            field="scope",
+            value=f"project_id={project_id}, environment_id={environment_id}, "
+            f"group_name={group_name}, system_wide={system_wide}",
+            suggestion="Specify exactly one of: project_id, environment_id, group_name, or system_wide=True",
+        )
+
+
+def validate_task_command_or_image(
+    task_type: str,
+    command: Optional[str],
+    image: Optional[str],
+) -> None:
+    """Validate that command/image is provided based on task type.
+
+    - If type is "command", command must be provided and image must be None
+    - If type is "image", image must be provided and command must be None
+
+    Args:
+        task_type: The task type ("command" or "image")
+        command: The command to execute (for command-type tasks)
+        image: The container image (for image-type tasks)
+
+    Raises:
+        LagoonValidationError: If command/image doesn't match task type
+    """
+    task_type_lower = task_type.lower()
+
+    if task_type_lower == "command":
+        if not command:
+            raise LagoonValidationError(
+                "Command is required for command-type tasks",
+                field="command",
+                value=command,
+                suggestion="Provide a command to execute (e.g., 'yarn audit')",
+            )
+        if image:
+            raise LagoonValidationError(
+                "Image should not be provided for command-type tasks",
+                field="image",
+                value=image,
+                suggestion="Remove image for command-type tasks, or change type to 'image'",
+            )
+    elif task_type_lower == "image":
+        if not image:
+            raise LagoonValidationError(
+                "Image is required for image-type tasks",
+                field="image",
+                value=image,
+                suggestion="Provide a container image (e.g., 'library/alpine:latest')",
+            )
+        if command:
+            raise LagoonValidationError(
+                "Command should not be provided for image-type tasks",
+                field="command",
+                value=command,
+                suggestion="Remove command for image-type tasks, or change type to 'command'",
+            )

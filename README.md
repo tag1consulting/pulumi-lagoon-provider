@@ -38,9 +38,11 @@ This provider enables you to manage Lagoon hosting platform resources (projects,
 - `LagoonNotificationMicrosoftTeams` - Manage Microsoft Teams notifications
 - `LagoonProjectNotification` - Link notifications to projects
 
+### Task Resources (Complete)
+- `LagoonTask` - Manage advanced task definitions (on-demand commands and container-based tasks)
+
 ### Planned
 - `LagoonGroup` - Manage user groups and permissions
-- `LagoonTask` - Manage tasks and backups
 
 ## Quick Start - Complete Test Environment
 
@@ -222,6 +224,7 @@ You can import existing Lagoon resources into Pulumi state using `pulumi import`
 | `LagoonNotificationEmail` | `{name}` | `pulumi import lagoon:index:NotificationEmail my-email ops-team` |
 | `LagoonNotificationMicrosoftTeams` | `{name}` | `pulumi import lagoon:index:NotificationMicrosoftTeams my-teams teams-alerts` |
 | `LagoonProjectNotification` | `{project}:{type}:{name}` | `pulumi import lagoon:index:ProjectNotification my-assoc my-project:slack:deploy-alerts` |
+| `LagoonTask` | `{numeric_id}` | `pulumi import lagoon:index:Task my-task 123` |
 
 ### Finding Resource IDs
 
@@ -261,6 +264,9 @@ pulumi import lagoon:index:NotificationSlack my-slack deploy-alerts
 
 # Import a project notification association
 pulumi import lagoon:index:ProjectNotification my-assoc my-project:slack:deploy-alerts
+
+# Import an advanced task definition
+pulumi import lagoon:index:Task yarn-audit 456
 ```
 
 After importing, you'll need to add the corresponding resource definition to your Pulumi code.
@@ -359,6 +365,7 @@ pulumi-lagoon-provider/
 │   ├── project.py          # LagoonProject resource
 │   ├── environment.py      # LagoonEnvironment resource
 │   ├── variable.py         # LagoonVariable resource
+│   ├── task.py             # LagoonTask resource
 │   ├── deploytarget.py     # LagoonDeployTarget resource
 │   ├── deploytarget_config.py  # LagoonDeployTargetConfig resource
 │   ├── notification_slack.py   # LagoonNotificationSlack resource
