@@ -355,3 +355,952 @@ class TestVariableOperations:
         call_kwargs = lagoon_client.session.post.call_args[1]
         input_data = call_kwargs["json"]["variables"]["input"]
         assert input_data["environment"] == 1
+
+
+class TestNotificationSlackOperations:
+    """Tests for Slack notification CRUD operations."""
+
+    def test_add_notification_slack(self, lagoon_client, mock_response, sample_notification_slack):
+        """Test adding a Slack notification."""
+        response = mock_response(data={"addNotificationSlack": sample_notification_slack})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_notification_slack(
+            name="deploy-alerts",
+            webhook="https://hooks.slack.com/services/xxx/yyy/zzz",
+            channel="#deployments",
+        )
+
+        assert result["id"] == 1
+        assert result["name"] == "deploy-alerts"
+        assert result["webhook"] == "https://hooks.slack.com/services/xxx/yyy/zzz"
+        assert result["channel"] == "#deployments"
+
+        # Verify the GraphQL mutation was called with correct input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "deploy-alerts"
+        assert input_data["webhook"] == "https://hooks.slack.com/services/xxx/yyy/zzz"
+        assert input_data["channel"] == "#deployments"
+
+    def test_get_all_notification_slack(
+        self, lagoon_client, mock_response, sample_notification_slack
+    ):
+        """Test getting all Slack notifications."""
+        all_notifications = [
+            {**sample_notification_slack, "__typename": "NotificationSlack"},
+            {
+                "__typename": "NotificationEmail",
+                "id": 2,
+                "name": "email-alert",
+                "emailAddress": "test@example.com",
+            },
+        ]
+        response = mock_response(data={"allNotifications": all_notifications})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_all_notification_slack()
+
+        assert len(result) == 1
+        assert result[0]["name"] == "deploy-alerts"
+        assert result[0]["__typename"] == "NotificationSlack"
+
+    def test_get_notification_slack_by_name(
+        self, lagoon_client, mock_response, sample_notification_slack
+    ):
+        """Test getting Slack notification by name."""
+        all_notifications = [
+            {**sample_notification_slack, "__typename": "NotificationSlack"},
+        ]
+        response = mock_response(data={"allNotifications": all_notifications})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_notification_slack_by_name("deploy-alerts")
+
+        assert result is not None
+        assert result["name"] == "deploy-alerts"
+
+    def test_get_notification_slack_by_name_not_found(self, lagoon_client, mock_response):
+        """Test getting nonexistent Slack notification returns None."""
+        response = mock_response(data={"allNotifications": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_notification_slack_by_name("nonexistent")
+
+        assert result is None
+
+    def test_update_notification_slack(
+        self, lagoon_client, mock_response, sample_notification_slack
+    ):
+        """Test updating a Slack notification."""
+        updated = sample_notification_slack.copy()
+        updated["webhook"] = "https://hooks.slack.com/services/new/webhook/url"
+        response = mock_response(data={"updateNotificationSlack": updated})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.update_notification_slack(
+            name="deploy-alerts",
+            webhook="https://hooks.slack.com/services/new/webhook/url",
+        )
+
+        assert result["webhook"] == "https://hooks.slack.com/services/new/webhook/url"
+
+        # Verify patch format is used
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "deploy-alerts"
+        assert input_data["patch"]["webhook"] == "https://hooks.slack.com/services/new/webhook/url"
+
+    def test_delete_notification_slack(self, lagoon_client, mock_response):
+        """Test deleting a Slack notification."""
+        response = mock_response(data={"deleteNotificationSlack": "success"})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.delete_notification_slack(name="deploy-alerts")
+
+        assert result == "success"
+
+        # Verify correct input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "deploy-alerts"
+
+
+class TestNotificationRocketChatOperations:
+    """Tests for RocketChat notification CRUD operations."""
+
+    def test_add_notification_rocketchat(
+        self, lagoon_client, mock_response, sample_notification_rocketchat
+    ):
+        """Test adding a RocketChat notification."""
+        response = mock_response(data={"addNotificationRocketChat": sample_notification_rocketchat})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_notification_rocketchat(
+            name="team-chat",
+            webhook="https://rocketchat.example.com/hooks/xxx/yyy",
+            channel="#alerts",
+        )
+
+        assert result["id"] == 2
+        assert result["name"] == "team-chat"
+        assert result["webhook"] == "https://rocketchat.example.com/hooks/xxx/yyy"
+        assert result["channel"] == "#alerts"
+
+    def test_get_all_notification_rocketchat(
+        self, lagoon_client, mock_response, sample_notification_rocketchat
+    ):
+        """Test getting all RocketChat notifications."""
+        all_notifications = [
+            {**sample_notification_rocketchat, "__typename": "NotificationRocketChat"},
+            {
+                "__typename": "NotificationSlack",
+                "id": 1,
+                "name": "slack-alert",
+                "webhook": "https://slack.com",
+                "channel": "#test",
+            },
+        ]
+        response = mock_response(data={"allNotifications": all_notifications})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_all_notification_rocketchat()
+
+        assert len(result) == 1
+        assert result[0]["name"] == "team-chat"
+        assert result[0]["__typename"] == "NotificationRocketChat"
+
+    def test_get_notification_rocketchat_by_name(
+        self, lagoon_client, mock_response, sample_notification_rocketchat
+    ):
+        """Test getting RocketChat notification by name."""
+        all_notifications = [
+            {**sample_notification_rocketchat, "__typename": "NotificationRocketChat"},
+        ]
+        response = mock_response(data={"allNotifications": all_notifications})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_notification_rocketchat_by_name("team-chat")
+
+        assert result is not None
+        assert result["name"] == "team-chat"
+
+    def test_get_notification_rocketchat_by_name_not_found(self, lagoon_client, mock_response):
+        """Test getting nonexistent RocketChat notification returns None."""
+        response = mock_response(data={"allNotifications": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_notification_rocketchat_by_name("nonexistent")
+
+        assert result is None
+
+    def test_update_notification_rocketchat(
+        self, lagoon_client, mock_response, sample_notification_rocketchat
+    ):
+        """Test updating a RocketChat notification."""
+        updated = sample_notification_rocketchat.copy()
+        updated["channel"] = "#new-channel"
+        response = mock_response(data={"updateNotificationRocketChat": updated})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.update_notification_rocketchat(
+            name="team-chat",
+            channel="#new-channel",
+        )
+
+        assert result["channel"] == "#new-channel"
+
+        # Verify patch format is used
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "team-chat"
+        assert input_data["patch"]["channel"] == "#new-channel"
+
+    def test_delete_notification_rocketchat(self, lagoon_client, mock_response):
+        """Test deleting a RocketChat notification."""
+        response = mock_response(data={"deleteNotificationRocketChat": "success"})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.delete_notification_rocketchat(name="team-chat")
+
+        assert result == "success"
+
+
+class TestNotificationEmailOperations:
+    """Tests for Email notification CRUD operations."""
+
+    def test_add_notification_email(self, lagoon_client, mock_response, sample_notification_email):
+        """Test adding an Email notification."""
+        response = mock_response(data={"addNotificationEmail": sample_notification_email})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_notification_email(
+            name="ops-team",
+            email_address="ops@example.com",
+        )
+
+        assert result["id"] == 3
+        assert result["name"] == "ops-team"
+        assert result["emailAddress"] == "ops@example.com"
+
+        # Verify the GraphQL mutation uses emailAddress (camelCase)
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "ops-team"
+        assert input_data["emailAddress"] == "ops@example.com"
+
+    def test_get_all_notification_email(
+        self, lagoon_client, mock_response, sample_notification_email
+    ):
+        """Test getting all Email notifications."""
+        all_notifications = [
+            {**sample_notification_email, "__typename": "NotificationEmail"},
+            {
+                "__typename": "NotificationSlack",
+                "id": 1,
+                "name": "slack-alert",
+                "webhook": "https://slack.com",
+                "channel": "#test",
+            },
+        ]
+        response = mock_response(data={"allNotifications": all_notifications})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_all_notification_email()
+
+        assert len(result) == 1
+        assert result[0]["name"] == "ops-team"
+        assert result[0]["__typename"] == "NotificationEmail"
+
+    def test_get_notification_email_by_name(
+        self, lagoon_client, mock_response, sample_notification_email
+    ):
+        """Test getting Email notification by name."""
+        all_notifications = [
+            {**sample_notification_email, "__typename": "NotificationEmail"},
+        ]
+        response = mock_response(data={"allNotifications": all_notifications})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_notification_email_by_name("ops-team")
+
+        assert result is not None
+        assert result["name"] == "ops-team"
+
+    def test_get_notification_email_by_name_not_found(self, lagoon_client, mock_response):
+        """Test getting nonexistent Email notification returns None."""
+        response = mock_response(data={"allNotifications": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_notification_email_by_name("nonexistent")
+
+        assert result is None
+
+    def test_update_notification_email(
+        self, lagoon_client, mock_response, sample_notification_email
+    ):
+        """Test updating an Email notification."""
+        updated = sample_notification_email.copy()
+        updated["emailAddress"] = "new-ops@example.com"
+        response = mock_response(data={"updateNotificationEmail": updated})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.update_notification_email(
+            name="ops-team",
+            emailAddress="new-ops@example.com",
+        )
+
+        assert result["emailAddress"] == "new-ops@example.com"
+
+        # Verify patch format is used
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "ops-team"
+        assert input_data["patch"]["emailAddress"] == "new-ops@example.com"
+
+    def test_delete_notification_email(self, lagoon_client, mock_response):
+        """Test deleting an Email notification."""
+        response = mock_response(data={"deleteNotificationEmail": "success"})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.delete_notification_email(name="ops-team")
+
+        assert result == "success"
+
+
+class TestNotificationMicrosoftTeamsOperations:
+    """Tests for Microsoft Teams notification CRUD operations."""
+
+    def test_add_notification_microsoftteams(
+        self, lagoon_client, mock_response, sample_notification_microsoftteams
+    ):
+        """Test adding a Microsoft Teams notification."""
+        response = mock_response(
+            data={"addNotificationMicrosoftTeams": sample_notification_microsoftteams}
+        )
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_notification_microsoftteams(
+            name="teams-alerts",
+            webhook="https://outlook.office.com/webhook/xxx/yyy/zzz",
+        )
+
+        assert result["id"] == 4
+        assert result["name"] == "teams-alerts"
+        assert result["webhook"] == "https://outlook.office.com/webhook/xxx/yyy/zzz"
+
+    def test_get_all_notification_microsoftteams(
+        self, lagoon_client, mock_response, sample_notification_microsoftteams
+    ):
+        """Test getting all Microsoft Teams notifications."""
+        all_notifications = [
+            {**sample_notification_microsoftteams, "__typename": "NotificationMicrosoftTeams"},
+            {
+                "__typename": "NotificationSlack",
+                "id": 1,
+                "name": "slack-alert",
+                "webhook": "https://slack.com",
+                "channel": "#test",
+            },
+        ]
+        response = mock_response(data={"allNotifications": all_notifications})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_all_notification_microsoftteams()
+
+        assert len(result) == 1
+        assert result[0]["name"] == "teams-alerts"
+        assert result[0]["__typename"] == "NotificationMicrosoftTeams"
+
+    def test_get_notification_microsoftteams_by_name(
+        self, lagoon_client, mock_response, sample_notification_microsoftteams
+    ):
+        """Test getting Microsoft Teams notification by name."""
+        all_notifications = [
+            {**sample_notification_microsoftteams, "__typename": "NotificationMicrosoftTeams"},
+        ]
+        response = mock_response(data={"allNotifications": all_notifications})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_notification_microsoftteams_by_name("teams-alerts")
+
+        assert result is not None
+        assert result["name"] == "teams-alerts"
+
+    def test_get_notification_microsoftteams_by_name_not_found(self, lagoon_client, mock_response):
+        """Test getting nonexistent Microsoft Teams notification returns None."""
+        response = mock_response(data={"allNotifications": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_notification_microsoftteams_by_name("nonexistent")
+
+        assert result is None
+
+    def test_update_notification_microsoftteams(
+        self, lagoon_client, mock_response, sample_notification_microsoftteams
+    ):
+        """Test updating a Microsoft Teams notification."""
+        updated = sample_notification_microsoftteams.copy()
+        updated["webhook"] = "https://outlook.office.com/webhook/new/url/here"
+        response = mock_response(data={"updateNotificationMicrosoftTeams": updated})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.update_notification_microsoftteams(
+            name="teams-alerts",
+            webhook="https://outlook.office.com/webhook/new/url/here",
+        )
+
+        assert result["webhook"] == "https://outlook.office.com/webhook/new/url/here"
+
+        # Verify patch format is used
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "teams-alerts"
+        assert input_data["patch"]["webhook"] == "https://outlook.office.com/webhook/new/url/here"
+
+    def test_delete_notification_microsoftteams(self, lagoon_client, mock_response):
+        """Test deleting a Microsoft Teams notification."""
+        response = mock_response(data={"deleteNotificationMicrosoftTeams": "success"})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.delete_notification_microsoftteams(name="teams-alerts")
+
+        assert result == "success"
+
+
+class TestProjectNotificationOperations:
+    """Tests for project notification association operations."""
+
+    def test_add_notification_to_project(self, lagoon_client, mock_response, sample_project):
+        """Test adding a notification to a project."""
+        response = mock_response(
+            data={"addNotificationToProject": {"id": 1, "name": "test-project"}}
+        )
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_notification_to_project(
+            project="test-project",
+            notification_type="slack",
+            notification_name="deploy-alerts",
+        )
+
+        assert result["id"] == 1
+        assert result["name"] == "test-project"
+
+        # Verify notification type is uppercased
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["project"] == "test-project"
+        assert input_data["notificationType"] == "SLACK"
+        assert input_data["notificationName"] == "deploy-alerts"
+
+    def test_add_notification_to_project_all_types(self, lagoon_client, mock_response):
+        """Test adding different notification types to a project."""
+        response = mock_response(
+            data={"addNotificationToProject": {"id": 1, "name": "test-project"}}
+        )
+        lagoon_client.session.post.return_value = response
+
+        for notification_type in ["slack", "rocketchat", "email", "microsoftteams"]:
+            lagoon_client.add_notification_to_project(
+                project="test-project",
+                notification_type=notification_type,
+                notification_name="test-notification",
+            )
+
+            call_kwargs = lagoon_client.session.post.call_args[1]
+            input_data = call_kwargs["json"]["variables"]["input"]
+            assert input_data["notificationType"] == notification_type.upper()
+
+    def test_remove_notification_from_project(self, lagoon_client, mock_response):
+        """Test removing a notification from a project."""
+        response = mock_response(
+            data={"removeNotificationFromProject": {"id": 1, "name": "test-project"}}
+        )
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.remove_notification_from_project(
+            project="test-project",
+            notification_type="slack",
+            notification_name="deploy-alerts",
+        )
+
+        assert result["id"] == 1
+        assert result["name"] == "test-project"
+
+        # Verify notification type is uppercased
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["notificationType"] == "SLACK"
+
+    def test_get_project_notifications(
+        self, lagoon_client, mock_response, sample_notification_slack, sample_notification_email
+    ):
+        """Test getting all notifications linked to a project."""
+        project_data = {
+            "id": 1,
+            "name": "test-project",
+            "notifications": [
+                {**sample_notification_slack, "__typename": "NotificationSlack"},
+                {**sample_notification_email, "__typename": "NotificationEmail"},
+            ],
+        }
+        response = mock_response(data={"projectByName": project_data})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_project_notifications("test-project")
+
+        assert len(result["slack"]) == 1
+        assert result["slack"][0]["name"] == "deploy-alerts"
+        assert len(result["email"]) == 1
+        assert result["email"][0]["name"] == "ops-team"
+        assert len(result["rocketchat"]) == 0
+        assert len(result["microsoftteams"]) == 0
+
+    def test_get_project_notifications_empty(self, lagoon_client, mock_response):
+        """Test getting notifications for project with no notifications."""
+        project_data = {
+            "id": 1,
+            "name": "test-project",
+            "notifications": [],
+        }
+        response = mock_response(data={"projectByName": project_data})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_project_notifications("test-project")
+
+        assert result["slack"] == []
+        assert result["email"] == []
+        assert result["rocketchat"] == []
+        assert result["microsoftteams"] == []
+
+    def test_get_project_notifications_project_not_found(self, lagoon_client, mock_response):
+        """Test getting notifications for nonexistent project returns empty dict."""
+        response = mock_response(data={"projectByName": None})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_project_notifications("nonexistent")
+
+        assert result == {}
+
+    def test_check_project_notification_exists_true(
+        self, lagoon_client, mock_response, sample_notification_slack
+    ):
+        """Test checking that a notification exists on a project."""
+        project_data = {
+            "id": 1,
+            "name": "test-project",
+            "notifications": [
+                {**sample_notification_slack, "__typename": "NotificationSlack"},
+            ],
+        }
+        response = mock_response(data={"projectByName": project_data})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.check_project_notification_exists(
+            project_name="test-project",
+            notification_type="slack",
+            notification_name="deploy-alerts",
+        )
+
+        assert result is True
+
+    def test_check_project_notification_exists_false(
+        self, lagoon_client, mock_response, sample_notification_slack
+    ):
+        """Test checking that a notification does not exist on a project."""
+        project_data = {
+            "id": 1,
+            "name": "test-project",
+            "notifications": [
+                {**sample_notification_slack, "__typename": "NotificationSlack"},
+            ],
+        }
+        response = mock_response(data={"projectByName": project_data})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.check_project_notification_exists(
+            project_name="test-project",
+            notification_type="slack",
+            notification_name="nonexistent",
+        )
+
+        assert result is False
+
+    def test_check_project_notification_exists_wrong_type(
+        self, lagoon_client, mock_response, sample_notification_slack
+    ):
+        """Test checking notification with wrong type returns false."""
+        project_data = {
+            "id": 1,
+            "name": "test-project",
+            "notifications": [
+                {**sample_notification_slack, "__typename": "NotificationSlack"},
+            ],
+        }
+        response = mock_response(data={"projectByName": project_data})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.check_project_notification_exists(
+            project_name="test-project",
+            notification_type="email",
+            notification_name="deploy-alerts",
+        )
+
+        assert result is False
+
+
+class TestGetAllNotifications:
+    """Tests for the _get_all_notifications internal method."""
+
+    def test_get_all_notifications_mixed_types(
+        self,
+        lagoon_client,
+        mock_response,
+        sample_notification_slack,
+        sample_notification_rocketchat,
+        sample_notification_email,
+        sample_notification_microsoftteams,
+    ):
+        """Test getting all notifications with mixed types."""
+        all_notifications = [
+            {**sample_notification_slack, "__typename": "NotificationSlack"},
+            {**sample_notification_rocketchat, "__typename": "NotificationRocketChat"},
+            {**sample_notification_email, "__typename": "NotificationEmail"},
+            {**sample_notification_microsoftteams, "__typename": "NotificationMicrosoftTeams"},
+        ]
+        response = mock_response(data={"allNotifications": all_notifications})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client._get_all_notifications()
+
+        assert len(result) == 4
+        types = [n["__typename"] for n in result]
+        assert "NotificationSlack" in types
+        assert "NotificationRocketChat" in types
+        assert "NotificationEmail" in types
+        assert "NotificationMicrosoftTeams" in types
+
+    def test_get_all_notifications_empty(self, lagoon_client, mock_response):
+        """Test getting all notifications when none exist."""
+        response = mock_response(data={"allNotifications": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client._get_all_notifications()
+
+        assert result == []
+
+    def test_get_all_notifications_none_response(self, lagoon_client, mock_response):
+        """Test getting all notifications when response is None returns empty list."""
+        response = mock_response(data={"allNotifications": None})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client._get_all_notifications()
+
+        # Client should handle None response gracefully by returning empty list
+        assert result == []
+
+
+class TestKubernetesOperations:
+    """Tests for Kubernetes deploy target CRUD operations."""
+
+    def test_add_kubernetes(self, lagoon_client, mock_response, sample_deploy_target):
+        """Test adding a Kubernetes deploy target."""
+        response = mock_response(data={"addKubernetes": sample_deploy_target})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_kubernetes(
+            name="prod-cluster",
+            console_url="https://kubernetes.example.com:6443",
+            cloud_provider="aws",
+            cloud_region="us-east-1",
+        )
+
+        assert result["id"] == 1
+        assert result["name"] == "prod-cluster"
+        assert result["consoleUrl"] == "https://kubernetes.example.com:6443"
+
+        # Verify the GraphQL mutation was called with correct input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "prod-cluster"
+        assert input_data["consoleUrl"] == "https://kubernetes.example.com:6443"
+        assert input_data["cloudProvider"] == "aws"
+        assert input_data["cloudRegion"] == "us-east-1"
+
+    def test_add_kubernetes_with_optional_params(
+        self, lagoon_client, mock_response, sample_deploy_target
+    ):
+        """Test adding a Kubernetes deploy target with optional parameters."""
+        response = mock_response(data={"addKubernetes": sample_deploy_target})
+        lagoon_client.session.post.return_value = response
+
+        lagoon_client.add_kubernetes(
+            name="prod-cluster",
+            console_url="https://kubernetes.example.com:6443",
+            cloud_provider="aws",
+            cloud_region="us-east-1",
+            sshHost="ssh.lagoon.example.com",
+            sshPort="22",
+        )
+
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["sshHost"] == "ssh.lagoon.example.com"
+        assert input_data["sshPort"] == "22"
+
+    def test_get_all_kubernetes(self, lagoon_client, mock_response, sample_deploy_target):
+        """Test getting all Kubernetes deploy targets."""
+        response = mock_response(data={"allKubernetes": [sample_deploy_target]})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_all_kubernetes()
+
+        assert len(result) == 1
+        assert result[0]["name"] == "prod-cluster"
+
+    def test_get_all_kubernetes_empty(self, lagoon_client, mock_response):
+        """Test getting all Kubernetes deploy targets when none exist."""
+        response = mock_response(data={"allKubernetes": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_all_kubernetes()
+
+        assert result == []
+
+    def test_get_kubernetes_by_id(self, lagoon_client, mock_response, sample_deploy_target):
+        """Test getting Kubernetes deploy target by ID."""
+        response = mock_response(data={"kubernetes": sample_deploy_target})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_kubernetes_by_id(1)
+
+        assert result["id"] == 1
+        assert result["name"] == "prod-cluster"
+
+    def test_get_kubernetes_by_id_not_found(self, lagoon_client, mock_response):
+        """Test getting nonexistent Kubernetes deploy target returns None."""
+        response = mock_response(data={"kubernetes": None})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_kubernetes_by_id(999)
+
+        assert result is None
+
+    def test_get_kubernetes_by_name(self, lagoon_client, mock_response, sample_deploy_target):
+        """Test getting Kubernetes deploy target by name."""
+        response = mock_response(data={"allKubernetes": [sample_deploy_target]})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_kubernetes_by_name("prod-cluster")
+
+        assert result is not None
+        assert result["name"] == "prod-cluster"
+
+    def test_get_kubernetes_by_name_not_found(self, lagoon_client, mock_response):
+        """Test getting nonexistent Kubernetes deploy target by name returns None."""
+        response = mock_response(data={"allKubernetes": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_kubernetes_by_name("nonexistent")
+
+        assert result is None
+
+    def test_update_kubernetes(self, lagoon_client, mock_response, sample_deploy_target):
+        """Test updating a Kubernetes deploy target."""
+        updated = sample_deploy_target.copy()
+        updated["cloudRegion"] = "us-west-2"
+        response = mock_response(data={"updateKubernetes": updated})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.update_kubernetes(k8s_id=1, cloudRegion="us-west-2")
+
+        assert result["cloudRegion"] == "us-west-2"
+
+        # Verify the GraphQL mutation was called with correct input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["id"] == 1
+        assert input_data["cloudRegion"] == "us-west-2"
+
+    def test_delete_kubernetes(self, lagoon_client, mock_response):
+        """Test deleting a Kubernetes deploy target."""
+        response = mock_response(data={"deleteKubernetes": "success"})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.delete_kubernetes(name="prod-cluster")
+
+        assert result == "success"
+
+        # Verify correct input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "prod-cluster"
+
+
+class TestDeployTargetConfigOperations:
+    """Tests for deploy target configuration CRUD operations."""
+
+    def test_add_deploy_target_config(self, lagoon_client, mock_response):
+        """Test adding a deploy target configuration."""
+        config_data = {
+            "id": 1,
+            "weight": 1,
+            "branches": "^main$",
+            "pullrequests": "false",
+            "deployTargetProjectPattern": None,
+            "deployTarget": {"id": 1, "name": "prod-cluster"},
+            "project": {"id": 1, "name": "test-project"},
+        }
+        response = mock_response(data={"addDeployTargetConfig": config_data})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_deploy_target_config(
+            project=1,
+            deploy_target=1,
+            branches="^main$",
+            pullrequests="false",
+            weight=1,
+        )
+
+        assert result["id"] == 1
+        assert result["branches"] == "^main$"
+        assert result["deployTargetId"] == 1
+        assert result["projectId"] == 1
+
+    def test_add_deploy_target_config_with_pattern(self, lagoon_client, mock_response):
+        """Test adding a deploy target configuration with namespace pattern."""
+        config_data = {
+            "id": 1,
+            "weight": 1,
+            "branches": "^main$",
+            "pullrequests": "false",
+            "deployTargetProjectPattern": "${project}-${environment}",
+            "deployTarget": {"id": 1, "name": "prod-cluster"},
+            "project": {"id": 1, "name": "test-project"},
+        }
+        response = mock_response(data={"addDeployTargetConfig": config_data})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_deploy_target_config(
+            project=1,
+            deploy_target=1,
+            branches="^main$",
+            deploy_target_project_pattern="${project}-${environment}",
+        )
+
+        assert result["deployTargetProjectPattern"] == "${project}-${environment}"
+
+        # Verify pattern was included in input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["deployTargetProjectPattern"] == "${project}-${environment}"
+
+    def test_get_deploy_target_configs_by_project(self, lagoon_client, mock_response):
+        """Test getting deploy target configs for a project."""
+        configs = [
+            {
+                "id": 1,
+                "weight": 1,
+                "branches": "^main$",
+                "pullrequests": "false",
+                "deployTargetProjectPattern": None,
+                "deployTarget": {"id": 1, "name": "prod-cluster"},
+                "project": {"id": 1, "name": "test-project"},
+            },
+            {
+                "id": 2,
+                "weight": 2,
+                "branches": "^develop$",
+                "pullrequests": "true",
+                "deployTargetProjectPattern": None,
+                "deployTarget": {"id": 2, "name": "dev-cluster"},
+                "project": {"id": 1, "name": "test-project"},
+            },
+        ]
+        response = mock_response(data={"deployTargetConfigsByProjectId": configs})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_deploy_target_configs_by_project(project=1)
+
+        assert len(result) == 2
+        assert result[0]["deployTargetId"] == 1
+        assert result[1]["deployTargetId"] == 2
+
+    def test_get_deploy_target_configs_empty(self, lagoon_client, mock_response):
+        """Test getting deploy target configs when none exist."""
+        response = mock_response(data={"deployTargetConfigsByProjectId": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_deploy_target_configs_by_project(project=1)
+
+        assert result == []
+
+    def test_get_deploy_target_config_by_id(self, lagoon_client, mock_response):
+        """Test getting a specific deploy target config by ID."""
+        configs = [
+            {
+                "id": 1,
+                "weight": 1,
+                "branches": "^main$",
+                "pullrequests": "false",
+                "deployTargetProjectPattern": None,
+                "deployTarget": {"id": 1, "name": "prod-cluster"},
+                "project": {"id": 1, "name": "test-project"},
+            },
+        ]
+        response = mock_response(data={"deployTargetConfigsByProjectId": configs})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_deploy_target_config_by_id(config_id=1, project=1)
+
+        assert result is not None
+        assert result["id"] == 1
+
+    def test_get_deploy_target_config_by_id_not_found(self, lagoon_client, mock_response):
+        """Test getting nonexistent deploy target config returns None."""
+        response = mock_response(data={"deployTargetConfigsByProjectId": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_deploy_target_config_by_id(config_id=999, project=1)
+
+        assert result is None
+
+    def test_update_deploy_target_config(self, lagoon_client, mock_response):
+        """Test updating a deploy target configuration."""
+        updated_config = {
+            "id": 1,
+            "weight": 5,
+            "branches": "^(main|develop)$",
+            "pullrequests": "true",
+            "deployTargetProjectPattern": None,
+            "deployTarget": {"id": 1, "name": "prod-cluster"},
+            "project": {"id": 1, "name": "test-project"},
+        }
+        response = mock_response(data={"updateDeployTargetConfig": updated_config})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.update_deploy_target_config(
+            config_id=1,
+            branches="^(main|develop)$",
+            weight=5,
+        )
+
+        assert result["branches"] == "^(main|develop)$"
+        assert result["weight"] == 5
+        assert result["deployTargetId"] == 1
+
+    def test_delete_deploy_target_config(self, lagoon_client, mock_response):
+        """Test deleting a deploy target configuration."""
+        response = mock_response(data={"deleteDeployTargetConfig": "success"})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.delete_deploy_target_config(config_id=1, project=1)
+
+        assert result == "success"
+
+        # Verify correct input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["id"] == 1
+        assert input_data["project"] == 1

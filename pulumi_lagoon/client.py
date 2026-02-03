@@ -898,3 +898,942 @@ class LagoonClient:
 
         result = self._execute(mutation, {"input": input_data})
         return result.get("deleteDeployTargetConfig", "")
+
+    # Notification operations - Slack
+
+    def add_notification_slack(self, name: str, webhook: str, channel: str) -> Dict[str, Any]:
+        """
+        Add a Slack notification.
+
+        Args:
+            name: Notification name
+            webhook: Slack webhook URL
+            channel: Slack channel (e.g., "#alerts")
+
+        Returns:
+            Notification data
+        """
+        mutation = """
+        mutation AddNotificationSlack($input: AddNotificationSlackInput!) {
+            addNotificationSlack(input: $input) {
+                id
+                name
+                webhook
+                channel
+            }
+        }
+        """
+
+        input_data = {"name": name, "webhook": webhook, "channel": channel}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addNotificationSlack", {})
+
+    def _get_all_notifications(self) -> list:
+        """
+        Get all notifications of all types.
+
+        Returns:
+            List of notification data with __typename
+        """
+        query = """
+        query AllNotifications {
+            allNotifications {
+                __typename
+                ... on NotificationSlack {
+                    id
+                    name
+                    webhook
+                    channel
+                }
+                ... on NotificationRocketChat {
+                    id
+                    name
+                    webhook
+                    channel
+                }
+                ... on NotificationEmail {
+                    id
+                    name
+                    emailAddress
+                }
+                ... on NotificationMicrosoftTeams {
+                    id
+                    name
+                    webhook
+                }
+            }
+        }
+        """
+
+        result = self._execute(query)
+        return result.get("allNotifications") or []
+
+    def get_all_notification_slack(self) -> list:
+        """
+        Get all Slack notifications.
+
+        Returns:
+            List of Slack notification data
+        """
+        all_notifications = self._get_all_notifications()
+        return [n for n in all_notifications if n.get("__typename") == "NotificationSlack"]
+
+    def get_notification_slack_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get Slack notification by name.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Notification data or None if not found
+        """
+        all_notifications = self.get_all_notification_slack()
+
+        for notification in all_notifications:
+            if notification.get("name") == name:
+                return notification
+
+        return None
+
+    def update_notification_slack(self, name: str, **kwargs) -> Dict[str, Any]:
+        """
+        Update a Slack notification.
+
+        Args:
+            name: Notification name (used to identify the notification)
+            **kwargs: Properties to update (webhook, channel)
+
+        Returns:
+            Updated notification data
+        """
+        mutation = """
+        mutation UpdateNotificationSlack($input: UpdateNotificationSlackInput!) {
+            updateNotificationSlack(input: $input) {
+                id
+                name
+                webhook
+                channel
+            }
+        }
+        """
+
+        # Lagoon API uses patch format: {name: "...", patch: {field: value}}
+        input_data = {"name": name, "patch": kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("updateNotificationSlack", {})
+
+    def delete_notification_slack(self, name: str) -> str:
+        """
+        Delete a Slack notification.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteNotificationSlack($input: DeleteNotificationSlackInput!) {
+            deleteNotificationSlack(input: $input)
+        }
+        """
+
+        input_data = {"name": name}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteNotificationSlack", "")
+
+    # Notification operations - RocketChat
+
+    def add_notification_rocketchat(self, name: str, webhook: str, channel: str) -> Dict[str, Any]:
+        """
+        Add a RocketChat notification.
+
+        Args:
+            name: Notification name
+            webhook: RocketChat webhook URL
+            channel: RocketChat channel (e.g., "#alerts")
+
+        Returns:
+            Notification data
+        """
+        mutation = """
+        mutation AddNotificationRocketChat($input: AddNotificationRocketChatInput!) {
+            addNotificationRocketChat(input: $input) {
+                id
+                name
+                webhook
+                channel
+            }
+        }
+        """
+
+        input_data = {"name": name, "webhook": webhook, "channel": channel}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addNotificationRocketChat", {})
+
+    def get_all_notification_rocketchat(self) -> list:
+        """
+        Get all RocketChat notifications.
+
+        Returns:
+            List of RocketChat notification data
+        """
+        all_notifications = self._get_all_notifications()
+        return [n for n in all_notifications if n.get("__typename") == "NotificationRocketChat"]
+
+    def get_notification_rocketchat_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get RocketChat notification by name.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Notification data or None if not found
+        """
+        all_notifications = self.get_all_notification_rocketchat()
+
+        for notification in all_notifications:
+            if notification.get("name") == name:
+                return notification
+
+        return None
+
+    def update_notification_rocketchat(self, name: str, **kwargs) -> Dict[str, Any]:
+        """
+        Update a RocketChat notification.
+
+        Args:
+            name: Notification name (used to identify the notification)
+            **kwargs: Properties to update (webhook, channel)
+
+        Returns:
+            Updated notification data
+        """
+        mutation = """
+        mutation UpdateNotificationRocketChat($input: UpdateNotificationRocketChatInput!) {
+            updateNotificationRocketChat(input: $input) {
+                id
+                name
+                webhook
+                channel
+            }
+        }
+        """
+
+        # Lagoon API uses patch format: {name: "...", patch: {field: value}}
+        input_data = {"name": name, "patch": kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("updateNotificationRocketChat", {})
+
+    def delete_notification_rocketchat(self, name: str) -> str:
+        """
+        Delete a RocketChat notification.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteNotificationRocketChat($input: DeleteNotificationRocketChatInput!) {
+            deleteNotificationRocketChat(input: $input)
+        }
+        """
+
+        input_data = {"name": name}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteNotificationRocketChat", "")
+
+    # Notification operations - Email
+
+    def add_notification_email(self, name: str, email_address: str) -> Dict[str, Any]:
+        """
+        Add an Email notification.
+
+        Args:
+            name: Notification name
+            email_address: Email address to send notifications to
+
+        Returns:
+            Notification data
+        """
+        mutation = """
+        mutation AddNotificationEmail($input: AddNotificationEmailInput!) {
+            addNotificationEmail(input: $input) {
+                id
+                name
+                emailAddress
+            }
+        }
+        """
+
+        input_data = {"name": name, "emailAddress": email_address}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addNotificationEmail", {})
+
+    def get_all_notification_email(self) -> list:
+        """
+        Get all Email notifications.
+
+        Returns:
+            List of Email notification data
+        """
+        all_notifications = self._get_all_notifications()
+        return [n for n in all_notifications if n.get("__typename") == "NotificationEmail"]
+
+    def get_notification_email_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get Email notification by name.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Notification data or None if not found
+        """
+        all_notifications = self.get_all_notification_email()
+
+        for notification in all_notifications:
+            if notification.get("name") == name:
+                return notification
+
+        return None
+
+    def update_notification_email(self, name: str, **kwargs) -> Dict[str, Any]:
+        """
+        Update an Email notification.
+
+        Args:
+            name: Notification name (used to identify the notification)
+            **kwargs: Properties to update (emailAddress)
+
+        Returns:
+            Updated notification data
+        """
+        mutation = """
+        mutation UpdateNotificationEmail($input: UpdateNotificationEmailInput!) {
+            updateNotificationEmail(input: $input) {
+                id
+                name
+                emailAddress
+            }
+        }
+        """
+
+        # Lagoon API uses patch format: {name: "...", patch: {field: value}}
+        input_data = {"name": name, "patch": kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("updateNotificationEmail", {})
+
+    def delete_notification_email(self, name: str) -> str:
+        """
+        Delete an Email notification.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteNotificationEmail($input: DeleteNotificationEmailInput!) {
+            deleteNotificationEmail(input: $input)
+        }
+        """
+
+        input_data = {"name": name}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteNotificationEmail", "")
+
+    # Notification operations - Microsoft Teams
+
+    def add_notification_microsoftteams(self, name: str, webhook: str) -> Dict[str, Any]:
+        """
+        Add a Microsoft Teams notification.
+
+        Args:
+            name: Notification name
+            webhook: Microsoft Teams webhook URL
+
+        Returns:
+            Notification data
+        """
+        mutation = """
+        mutation AddNotificationMicrosoftTeams($input: AddNotificationMicrosoftTeamsInput!) {
+            addNotificationMicrosoftTeams(input: $input) {
+                id
+                name
+                webhook
+            }
+        }
+        """
+
+        input_data = {"name": name, "webhook": webhook}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addNotificationMicrosoftTeams", {})
+
+    def get_all_notification_microsoftteams(self) -> list:
+        """
+        Get all Microsoft Teams notifications.
+
+        Returns:
+            List of Microsoft Teams notification data
+        """
+        all_notifications = self._get_all_notifications()
+        return [n for n in all_notifications if n.get("__typename") == "NotificationMicrosoftTeams"]
+
+    def get_notification_microsoftteams_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get Microsoft Teams notification by name.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Notification data or None if not found
+        """
+        all_notifications = self.get_all_notification_microsoftteams()
+
+        for notification in all_notifications:
+            if notification.get("name") == name:
+                return notification
+
+        return None
+
+    def update_notification_microsoftteams(self, name: str, **kwargs) -> Dict[str, Any]:
+        """
+        Update a Microsoft Teams notification.
+
+        Args:
+            name: Notification name (used to identify the notification)
+            **kwargs: Properties to update (webhook)
+
+        Returns:
+            Updated notification data
+        """
+        mutation = """
+        mutation UpdateNotificationMicrosoftTeams($input: UpdateNotificationMicrosoftTeamsInput!) {
+            updateNotificationMicrosoftTeams(input: $input) {
+                id
+                name
+                webhook
+            }
+        }
+        """
+
+        # Lagoon API uses patch format: {name: "...", patch: {field: value}}
+        input_data = {"name": name, "patch": kwargs}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("updateNotificationMicrosoftTeams", {})
+
+    def delete_notification_microsoftteams(self, name: str) -> str:
+        """
+        Delete a Microsoft Teams notification.
+
+        Args:
+            name: Notification name
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteNotificationMicrosoftTeams($input: DeleteNotificationMicrosoftTeamsInput!) {
+            deleteNotificationMicrosoftTeams(input: $input)
+        }
+        """
+
+        input_data = {"name": name}
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("deleteNotificationMicrosoftTeams", "")
+
+    # Project notification association operations
+
+    def add_notification_to_project(
+        self, project: str, notification_type: str, notification_name: str
+    ) -> Dict[str, Any]:
+        """
+        Add a notification to a project.
+
+        Args:
+            project: Project name
+            notification_type: Type of notification (slack, rocketchat, email, microsoftteams)
+            notification_name: Name of the notification to add
+
+        Returns:
+            Project data with notifications
+        """
+        mutation = """
+        mutation AddNotificationToProject($input: AddNotificationToProjectInput!) {
+            addNotificationToProject(input: $input) {
+                id
+                name
+            }
+        }
+        """
+
+        input_data = {
+            "project": project,
+            "notificationType": notification_type.upper(),
+            "notificationName": notification_name,
+        }
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("addNotificationToProject", {})
+
+    def remove_notification_from_project(
+        self, project: str, notification_type: str, notification_name: str
+    ) -> Dict[str, Any]:
+        """
+        Remove a notification from a project.
+
+        Args:
+            project: Project name
+            notification_type: Type of notification (slack, rocketchat, email, microsoftteams)
+            notification_name: Name of the notification to remove
+
+        Returns:
+            Project data
+        """
+        mutation = """
+        mutation RemoveNotificationFromProject($input: RemoveNotificationFromProjectInput!) {
+            removeNotificationFromProject(input: $input) {
+                id
+                name
+            }
+        }
+        """
+
+        input_data = {
+            "project": project,
+            "notificationType": notification_type.upper(),
+            "notificationName": notification_name,
+        }
+
+        result = self._execute(mutation, {"input": input_data})
+        return result.get("removeNotificationFromProject", {})
+
+    def get_project_notifications(self, project_name: str) -> Dict[str, Any]:
+        """
+        Get all notifications linked to a project.
+
+        Args:
+            project_name: Project name
+
+        Returns:
+            Dict with notification lists by type
+        """
+        query = """
+        query ProjectByName($name: String!) {
+            projectByName(name: $name) {
+                id
+                name
+                notifications {
+                    ... on NotificationSlack {
+                        __typename
+                        id
+                        name
+                        webhook
+                        channel
+                    }
+                    ... on NotificationRocketChat {
+                        __typename
+                        id
+                        name
+                        webhook
+                        channel
+                    }
+                    ... on NotificationEmail {
+                        __typename
+                        id
+                        name
+                        emailAddress
+                    }
+                    ... on NotificationMicrosoftTeams {
+                        __typename
+                        id
+                        name
+                        webhook
+                    }
+                }
+            }
+        }
+        """
+
+        result = self._execute(query, {"name": project_name})
+        project = result.get("projectByName")
+
+        if not project:
+            return {}
+
+        # Organize notifications by type
+        notifications = {
+            "slack": [],
+            "rocketchat": [],
+            "email": [],
+            "microsoftteams": [],
+        }
+
+        for notification in project.get("notifications", []):
+            typename = notification.get("__typename", "")
+            if typename == "NotificationSlack":
+                notifications["slack"].append(notification)
+            elif typename == "NotificationRocketChat":
+                notifications["rocketchat"].append(notification)
+            elif typename == "NotificationEmail":
+                notifications["email"].append(notification)
+            elif typename == "NotificationMicrosoftTeams":
+                notifications["microsoftteams"].append(notification)
+
+        return notifications
+
+    def check_project_notification_exists(
+        self, project_name: str, notification_type: str, notification_name: str
+    ) -> bool:
+        """
+        Check if a specific notification is linked to a project.
+
+        Args:
+            project_name: Project name
+            notification_type: Type of notification (slack, rocketchat, email, microsoftteams)
+            notification_name: Name of the notification
+
+        Returns:
+            True if the notification is linked to the project
+        """
+        notifications = self.get_project_notifications(project_name)
+        type_notifications = notifications.get(notification_type.lower(), [])
+
+        for notification in type_notifications:
+            if notification.get("name") == notification_name:
+                return True
+
+        return False
+
+    # Advanced Task Definition operations
+    def add_advanced_task_definition(
+        self,
+        name: str,
+        task_type: str,
+        service: str,
+        command: Optional[str] = None,
+        image: Optional[str] = None,
+        project_id: Optional[int] = None,
+        environment_id: Optional[int] = None,
+        group_name: Optional[str] = None,
+        system_wide: Optional[bool] = None,
+        description: Optional[str] = None,
+        permission: Optional[str] = None,
+        confirmation_text: Optional[str] = None,
+        arguments: Optional[list] = None,
+    ) -> Dict[str, Any]:
+        """
+        Add an advanced task definition.
+
+        Args:
+            name: Task definition name
+            task_type: Task type ("COMMAND" or "IMAGE")
+            service: Service container name to run in
+            command: Command to execute (required for COMMAND type)
+            image: Container image (required for IMAGE type)
+            project_id: Project ID (for project-scoped tasks)
+            environment_id: Environment ID (for environment-scoped tasks)
+            group_name: Group name (for group-scoped tasks)
+            system_wide: If True, task is available system-wide (platform admin only)
+            description: Task description
+            permission: Permission level ("GUEST", "DEVELOPER", "MAINTAINER")
+            confirmation_text: Text to display for user confirmation
+            arguments: List of argument definitions [{name, displayName, type}]
+
+        Returns:
+            Task definition data
+        """
+        # Use inline fragments for union type response
+        mutation = """
+        mutation AddAdvancedTaskDefinition($input: AddAdvancedTaskDefinitionInput!) {
+            addAdvancedTaskDefinition(input: $input) {
+                ... on AdvancedTaskDefinitionCommand {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    command
+                    permission
+                    confirmationText
+                    advancedTaskDefinitionArguments {
+                        id
+                        name
+                        displayName
+                        type
+                    }
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                    created
+                }
+                ... on AdvancedTaskDefinitionImage {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    image
+                    permission
+                    confirmationText
+                    advancedTaskDefinitionArguments {
+                        id
+                        name
+                        displayName
+                        type
+                    }
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                    created
+                }
+            }
+        }
+        """
+
+        input_data: Dict[str, Any] = {
+            "name": name,
+            "type": task_type.upper(),
+            "service": service,
+        }
+
+        # Add command or image based on type
+        if command:
+            input_data["command"] = command
+        if image:
+            input_data["image"] = image
+
+        # Add scope (exactly one should be set)
+        if project_id is not None:
+            input_data["project"] = project_id
+        if environment_id is not None:
+            input_data["environment"] = environment_id
+        if group_name is not None:
+            input_data["groupName"] = group_name
+        if system_wide is True:
+            input_data["systemWide"] = True
+
+        # Add optional fields
+        if description:
+            input_data["description"] = description
+        if permission:
+            input_data["permission"] = permission.upper()
+        if confirmation_text:
+            input_data["confirmationText"] = confirmation_text
+        if arguments:
+            # Convert to API format
+            input_data["advancedTaskDefinitionArguments"] = [
+                {
+                    "name": arg.get("name"),
+                    "displayName": arg.get("display_name") or arg.get("displayName"),
+                    "type": arg.get("type", "STRING").upper(),
+                }
+                for arg in arguments
+            ]
+
+        result = self._execute(mutation, {"input": input_data})
+        task = result.get("addAdvancedTaskDefinition", {})
+
+        # Normalize nested objects
+        if task.get("project") and isinstance(task["project"], dict):
+            task["projectId"] = task["project"].get("id")
+        if task.get("environment") and isinstance(task["environment"], dict):
+            task["environmentId"] = task["environment"].get("id")
+
+        return task
+
+    def get_advanced_task_definition_by_id(self, task_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get an advanced task definition by ID.
+
+        Args:
+            task_id: Task definition ID
+
+        Returns:
+            Task definition data or None if not found
+        """
+        query = """
+        query AdvancedTaskDefinitionById($id: Int!) {
+            advancedTaskDefinitionById(id: $id) {
+                ... on AdvancedTaskDefinitionCommand {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    command
+                    permission
+                    confirmationText
+                    advancedTaskDefinitionArguments {
+                        id
+                        name
+                        displayName
+                        type
+                    }
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                    created
+                }
+                ... on AdvancedTaskDefinitionImage {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    image
+                    permission
+                    confirmationText
+                    advancedTaskDefinitionArguments {
+                        id
+                        name
+                        displayName
+                        type
+                    }
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                    created
+                }
+            }
+        }
+        """
+
+        result = self._execute(query, {"id": task_id})
+        task = result.get("advancedTaskDefinitionById")
+
+        if task:
+            # Normalize nested objects
+            if task.get("project") and isinstance(task["project"], dict):
+                task["projectId"] = task["project"].get("id")
+            if task.get("environment") and isinstance(task["environment"], dict):
+                task["environmentId"] = task["environment"].get("id")
+
+        return task
+
+    def delete_advanced_task_definition(self, task_id: int) -> str:
+        """
+        Delete an advanced task definition.
+
+        Args:
+            task_id: Task definition ID
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteAdvancedTaskDefinition($id: Int!) {
+            deleteAdvancedTaskDefinition(id: $id)
+        }
+        """
+
+        result = self._execute(mutation, {"id": task_id})
+        return result.get("deleteAdvancedTaskDefinition", "")
+
+    def get_advanced_tasks_by_environment(self, environment_id: int) -> list:
+        """
+        Get all advanced task definitions available for an environment.
+
+        Args:
+            environment_id: Environment ID
+
+        Returns:
+            List of task definition data
+        """
+        query = """
+        query AdvancedTasksByEnvironment($environment: Int!) {
+            advancedTasksByEnvironment(environment: $environment) {
+                ... on AdvancedTaskDefinitionCommand {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    command
+                    permission
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                }
+                ... on AdvancedTaskDefinitionImage {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    image
+                    permission
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                }
+            }
+        }
+        """
+
+        result = self._execute(query, {"environment": environment_id})
+        tasks = result.get("advancedTasksByEnvironment", [])
+
+        # Normalize nested objects for each task
+        for task in tasks:
+            if task.get("project") and isinstance(task["project"], dict):
+                task["projectId"] = task["project"].get("id")
+            if task.get("environment") and isinstance(task["environment"], dict):
+                task["environmentId"] = task["environment"].get("id")
+
+        return tasks

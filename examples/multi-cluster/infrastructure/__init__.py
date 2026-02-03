@@ -7,10 +7,10 @@ This module provides functions for installing common infrastructure components:
 - CoreDNS configuration for local domain resolution
 """
 
-from .ingress import install_ingress_nginx
-from .certmanager import install_cert_manager, create_cluster_issuer
 from .certificates import create_wildcard_certificate
-from .coredns import setup_coredns_for_lagoon, get_kind_node_internal_ip, patch_coredns_for_lagoon
+from .certmanager import create_cluster_issuer, install_cert_manager
+from .coredns import get_kind_node_internal_ip, patch_coredns_for_lagoon, setup_coredns_for_lagoon
+from .ingress import install_ingress_nginx
 
 __all__ = [
     "install_ingress_nginx",

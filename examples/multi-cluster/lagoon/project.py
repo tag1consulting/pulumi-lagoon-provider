@@ -6,13 +6,13 @@ This module demonstrates how to:
 3. Route production branches to prod cluster and dev branches to nonprod cluster
 """
 
-from typing import Optional
 from dataclasses import dataclass
+from typing import Optional
 
 import pulumi
-import pulumi_lagoon as lagoon
-
 from config import DomainConfig
+
+import pulumi_lagoon as lagoon
 
 
 @dataclass

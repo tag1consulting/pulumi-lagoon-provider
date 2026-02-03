@@ -12,8 +12,6 @@ lagoon-build-deploy enabled, otherwise the controller will fail to start.
 """
 
 from typing import Optional
-import tempfile
-import os
 
 import pulumi
 import pulumi_kubernetes as k8s

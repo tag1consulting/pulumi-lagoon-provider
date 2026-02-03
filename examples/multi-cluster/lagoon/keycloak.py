@@ -225,7 +225,11 @@ echo "lagoonadmin user: configured"
                             name="configure-keycloak",
                             # Use alpine with curl and jq installed
                             image="alpine:3.19",
-                            command=["/bin/sh", "-c", "apk add --no-cache curl jq && /bin/sh /scripts/configure-keycloak.sh"],
+                            command=[
+                                "/bin/sh",
+                                "-c",
+                                "apk add --no-cache curl jq && /bin/sh /scripts/configure-keycloak.sh",
+                            ],
                             env=[
                                 k8s.core.v1.EnvVarArgs(
                                     name="KEYCLOAK_SERVICE",

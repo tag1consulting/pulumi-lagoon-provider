@@ -25,37 +25,31 @@ Configuration:
 
 import pulumi
 import pulumi_kubernetes as k8s
-from pulumi_command import local as command
-
+from clusters import create_k8s_provider, create_kind_cluster
 from config import (
     config,
-    DEFAULT_CLUSTERS,
-    DomainConfig,
-    NamespaceConfig,
 )
-from clusters import create_kind_cluster, create_k8s_provider
 from infrastructure import (
-    install_ingress_nginx,
-    install_cert_manager,
     create_cluster_issuer,
     create_wildcard_certificate,
-    setup_coredns_for_lagoon,
     get_kind_node_internal_ip,
+    install_cert_manager,
+    install_ingress_nginx,
     patch_coredns_for_lagoon,
+    setup_coredns_for_lagoon,
 )
-from registry import install_harbor
 from lagoon import (
-    generate_lagoon_secrets,
-    install_lagoon_core,
-    install_lagoon_remote,
-    install_lagoon_build_deploy_crds,
-    create_rabbitmq_nodeport_service,
     configure_keycloak_for_cli_auth,
     create_deploy_targets,
     create_example_drupal_project,
+    create_rabbitmq_nodeport_service,
     ensure_knex_migrations,
+    generate_lagoon_secrets,
+    install_lagoon_build_deploy_crds,
+    install_lagoon_core,
+    install_lagoon_remote,
 )
-
+from registry import install_harbor
 
 # =============================================================================
 # Configuration
@@ -399,7 +393,12 @@ if lagoon_core is not None and lagoon_secrets is not None:
             namespace_config=namespace_config,
             external_rabbitmq_host=external_rabbitmq_host,
             opts=pulumi.ResourceOptions(
-                depends_on=[lagoon_core.release, nonprod_ingress.service, nonprod_coredns, nonprod_lagoon_crds],
+                depends_on=[
+                    lagoon_core.release,
+                    nonprod_ingress.service,
+                    nonprod_coredns,
+                    nonprod_lagoon_crds,
+                ],
             ),
         )
 
@@ -485,17 +484,23 @@ if lagoon_core is not None and config.create_example_project:
 # Summary Exports
 # =============================================================================
 
-pulumi.export("domain_config", {
-    "base": domain_config.base,
-    "api": domain_config.lagoon_api,
-    "ui": domain_config.lagoon_ui,
-    "keycloak": domain_config.lagoon_keycloak,
-    "harbor": domain_config.harbor,
-})
+pulumi.export(
+    "domain_config",
+    {
+        "base": domain_config.base,
+        "api": domain_config.lagoon_api,
+        "ui": domain_config.lagoon_ui,
+        "keycloak": domain_config.lagoon_keycloak,
+        "harbor": domain_config.harbor,
+    },
+)
 
-pulumi.export("installation_summary", {
-    "clusters_created": create_clusters,
-    "harbor_installed": install_harbor_registry and prod_harbor is not None,
-    "lagoon_installed": install_lagoon_components and lagoon_core is not None,
-    "example_project_created": config.create_example_project and example_project is not None,
-})
+pulumi.export(
+    "installation_summary",
+    {
+        "clusters_created": create_clusters,
+        "harbor_installed": install_harbor_registry and prod_harbor is not None,
+        "lagoon_installed": install_lagoon_components and lagoon_core is not None,
+        "example_project_created": config.create_example_project and example_project is not None,
+    },
+)

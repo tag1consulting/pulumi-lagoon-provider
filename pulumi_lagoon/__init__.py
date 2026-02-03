@@ -1,6 +1,6 @@
 """Pulumi Lagoon Provider - Manage Lagoon resources as infrastructure-as-code."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # Configuration
 # Client (for advanced use cases)
@@ -22,8 +22,22 @@ from .exceptions import (
 # Import utilities
 from .import_utils import ImportIdParser
 
+# Notification resources
+from .notification_email import LagoonNotificationEmail, LagoonNotificationEmailArgs
+from .notification_microsoftteams import (
+    LagoonNotificationMicrosoftTeams,
+    LagoonNotificationMicrosoftTeamsArgs,
+)
+from .notification_rocketchat import (
+    LagoonNotificationRocketChat,
+    LagoonNotificationRocketChatArgs,
+)
+from .notification_slack import LagoonNotificationSlack, LagoonNotificationSlackArgs
+
 # Resources
 from .project import LagoonProject, LagoonProjectArgs
+from .project_notification import LagoonProjectNotification, LagoonProjectNotificationArgs
+from .task import LagoonTask, LagoonTaskArgs
 from .variable import LagoonVariable, LagoonVariableArgs
 
 __all__ = [
@@ -36,10 +50,23 @@ __all__ = [
     "LagoonEnvironmentArgs",
     "LagoonVariable",
     "LagoonVariableArgs",
+    "LagoonTask",
+    "LagoonTaskArgs",
     "LagoonDeployTarget",
     "LagoonDeployTargetArgs",
     "LagoonDeployTargetConfig",
     "LagoonDeployTargetConfigArgs",
+    # Notification resources
+    "LagoonNotificationSlack",
+    "LagoonNotificationSlackArgs",
+    "LagoonNotificationRocketChat",
+    "LagoonNotificationRocketChatArgs",
+    "LagoonNotificationEmail",
+    "LagoonNotificationEmailArgs",
+    "LagoonNotificationMicrosoftTeams",
+    "LagoonNotificationMicrosoftTeamsArgs",
+    "LagoonProjectNotification",
+    "LagoonProjectNotificationArgs",
     # Client
     "LagoonClient",
     # Import utilities

@@ -56,6 +56,52 @@ SAMPLE_DEPLOY_TARGET = {
     "created": "2024-01-01T00:00:00Z",
 }
 
+# Notification sample data
+SAMPLE_NOTIFICATION_SLACK = {
+    "id": 1,
+    "name": "deploy-alerts",
+    "webhook": "https://hooks.slack.com/services/xxx/yyy/zzz",
+    "channel": "#deployments",
+}
+
+SAMPLE_NOTIFICATION_ROCKETCHAT = {
+    "id": 2,
+    "name": "team-chat",
+    "webhook": "https://rocketchat.example.com/hooks/xxx/yyy",
+    "channel": "#alerts",
+}
+
+SAMPLE_NOTIFICATION_EMAIL = {
+    "id": 3,
+    "name": "ops-team",
+    "emailAddress": "ops@example.com",
+}
+
+SAMPLE_NOTIFICATION_MICROSOFTTEAMS = {
+    "id": 4,
+    "name": "teams-alerts",
+    "webhook": "https://outlook.office.com/webhook/xxx/yyy/zzz",
+}
+
+SAMPLE_TASK = {
+    "id": 1,
+    "name": "run-yarn-audit",
+    "description": "Run yarn audit to check for vulnerabilities",
+    "type": "COMMAND",
+    "service": "node",
+    "command": "yarn audit",
+    "image": None,
+    "permission": "DEVELOPER",
+    "confirmationText": None,
+    "advancedTaskDefinitionArguments": None,
+    "project": {"id": 1, "name": "test-project"},
+    "projectId": 1,
+    "environment": None,
+    "environmentId": None,
+    "groupName": None,
+    "created": "2024-01-01T00:00:00Z",
+}
+
 
 @pytest.fixture
 def mock_session():
@@ -134,6 +180,36 @@ def sample_variable():
 def sample_deploy_target():
     """Return sample deploy target data."""
     return SAMPLE_DEPLOY_TARGET.copy()
+
+
+@pytest.fixture
+def sample_notification_slack():
+    """Return sample Slack notification data."""
+    return SAMPLE_NOTIFICATION_SLACK.copy()
+
+
+@pytest.fixture
+def sample_notification_rocketchat():
+    """Return sample RocketChat notification data."""
+    return SAMPLE_NOTIFICATION_ROCKETCHAT.copy()
+
+
+@pytest.fixture
+def sample_notification_email():
+    """Return sample Email notification data."""
+    return SAMPLE_NOTIFICATION_EMAIL.copy()
+
+
+@pytest.fixture
+def sample_notification_microsoftteams():
+    """Return sample Microsoft Teams notification data."""
+    return SAMPLE_NOTIFICATION_MICROSOFTTEAMS.copy()
+
+
+@pytest.fixture
+def sample_task():
+    """Return sample task data."""
+    return SAMPLE_TASK.copy()
 
 
 @pytest.fixture

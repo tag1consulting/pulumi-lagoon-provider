@@ -31,10 +31,18 @@ This provider enables you to manage Lagoon hosting platform resources (projects,
 - `LagoonDeployTarget` - Manage Kubernetes cluster deploy targets
 - `LagoonDeployTargetConfig` - Configure project deployment routing to specific clusters based on branch patterns
 
+### Notification Resources (Complete)
+- `LagoonNotificationSlack` - Manage Slack notifications
+- `LagoonNotificationRocketChat` - Manage RocketChat notifications
+- `LagoonNotificationEmail` - Manage Email notifications
+- `LagoonNotificationMicrosoftTeams` - Manage Microsoft Teams notifications
+- `LagoonProjectNotification` - Link notifications to projects
+
+### Task Resources (Complete)
+- `LagoonTask` - Manage advanced task definitions (on-demand commands and container-based tasks)
+
 ### Planned
 - `LagoonGroup` - Manage user groups and permissions
-- `LagoonNotification` - Manage notification integrations
-- `LagoonTask` - Manage tasks and backups
 
 ## Quick Start - Complete Test Environment
 
@@ -141,6 +149,25 @@ db_config = lagoon.LagoonVariable("database-host",
     scope="runtime",
 )
 
+# Create a Slack notification
+slack_alerts = lagoon.LagoonNotificationSlack("deploy-alerts",
+    lagoon.LagoonNotificationSlackArgs(
+        name="deploy-alerts",
+        webhook="https://hooks.slack.com/services/xxx/yyy/zzz",
+        channel="#deployments",
+    )
+)
+
+# Link the notification to the project
+project_notification = lagoon.LagoonProjectNotification("project-slack",
+    lagoon.LagoonProjectNotificationArgs(
+        project_name=project.name,
+        notification_type="slack",
+        notification_name=slack_alerts.name,
+    ),
+    opts=pulumi.ResourceOptions(depends_on=[project, slack_alerts])
+)
+
 # Export project details
 pulumi.export("project_id", project.id)
 pulumi.export("production_url", prod_env.route)
@@ -192,6 +219,12 @@ You can import existing Lagoon resources into Pulumi state using `pulumi import`
 | `LagoonVariable` | `{project_id}:{env_id}:{var_name}` | `pulumi import lagoon:index:Variable my-var 123:456:DATABASE_HOST` |
 | `LagoonVariable` (project-level) | `{project_id}::{var_name}` | `pulumi import lagoon:index:Variable my-var 123::API_KEY` |
 | `LagoonDeployTargetConfig` | `{project_id}:{config_id}` | `pulumi import lagoon:index:DeployTargetConfig my-config 123:5` |
+| `LagoonNotificationSlack` | `{name}` | `pulumi import lagoon:index:NotificationSlack my-slack deploy-alerts` |
+| `LagoonNotificationRocketChat` | `{name}` | `pulumi import lagoon:index:NotificationRocketChat my-rc team-chat` |
+| `LagoonNotificationEmail` | `{name}` | `pulumi import lagoon:index:NotificationEmail my-email ops-team` |
+| `LagoonNotificationMicrosoftTeams` | `{name}` | `pulumi import lagoon:index:NotificationMicrosoftTeams my-teams teams-alerts` |
+| `LagoonProjectNotification` | `{project}:{type}:{name}` | `pulumi import lagoon:index:ProjectNotification my-assoc my-project:slack:deploy-alerts` |
+| `LagoonTask` | `{numeric_id}` | `pulumi import lagoon:index:Task my-task 123` |
 
 ### Finding Resource IDs
 
@@ -225,6 +258,15 @@ pulumi import lagoon:index:Variable db-host 123:456:DATABASE_HOST
 
 # Import a deploy target config
 pulumi import lagoon:index:DeployTargetConfig routing-config 123:5
+
+# Import a Slack notification
+pulumi import lagoon:index:NotificationSlack my-slack deploy-alerts
+
+# Import a project notification association
+pulumi import lagoon:index:ProjectNotification my-assoc my-project:slack:deploy-alerts
+
+# Import an advanced task definition
+pulumi import lagoon:index:Task yarn-audit 456
 ```
 
 After importing, you'll need to add the corresponding resource definition to your Pulumi code.
@@ -323,8 +365,14 @@ pulumi-lagoon-provider/
 │   ├── project.py          # LagoonProject resource
 │   ├── environment.py      # LagoonEnvironment resource
 │   ├── variable.py         # LagoonVariable resource
+│   ├── task.py             # LagoonTask resource
 │   ├── deploytarget.py     # LagoonDeployTarget resource
-│   └── deploytarget_config.py  # LagoonDeployTargetConfig resource
+│   ├── deploytarget_config.py  # LagoonDeployTargetConfig resource
+│   ├── notification_slack.py   # LagoonNotificationSlack resource
+│   ├── notification_rocketchat.py  # LagoonNotificationRocketChat resource
+│   ├── notification_email.py   # LagoonNotificationEmail resource
+│   ├── notification_microsoftteams.py  # LagoonNotificationMicrosoftTeams resource
+│   └── project_notification.py # LagoonProjectNotification resource
 ├── examples/
 │   ├── simple-project/     # API usage example (assumes Lagoon exists)
 │   │   ├── __main__.py     # Creates projects/environments/variables
@@ -382,7 +430,9 @@ For detailed architecture information, see `memory-bank/architecture.md`.
 
 ### Phase 3: Production Ready (Current)
 - [x] PyPI package publishing
-- [ ] Additional resources (Group, Notification)
+- [x] Notification resources (Slack, RocketChat, Email, Microsoft Teams)
+- [x] Project notification associations
+- [ ] Additional resources (Group)
 - [ ] Advanced examples
 - [ ] Community feedback integration
 

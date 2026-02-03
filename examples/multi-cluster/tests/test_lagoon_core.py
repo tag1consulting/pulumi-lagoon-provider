@@ -1,14 +1,12 @@
 """Unit tests for Lagoon core configuration."""
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from config import DomainConfig, NamespaceConfig, LagoonSecretsOutputs
-from unittest.mock import MagicMock, patch
 
 
 class TestCORSConfiguration:
@@ -123,25 +121,25 @@ class TestServiceNaming:
         """Test API service name follows Helm chart pattern."""
         release_name = "prod-core"
 
-        # Pattern: {release_name}-lagoon-core-api
-        api_service = f"{release_name}-lagoon-core-api"
-        assert api_service == "prod-core-lagoon-core-api"
+        # Pattern: {release_name}-api
+        api_service = f"{release_name}-api"
+        assert api_service == "prod-core-api"
 
     def test_broker_service_name(self):
         """Test RabbitMQ broker service name follows Helm chart pattern."""
         release_name = "prod-core"
 
-        # Pattern: {release_name}-lagoon-core-broker
-        broker_service = f"{release_name}-lagoon-core-broker"
-        assert broker_service == "prod-core-lagoon-core-broker"
+        # Pattern: {release_name}-broker
+        broker_service = f"{release_name}-broker"
+        assert broker_service == "prod-core-broker"
 
     def test_ssh_service_name(self):
         """Test SSH service name follows Helm chart pattern."""
         release_name = "prod-core"
 
-        # Pattern: {release_name}-lagoon-core-ssh
-        ssh_service = f"{release_name}-lagoon-core-ssh"
-        assert ssh_service == "prod-core-lagoon-core-ssh"
+        # Pattern: {release_name}-ssh
+        ssh_service = f"{release_name}-ssh"
+        assert ssh_service == "prod-core-ssh"
 
 
 class TestRabbitMQNodePortConfiguration:
@@ -164,13 +162,14 @@ class TestRabbitMQNodePortConfiguration:
         release_name = "prod-core"
 
         # Selector labels should match broker pods
+        # Pattern: {release_name}-broker
         selector = {
-            "app.kubernetes.io/component": f"{release_name}-lagoon-core-broker",
+            "app.kubernetes.io/component": f"{release_name}-broker",
             "app.kubernetes.io/instance": release_name,
             "app.kubernetes.io/name": "lagoon-core",
         }
 
-        assert "lagoon-core-broker" in selector["app.kubernetes.io/component"]
+        assert "broker" in selector["app.kubernetes.io/component"]
         assert selector["app.kubernetes.io/instance"] == release_name
 
 

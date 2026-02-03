@@ -12,9 +12,8 @@ from typing import Optional
 
 import pulumi
 import pulumi_kubernetes as k8s
-from pulumi_command import local as command
-
 from config import DomainConfig
+from pulumi_command import local as command
 
 
 def get_kind_container_id(

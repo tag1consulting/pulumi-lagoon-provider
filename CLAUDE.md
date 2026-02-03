@@ -58,7 +58,12 @@ pulumi-lagoon-provider/
 │   ├── project.py          # LagoonProject resource
 │   ├── environment.py      # LagoonEnvironment resource
 │   ├── variable.py         # LagoonVariable resource
-│   └── deploytarget.py     # LagoonDeployTarget resource
+│   ├── deploytarget.py     # LagoonDeployTarget resource
+│   ├── notification_slack.py   # LagoonNotificationSlack resource
+│   ├── notification_rocketchat.py  # LagoonNotificationRocketChat resource
+│   ├── notification_email.py   # LagoonNotificationEmail resource
+│   ├── notification_microsoftteams.py  # LagoonNotificationMicrosoftTeams resource
+│   └── project_notification.py # LagoonProjectNotification resource
 │
 ├── scripts/                 # SHARED operational scripts
 │   ├── common.sh           # Common functions and configuration
@@ -151,6 +156,46 @@ Manages environment or project-level variables.
 - `value`: Variable value
 - `scope`: build, runtime, or global
 
+### Notification Resources
+
+#### LagoonNotificationSlack
+Manages Slack notification configurations.
+
+**Properties:**
+- `name`: Notification name
+- `webhook`: Slack webhook URL
+- `channel`: Slack channel (e.g., '#deployments')
+
+#### LagoonNotificationRocketChat
+Manages RocketChat notification configurations.
+
+**Properties:**
+- `name`: Notification name
+- `webhook`: RocketChat webhook URL
+- `channel`: RocketChat channel
+
+#### LagoonNotificationEmail
+Manages Email notification configurations.
+
+**Properties:**
+- `name`: Notification name
+- `email_address`: Email address to send notifications to
+
+#### LagoonNotificationMicrosoftTeams
+Manages Microsoft Teams notification configurations.
+
+**Properties:**
+- `name`: Notification name
+- `webhook`: Microsoft Teams webhook URL
+
+#### LagoonProjectNotification
+Links a notification to a project.
+
+**Properties:**
+- `project_name`: Project name
+- `notification_type`: Type of notification (slack, rocketchat, email, microsoftteams)
+- `notification_name`: Name of the notification to link
+
 ## Lagoon API Integration
 
 ### GraphQL API
@@ -225,8 +270,10 @@ export LAGOON_TOKEN=<your-token>
 - [x] Comprehensive documentation
 - [x] Published to PyPI
 
-### Long-term (Phase 3)
-- [ ] Additional resources (Groups, Notifications, Tasks)
+### Long-term (Phase 3) - In Progress
+- [x] Notification resources (Slack, RocketChat, Email, Microsoft Teams)
+- [x] Project notification associations
+- [ ] Additional resources (Groups, Tasks)
 - [ ] Native Go provider
 - [ ] Multi-language SDK generation
 - [ ] Community adoption

@@ -1,13 +1,13 @@
 """Setup script for pulumi-lagoon-provider."""
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
-with open("README.md", "r", encoding="utf-8") as fh:
+with open("README.md", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
     name="pulumi-lagoon",
-    version="0.1.0",
+    version="0.1.1",
     author="Greg Chaix",
     author_email="greg@tag1consulting.com",
     description="A Pulumi dynamic provider for managing Lagoon resources",

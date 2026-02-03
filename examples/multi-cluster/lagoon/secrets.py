@@ -7,11 +7,9 @@ and other secrets required by Lagoon components.
 from typing import Optional
 
 import pulumi
-from pulumi_command import local
+from config import LagoonSecretsOutputs
 from pulumi_random import RandomPassword
 from pulumi_tls import PrivateKey
-
-from config import LagoonSecretsOutputs
 
 
 def generate_lagoon_secrets(
@@ -97,8 +95,8 @@ def create_ssh_key_secret(
     Returns:
         Kubernetes Secret resource
     """
+
     import pulumi_kubernetes as k8s
-    import base64
 
     # Create secret with SSH keys
     return k8s.core.v1.Secret(
