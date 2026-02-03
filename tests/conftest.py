@@ -83,6 +83,25 @@ SAMPLE_NOTIFICATION_MICROSOFTTEAMS = {
     "webhook": "https://outlook.office.com/webhook/xxx/yyy/zzz",
 }
 
+SAMPLE_TASK = {
+    "id": 1,
+    "name": "run-yarn-audit",
+    "description": "Run yarn audit to check for vulnerabilities",
+    "type": "COMMAND",
+    "service": "node",
+    "command": "yarn audit",
+    "image": None,
+    "permission": "DEVELOPER",
+    "confirmationText": None,
+    "advancedTaskDefinitionArguments": None,
+    "project": {"id": 1, "name": "test-project"},
+    "projectId": 1,
+    "environment": None,
+    "environmentId": None,
+    "groupName": None,
+    "created": "2024-01-01T00:00:00Z",
+}
+
 
 @pytest.fixture
 def mock_session():
@@ -185,6 +204,12 @@ def sample_notification_email():
 def sample_notification_microsoftteams():
     """Return sample Microsoft Teams notification data."""
     return SAMPLE_NOTIFICATION_MICROSOFTTEAMS.copy()
+
+
+@pytest.fixture
+def sample_task():
+    """Return sample task data."""
+    return SAMPLE_TASK.copy()
 
 
 @pytest.fixture

@@ -37,6 +37,7 @@ from .notification_slack import LagoonNotificationSlack, LagoonNotificationSlack
 # Resources
 from .project import LagoonProject, LagoonProjectArgs
 from .project_notification import LagoonProjectNotification, LagoonProjectNotificationArgs
+from .task import LagoonTask, LagoonTaskArgs
 from .variable import LagoonVariable, LagoonVariableArgs
 
 __all__ = [
@@ -49,6 +50,8 @@ __all__ = [
     "LagoonEnvironmentArgs",
     "LagoonVariable",
     "LagoonVariableArgs",
+    "LagoonTask",
+    "LagoonTaskArgs",
     "LagoonDeployTarget",
     "LagoonDeployTargetArgs",
     "LagoonDeployTargetConfig",

@@ -1523,3 +1523,317 @@ class LagoonClient:
                 return True
 
         return False
+
+    # Advanced Task Definition operations
+    def add_advanced_task_definition(
+        self,
+        name: str,
+        task_type: str,
+        service: str,
+        command: Optional[str] = None,
+        image: Optional[str] = None,
+        project_id: Optional[int] = None,
+        environment_id: Optional[int] = None,
+        group_name: Optional[str] = None,
+        system_wide: Optional[bool] = None,
+        description: Optional[str] = None,
+        permission: Optional[str] = None,
+        confirmation_text: Optional[str] = None,
+        arguments: Optional[list] = None,
+    ) -> Dict[str, Any]:
+        """
+        Add an advanced task definition.
+
+        Args:
+            name: Task definition name
+            task_type: Task type ("COMMAND" or "IMAGE")
+            service: Service container name to run in
+            command: Command to execute (required for COMMAND type)
+            image: Container image (required for IMAGE type)
+            project_id: Project ID (for project-scoped tasks)
+            environment_id: Environment ID (for environment-scoped tasks)
+            group_name: Group name (for group-scoped tasks)
+            system_wide: If True, task is available system-wide (platform admin only)
+            description: Task description
+            permission: Permission level ("GUEST", "DEVELOPER", "MAINTAINER")
+            confirmation_text: Text to display for user confirmation
+            arguments: List of argument definitions [{name, displayName, type}]
+
+        Returns:
+            Task definition data
+        """
+        # Use inline fragments for union type response
+        mutation = """
+        mutation AddAdvancedTaskDefinition($input: AddAdvancedTaskDefinitionInput!) {
+            addAdvancedTaskDefinition(input: $input) {
+                ... on AdvancedTaskDefinitionCommand {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    command
+                    permission
+                    confirmationText
+                    advancedTaskDefinitionArguments {
+                        id
+                        name
+                        displayName
+                        type
+                    }
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                    created
+                }
+                ... on AdvancedTaskDefinitionImage {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    image
+                    permission
+                    confirmationText
+                    advancedTaskDefinitionArguments {
+                        id
+                        name
+                        displayName
+                        type
+                    }
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                    created
+                }
+            }
+        }
+        """
+
+        input_data: Dict[str, Any] = {
+            "name": name,
+            "type": task_type.upper(),
+            "service": service,
+        }
+
+        # Add command or image based on type
+        if command:
+            input_data["command"] = command
+        if image:
+            input_data["image"] = image
+
+        # Add scope (exactly one should be set)
+        if project_id is not None:
+            input_data["project"] = project_id
+        if environment_id is not None:
+            input_data["environment"] = environment_id
+        if group_name is not None:
+            input_data["groupName"] = group_name
+        if system_wide is True:
+            input_data["systemWide"] = True
+
+        # Add optional fields
+        if description:
+            input_data["description"] = description
+        if permission:
+            input_data["permission"] = permission.upper()
+        if confirmation_text:
+            input_data["confirmationText"] = confirmation_text
+        if arguments:
+            # Convert to API format
+            input_data["advancedTaskDefinitionArguments"] = [
+                {
+                    "name": arg.get("name"),
+                    "displayName": arg.get("display_name") or arg.get("displayName"),
+                    "type": arg.get("type", "STRING").upper(),
+                }
+                for arg in arguments
+            ]
+
+        result = self._execute(mutation, {"input": input_data})
+        task = result.get("addAdvancedTaskDefinition", {})
+
+        # Normalize nested objects
+        if task.get("project") and isinstance(task["project"], dict):
+            task["projectId"] = task["project"].get("id")
+        if task.get("environment") and isinstance(task["environment"], dict):
+            task["environmentId"] = task["environment"].get("id")
+
+        return task
+
+    def get_advanced_task_definition_by_id(self, task_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get an advanced task definition by ID.
+
+        Args:
+            task_id: Task definition ID
+
+        Returns:
+            Task definition data or None if not found
+        """
+        query = """
+        query AdvancedTaskDefinitionById($id: Int!) {
+            advancedTaskDefinitionById(id: $id) {
+                ... on AdvancedTaskDefinitionCommand {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    command
+                    permission
+                    confirmationText
+                    advancedTaskDefinitionArguments {
+                        id
+                        name
+                        displayName
+                        type
+                    }
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                    created
+                }
+                ... on AdvancedTaskDefinitionImage {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    image
+                    permission
+                    confirmationText
+                    advancedTaskDefinitionArguments {
+                        id
+                        name
+                        displayName
+                        type
+                    }
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                    created
+                }
+            }
+        }
+        """
+
+        result = self._execute(query, {"id": task_id})
+        task = result.get("advancedTaskDefinitionById")
+
+        if task:
+            # Normalize nested objects
+            if task.get("project") and isinstance(task["project"], dict):
+                task["projectId"] = task["project"].get("id")
+            if task.get("environment") and isinstance(task["environment"], dict):
+                task["environmentId"] = task["environment"].get("id")
+
+        return task
+
+    def delete_advanced_task_definition(self, task_id: int) -> str:
+        """
+        Delete an advanced task definition.
+
+        Args:
+            task_id: Task definition ID
+
+        Returns:
+            Success message
+        """
+        mutation = """
+        mutation DeleteAdvancedTaskDefinition($id: Int!) {
+            deleteAdvancedTaskDefinition(id: $id)
+        }
+        """
+
+        result = self._execute(mutation, {"id": task_id})
+        return result.get("deleteAdvancedTaskDefinition", "")
+
+    def get_advanced_tasks_by_environment(self, environment_id: int) -> list:
+        """
+        Get all advanced task definitions available for an environment.
+
+        Args:
+            environment_id: Environment ID
+
+        Returns:
+            List of task definition data
+        """
+        query = """
+        query AdvancedTasksByEnvironment($environment: Int!) {
+            advancedTasksByEnvironment(environment: $environment) {
+                ... on AdvancedTaskDefinitionCommand {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    command
+                    permission
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                }
+                ... on AdvancedTaskDefinitionImage {
+                    id
+                    name
+                    description
+                    type
+                    service
+                    image
+                    permission
+                    project {
+                        id
+                        name
+                    }
+                    environment {
+                        id
+                        name
+                    }
+                    groupName
+                }
+            }
+        }
+        """
+
+        result = self._execute(query, {"environment": environment_id})
+        tasks = result.get("advancedTasksByEnvironment", [])
+
+        # Normalize nested objects for each task
+        for task in tasks:
+            if task.get("project") and isinstance(task["project"], dict):
+                task["projectId"] = task["project"].get("id")
+            if task.get("environment") and isinstance(task["environment"], dict):
+                task["environmentId"] = task["environment"].get("id")
+
+        return tasks

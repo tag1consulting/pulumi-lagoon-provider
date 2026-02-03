@@ -15,6 +15,7 @@ Import ID Formats:
     - LagoonNotificationEmail: {name}
     - LagoonNotificationMicrosoftTeams: {name}
     - LagoonProjectNotification: {project_name}:{notification_type}:{notification_name}
+    - LagoonTask: {numeric_id}
 """
 
 from typing import List, Optional, Tuple
@@ -311,3 +312,39 @@ class ImportIdParser:
             )
 
         return project_name, notification_type_lower, notification_name
+
+    @staticmethod
+    def parse_task_id(import_id: str) -> int:
+        """Parse a task import ID.
+
+        Format: {numeric_id}
+        Example: "123" -> 123
+
+        Args:
+            import_id: The import ID (numeric task ID as string)
+
+        Returns:
+            The task ID as integer
+
+        Raises:
+            LagoonValidationError: If the format is invalid
+        """
+        if not import_id:
+            raise LagoonValidationError(
+                "Invalid task import ID: empty string. "
+                "Expected format: numeric task ID (e.g., '123')"
+            )
+
+        try:
+            task_id = int(import_id)
+        except ValueError:
+            raise LagoonValidationError(
+                f"Invalid task import ID: '{import_id}'. Task ID must be a number."
+            )
+
+        if task_id <= 0:
+            raise LagoonValidationError(
+                f"Invalid task import ID: '{import_id}'. Task ID must be positive, got {task_id}."
+            )
+
+        return task_id
