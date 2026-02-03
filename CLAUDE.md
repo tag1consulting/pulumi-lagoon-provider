@@ -198,6 +198,24 @@ Links a notification to a project.
 - `notification_type`: Type of notification (slack, rocketchat, email, microsoftteams)
 - `notification_name`: Name of the notification to link
 
+### LagoonTask
+Manages advanced task definitions (on-demand commands and container-based tasks).
+
+**Properties:**
+- `name`: Task definition name
+- `type`: Task type (`command` or `image`)
+- `service`: Service container name to run the task in
+- `command`: Command to execute (required if type='command')
+- `image`: Container image to run (required if type='image')
+- `project_id`: Project ID (for project-scoped tasks)
+- `environment_id`: Environment ID (for environment-scoped tasks)
+- `group_name`: Group name (for group-scoped tasks)
+- `system_wide`: If true, task is available system-wide (platform admin only)
+- `permission`: Permission level (`guest`, `developer`, `maintainer`)
+- `description`: Task description (optional)
+- `confirmation_text`: Text to display for user confirmation (optional)
+- `arguments`: List of argument definitions (optional)
+
 ## Lagoon API Integration
 
 ### GraphQL API

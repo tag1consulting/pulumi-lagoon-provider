@@ -76,7 +76,7 @@ make example-up
 - Python virtual environment with provider installed
 - Example project ready to deploy
 
-**Total setup time: ~15-20 minutes**
+**Setup time:** ~5 minutes for single-cluster, ~15-20 minutes for multi-cluster with full Lagoon stack
 
 ## Installation
 
@@ -380,6 +380,7 @@ pulumi-lagoon-provider/
 │   ├── config.py           # Provider configuration
 │   ├── exceptions.py       # Custom exceptions
 │   ├── validators.py       # Input validation
+│   ├── import_utils.py     # Import ID parsing utilities
 │   ├── project.py          # LagoonProject resource
 │   ├── environment.py      # LagoonEnvironment resource
 │   ├── variable.py         # LagoonVariable resource
@@ -461,7 +462,7 @@ For detailed architecture information, see `memory-bank/architecture.md`.
 
 ## Contributing
 
-This project is in early development. Contributions, feedback, and bug reports are welcome!
+This project is in active development. Contributions, feedback, and bug reports are welcome!
 
 1. Fork the repository
 2. Create a feature branch
@@ -483,7 +484,7 @@ Apache License 2.0 - See [LICENSE](LICENSE) for details.
 
 For issues and questions:
 - GitHub Issues: [Create an issue](https://github.com/tag1consulting/pulumi-lagoon-provider/issues)
-- Lagoon Community: [Slack](https://amazeeio.rocket.chat/)
+- Lagoon Community: [RocketChat](https://amazeeio.rocket.chat/)
 
 ## Acknowledgments
 
