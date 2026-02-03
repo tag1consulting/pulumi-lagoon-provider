@@ -967,7 +967,7 @@ class LagoonClient:
         """
 
         result = self._execute(query)
-        return result.get("allNotifications", [])
+        return result.get("allNotifications") or []
 
     def get_all_notification_slack(self) -> list:
         """
