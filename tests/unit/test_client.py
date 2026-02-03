@@ -999,3 +999,308 @@ class TestGetAllNotifications:
 
         # Client should handle None response gracefully by returning empty list
         assert result == []
+
+
+class TestKubernetesOperations:
+    """Tests for Kubernetes deploy target CRUD operations."""
+
+    def test_add_kubernetes(self, lagoon_client, mock_response, sample_deploy_target):
+        """Test adding a Kubernetes deploy target."""
+        response = mock_response(data={"addKubernetes": sample_deploy_target})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_kubernetes(
+            name="prod-cluster",
+            console_url="https://kubernetes.example.com:6443",
+            cloud_provider="aws",
+            cloud_region="us-east-1",
+        )
+
+        assert result["id"] == 1
+        assert result["name"] == "prod-cluster"
+        assert result["consoleUrl"] == "https://kubernetes.example.com:6443"
+
+        # Verify the GraphQL mutation was called with correct input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "prod-cluster"
+        assert input_data["consoleUrl"] == "https://kubernetes.example.com:6443"
+        assert input_data["cloudProvider"] == "aws"
+        assert input_data["cloudRegion"] == "us-east-1"
+
+    def test_add_kubernetes_with_optional_params(
+        self, lagoon_client, mock_response, sample_deploy_target
+    ):
+        """Test adding a Kubernetes deploy target with optional parameters."""
+        response = mock_response(data={"addKubernetes": sample_deploy_target})
+        lagoon_client.session.post.return_value = response
+
+        lagoon_client.add_kubernetes(
+            name="prod-cluster",
+            console_url="https://kubernetes.example.com:6443",
+            cloud_provider="aws",
+            cloud_region="us-east-1",
+            sshHost="ssh.lagoon.example.com",
+            sshPort="22",
+        )
+
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["sshHost"] == "ssh.lagoon.example.com"
+        assert input_data["sshPort"] == "22"
+
+    def test_get_all_kubernetes(self, lagoon_client, mock_response, sample_deploy_target):
+        """Test getting all Kubernetes deploy targets."""
+        response = mock_response(data={"allKubernetes": [sample_deploy_target]})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_all_kubernetes()
+
+        assert len(result) == 1
+        assert result[0]["name"] == "prod-cluster"
+
+    def test_get_all_kubernetes_empty(self, lagoon_client, mock_response):
+        """Test getting all Kubernetes deploy targets when none exist."""
+        response = mock_response(data={"allKubernetes": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_all_kubernetes()
+
+        assert result == []
+
+    def test_get_kubernetes_by_id(self, lagoon_client, mock_response, sample_deploy_target):
+        """Test getting Kubernetes deploy target by ID."""
+        response = mock_response(data={"kubernetes": sample_deploy_target})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_kubernetes_by_id(1)
+
+        assert result["id"] == 1
+        assert result["name"] == "prod-cluster"
+
+    def test_get_kubernetes_by_id_not_found(self, lagoon_client, mock_response):
+        """Test getting nonexistent Kubernetes deploy target returns None."""
+        response = mock_response(data={"kubernetes": None})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_kubernetes_by_id(999)
+
+        assert result is None
+
+    def test_get_kubernetes_by_name(self, lagoon_client, mock_response, sample_deploy_target):
+        """Test getting Kubernetes deploy target by name."""
+        response = mock_response(data={"allKubernetes": [sample_deploy_target]})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_kubernetes_by_name("prod-cluster")
+
+        assert result is not None
+        assert result["name"] == "prod-cluster"
+
+    def test_get_kubernetes_by_name_not_found(self, lagoon_client, mock_response):
+        """Test getting nonexistent Kubernetes deploy target by name returns None."""
+        response = mock_response(data={"allKubernetes": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_kubernetes_by_name("nonexistent")
+
+        assert result is None
+
+    def test_update_kubernetes(self, lagoon_client, mock_response, sample_deploy_target):
+        """Test updating a Kubernetes deploy target."""
+        updated = sample_deploy_target.copy()
+        updated["cloudRegion"] = "us-west-2"
+        response = mock_response(data={"updateKubernetes": updated})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.update_kubernetes(k8s_id=1, cloudRegion="us-west-2")
+
+        assert result["cloudRegion"] == "us-west-2"
+
+        # Verify the GraphQL mutation was called with correct input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["id"] == 1
+        assert input_data["cloudRegion"] == "us-west-2"
+
+    def test_delete_kubernetes(self, lagoon_client, mock_response):
+        """Test deleting a Kubernetes deploy target."""
+        response = mock_response(data={"deleteKubernetes": "success"})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.delete_kubernetes(name="prod-cluster")
+
+        assert result == "success"
+
+        # Verify correct input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["name"] == "prod-cluster"
+
+
+class TestDeployTargetConfigOperations:
+    """Tests for deploy target configuration CRUD operations."""
+
+    def test_add_deploy_target_config(self, lagoon_client, mock_response):
+        """Test adding a deploy target configuration."""
+        config_data = {
+            "id": 1,
+            "weight": 1,
+            "branches": "^main$",
+            "pullrequests": "false",
+            "deployTargetProjectPattern": None,
+            "deployTarget": {"id": 1, "name": "prod-cluster"},
+            "project": {"id": 1, "name": "test-project"},
+        }
+        response = mock_response(data={"addDeployTargetConfig": config_data})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_deploy_target_config(
+            project=1,
+            deploy_target=1,
+            branches="^main$",
+            pullrequests="false",
+            weight=1,
+        )
+
+        assert result["id"] == 1
+        assert result["branches"] == "^main$"
+        assert result["deployTargetId"] == 1
+        assert result["projectId"] == 1
+
+    def test_add_deploy_target_config_with_pattern(self, lagoon_client, mock_response):
+        """Test adding a deploy target configuration with namespace pattern."""
+        config_data = {
+            "id": 1,
+            "weight": 1,
+            "branches": "^main$",
+            "pullrequests": "false",
+            "deployTargetProjectPattern": "${project}-${environment}",
+            "deployTarget": {"id": 1, "name": "prod-cluster"},
+            "project": {"id": 1, "name": "test-project"},
+        }
+        response = mock_response(data={"addDeployTargetConfig": config_data})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.add_deploy_target_config(
+            project=1,
+            deploy_target=1,
+            branches="^main$",
+            deploy_target_project_pattern="${project}-${environment}",
+        )
+
+        assert result["deployTargetProjectPattern"] == "${project}-${environment}"
+
+        # Verify pattern was included in input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["deployTargetProjectPattern"] == "${project}-${environment}"
+
+    def test_get_deploy_target_configs_by_project(self, lagoon_client, mock_response):
+        """Test getting deploy target configs for a project."""
+        configs = [
+            {
+                "id": 1,
+                "weight": 1,
+                "branches": "^main$",
+                "pullrequests": "false",
+                "deployTargetProjectPattern": None,
+                "deployTarget": {"id": 1, "name": "prod-cluster"},
+                "project": {"id": 1, "name": "test-project"},
+            },
+            {
+                "id": 2,
+                "weight": 2,
+                "branches": "^develop$",
+                "pullrequests": "true",
+                "deployTargetProjectPattern": None,
+                "deployTarget": {"id": 2, "name": "dev-cluster"},
+                "project": {"id": 1, "name": "test-project"},
+            },
+        ]
+        response = mock_response(data={"deployTargetConfigsByProjectId": configs})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_deploy_target_configs_by_project(project=1)
+
+        assert len(result) == 2
+        assert result[0]["deployTargetId"] == 1
+        assert result[1]["deployTargetId"] == 2
+
+    def test_get_deploy_target_configs_empty(self, lagoon_client, mock_response):
+        """Test getting deploy target configs when none exist."""
+        response = mock_response(data={"deployTargetConfigsByProjectId": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_deploy_target_configs_by_project(project=1)
+
+        assert result == []
+
+    def test_get_deploy_target_config_by_id(self, lagoon_client, mock_response):
+        """Test getting a specific deploy target config by ID."""
+        configs = [
+            {
+                "id": 1,
+                "weight": 1,
+                "branches": "^main$",
+                "pullrequests": "false",
+                "deployTargetProjectPattern": None,
+                "deployTarget": {"id": 1, "name": "prod-cluster"},
+                "project": {"id": 1, "name": "test-project"},
+            },
+        ]
+        response = mock_response(data={"deployTargetConfigsByProjectId": configs})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_deploy_target_config_by_id(config_id=1, project=1)
+
+        assert result is not None
+        assert result["id"] == 1
+
+    def test_get_deploy_target_config_by_id_not_found(self, lagoon_client, mock_response):
+        """Test getting nonexistent deploy target config returns None."""
+        response = mock_response(data={"deployTargetConfigsByProjectId": []})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.get_deploy_target_config_by_id(config_id=999, project=1)
+
+        assert result is None
+
+    def test_update_deploy_target_config(self, lagoon_client, mock_response):
+        """Test updating a deploy target configuration."""
+        updated_config = {
+            "id": 1,
+            "weight": 5,
+            "branches": "^(main|develop)$",
+            "pullrequests": "true",
+            "deployTargetProjectPattern": None,
+            "deployTarget": {"id": 1, "name": "prod-cluster"},
+            "project": {"id": 1, "name": "test-project"},
+        }
+        response = mock_response(data={"updateDeployTargetConfig": updated_config})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.update_deploy_target_config(
+            config_id=1,
+            branches="^(main|develop)$",
+            weight=5,
+        )
+
+        assert result["branches"] == "^(main|develop)$"
+        assert result["weight"] == 5
+        assert result["deployTargetId"] == 1
+
+    def test_delete_deploy_target_config(self, lagoon_client, mock_response):
+        """Test deleting a deploy target configuration."""
+        response = mock_response(data={"deleteDeployTargetConfig": "success"})
+        lagoon_client.session.post.return_value = response
+
+        result = lagoon_client.delete_deploy_target_config(config_id=1, project=1)
+
+        assert result == "success"
+
+        # Verify correct input
+        call_kwargs = lagoon_client.session.post.call_args[1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["id"] == 1
+        assert input_data["project"] == 1
