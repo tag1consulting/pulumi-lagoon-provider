@@ -360,9 +360,7 @@ class TestVariableOperations:
 class TestNotificationSlackOperations:
     """Tests for Slack notification CRUD operations."""
 
-    def test_add_notification_slack(
-        self, lagoon_client, mock_response, sample_notification_slack
-    ):
+    def test_add_notification_slack(self, lagoon_client, mock_response, sample_notification_slack):
         """Test adding a Slack notification."""
         response = mock_response(data={"addNotificationSlack": sample_notification_slack})
         lagoon_client.session.post.return_value = response
@@ -391,7 +389,12 @@ class TestNotificationSlackOperations:
         """Test getting all Slack notifications."""
         all_notifications = [
             {**sample_notification_slack, "__typename": "NotificationSlack"},
-            {"__typename": "NotificationEmail", "id": 2, "name": "email-alert", "emailAddress": "test@example.com"},
+            {
+                "__typename": "NotificationEmail",
+                "id": 2,
+                "name": "email-alert",
+                "emailAddress": "test@example.com",
+            },
         ]
         response = mock_response(data={"allNotifications": all_notifications})
         lagoon_client.session.post.return_value = response
@@ -490,7 +493,13 @@ class TestNotificationRocketChatOperations:
         """Test getting all RocketChat notifications."""
         all_notifications = [
             {**sample_notification_rocketchat, "__typename": "NotificationRocketChat"},
-            {"__typename": "NotificationSlack", "id": 1, "name": "slack-alert", "webhook": "https://slack.com", "channel": "#test"},
+            {
+                "__typename": "NotificationSlack",
+                "id": 1,
+                "name": "slack-alert",
+                "webhook": "https://slack.com",
+                "channel": "#test",
+            },
         ]
         response = mock_response(data={"allNotifications": all_notifications})
         lagoon_client.session.post.return_value = response
@@ -560,9 +569,7 @@ class TestNotificationRocketChatOperations:
 class TestNotificationEmailOperations:
     """Tests for Email notification CRUD operations."""
 
-    def test_add_notification_email(
-        self, lagoon_client, mock_response, sample_notification_email
-    ):
+    def test_add_notification_email(self, lagoon_client, mock_response, sample_notification_email):
         """Test adding an Email notification."""
         response = mock_response(data={"addNotificationEmail": sample_notification_email})
         lagoon_client.session.post.return_value = response
@@ -588,7 +595,13 @@ class TestNotificationEmailOperations:
         """Test getting all Email notifications."""
         all_notifications = [
             {**sample_notification_email, "__typename": "NotificationEmail"},
-            {"__typename": "NotificationSlack", "id": 1, "name": "slack-alert", "webhook": "https://slack.com", "channel": "#test"},
+            {
+                "__typename": "NotificationSlack",
+                "id": 1,
+                "name": "slack-alert",
+                "webhook": "https://slack.com",
+                "channel": "#test",
+            },
         ]
         response = mock_response(data={"allNotifications": all_notifications})
         lagoon_client.session.post.return_value = response
@@ -662,7 +675,9 @@ class TestNotificationMicrosoftTeamsOperations:
         self, lagoon_client, mock_response, sample_notification_microsoftteams
     ):
         """Test adding a Microsoft Teams notification."""
-        response = mock_response(data={"addNotificationMicrosoftTeams": sample_notification_microsoftteams})
+        response = mock_response(
+            data={"addNotificationMicrosoftTeams": sample_notification_microsoftteams}
+        )
         lagoon_client.session.post.return_value = response
 
         result = lagoon_client.add_notification_microsoftteams(
@@ -680,7 +695,13 @@ class TestNotificationMicrosoftTeamsOperations:
         """Test getting all Microsoft Teams notifications."""
         all_notifications = [
             {**sample_notification_microsoftteams, "__typename": "NotificationMicrosoftTeams"},
-            {"__typename": "NotificationSlack", "id": 1, "name": "slack-alert", "webhook": "https://slack.com", "channel": "#test"},
+            {
+                "__typename": "NotificationSlack",
+                "id": 1,
+                "name": "slack-alert",
+                "webhook": "https://slack.com",
+                "channel": "#test",
+            },
         ]
         response = mock_response(data={"allNotifications": all_notifications})
         lagoon_client.session.post.return_value = response
@@ -752,7 +773,9 @@ class TestProjectNotificationOperations:
 
     def test_add_notification_to_project(self, lagoon_client, mock_response, sample_project):
         """Test adding a notification to a project."""
-        response = mock_response(data={"addNotificationToProject": {"id": 1, "name": "test-project"}})
+        response = mock_response(
+            data={"addNotificationToProject": {"id": 1, "name": "test-project"}}
+        )
         lagoon_client.session.post.return_value = response
 
         result = lagoon_client.add_notification_to_project(
@@ -773,7 +796,9 @@ class TestProjectNotificationOperations:
 
     def test_add_notification_to_project_all_types(self, lagoon_client, mock_response):
         """Test adding different notification types to a project."""
-        response = mock_response(data={"addNotificationToProject": {"id": 1, "name": "test-project"}})
+        response = mock_response(
+            data={"addNotificationToProject": {"id": 1, "name": "test-project"}}
+        )
         lagoon_client.session.post.return_value = response
 
         for notification_type in ["slack", "rocketchat", "email", "microsoftteams"]:
@@ -789,7 +814,9 @@ class TestProjectNotificationOperations:
 
     def test_remove_notification_from_project(self, lagoon_client, mock_response):
         """Test removing a notification from a project."""
-        response = mock_response(data={"removeNotificationFromProject": {"id": 1, "name": "test-project"}})
+        response = mock_response(
+            data={"removeNotificationFromProject": {"id": 1, "name": "test-project"}}
+        )
         lagoon_client.session.post.return_value = response
 
         result = lagoon_client.remove_notification_from_project(
