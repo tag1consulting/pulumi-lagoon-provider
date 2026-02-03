@@ -827,23 +827,28 @@ class TestLagoonTaskClientMethods:
         assert result == "success"
 
     def test_get_advanced_tasks_by_environment(self, lagoon_client, mock_response):
-        """Test getting tasks for an environment."""
+        """Test getting tasks for an environment.
+
+        Note: The implementation now uses advancedTasksForEnvironment for v2.30.0+
+        with fallback to advancedTasksByEnvironment. The new API returns
+        project/environment as Int IDs instead of objects.
+        """
         response = mock_response(
             data={
-                "advancedTasksByEnvironment": [
+                "advancedTasksForEnvironment": [
                     {
                         "id": 1,
                         "name": "task1",
                         "type": "COMMAND",
                         "service": "node",
-                        "project": {"id": 1, "name": "test"},
+                        "project": 1,  # Int ID in new API
                     },
                     {
                         "id": 2,
                         "name": "task2",
                         "type": "IMAGE",
                         "service": "cli",
-                        "project": {"id": 1, "name": "test"},
+                        "project": 1,  # Int ID in new API
                     },
                 ]
             }
@@ -855,3 +860,5 @@ class TestLagoonTaskClientMethods:
         assert len(result) == 2
         assert result[0]["name"] == "task1"
         assert result[1]["name"] == "task2"
+        # Verify projectId normalization works with Int IDs
+        assert result[0]["projectId"] == 1

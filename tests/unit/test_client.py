@@ -267,7 +267,9 @@ class TestVariableOperations:
     mock both the allProjects query and the actual mutation.
     """
 
-    def test_add_project_variable(self, lagoon_client, mock_response, sample_variable, sample_project):
+    def test_add_project_variable(
+        self, lagoon_client, mock_response, sample_variable, sample_project
+    ):
         """Test adding a project-level variable."""
         # Mock responses for: 1) allProjects (to get project name), 2) mutation
         project_response = mock_response(data={"allProjects": [sample_project]})
@@ -280,7 +282,9 @@ class TestVariableOperations:
 
         assert result["name"] == "DATABASE_HOST"
 
-    def test_add_environment_variable(self, lagoon_client, mock_response, sample_variable, sample_project, sample_environment):
+    def test_add_environment_variable(
+        self, lagoon_client, mock_response, sample_variable, sample_project, sample_environment
+    ):
         """Test adding an environment-level variable."""
         env_var = sample_variable.copy()
         env_var["environment"] = {"id": 1, "name": "main"}
@@ -301,7 +305,9 @@ class TestVariableOperations:
         # Verify mutation was called (3rd call)
         assert lagoon_client.session.post.call_count == 3
 
-    def test_add_variable_uppercase_scope(self, lagoon_client, mock_response, sample_variable, sample_project):
+    def test_add_variable_uppercase_scope(
+        self, lagoon_client, mock_response, sample_variable, sample_project
+    ):
         """Test that scope is uppercased."""
         project_response = mock_response(data={"allProjects": [sample_project]})
         mutation_response = mock_response(data={"addOrUpdateEnvVariableByName": sample_variable})
@@ -314,11 +320,15 @@ class TestVariableOperations:
         input_data = call_kwargs["json"]["variables"]["input"]
         assert input_data["scope"] == "BUILD"
 
-    def test_get_variable_by_name(self, lagoon_client, mock_response, sample_variable, sample_project):
+    def test_get_variable_by_name(
+        self, lagoon_client, mock_response, sample_variable, sample_project
+    ):
         """Test getting variable by name."""
         # Mock responses for: 1) allProjects (to get project name), 2) variable query
         project_response = mock_response(data={"allProjects": [sample_project]})
-        var_response = mock_response(data={"getEnvVariablesByProjectEnvironmentName": [sample_variable]})
+        var_response = mock_response(
+            data={"getEnvVariablesByProjectEnvironmentName": [sample_variable]}
+        )
         lagoon_client.session.post.side_effect = [project_response, var_response]
 
         result = lagoon_client.get_env_variable_by_name(name="DATABASE_HOST", project=1)
@@ -335,12 +345,16 @@ class TestVariableOperations:
 
         assert result is None
 
-    def test_get_variable_with_environment(self, lagoon_client, mock_response, sample_variable, sample_project, sample_environment):
+    def test_get_variable_with_environment(
+        self, lagoon_client, mock_response, sample_variable, sample_project, sample_environment
+    ):
         """Test getting environment-scoped variable."""
         # Mock responses for: 1) allProjects, 2) environmentById, 3) variable query
         project_response = mock_response(data={"allProjects": [sample_project]})
         env_response = mock_response(data={"environmentById": sample_environment})
-        var_response = mock_response(data={"getEnvVariablesByProjectEnvironmentName": [sample_variable]})
+        var_response = mock_response(
+            data={"getEnvVariablesByProjectEnvironmentName": [sample_variable]}
+        )
         lagoon_client.session.post.side_effect = [project_response, env_response, var_response]
 
         lagoon_client.get_env_variable_by_name(name="DATABASE_HOST", project=1, environment=1)
@@ -360,7 +374,9 @@ class TestVariableOperations:
 
         assert result == "success"
 
-    def test_delete_environment_variable(self, lagoon_client, mock_response, sample_project, sample_environment):
+    def test_delete_environment_variable(
+        self, lagoon_client, mock_response, sample_project, sample_environment
+    ):
         """Test deleting an environment-scoped variable."""
         project_response = mock_response(data={"allProjects": [sample_project]})
         env_response = mock_response(data={"environmentById": sample_environment})
