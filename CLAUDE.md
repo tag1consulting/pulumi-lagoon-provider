@@ -10,16 +10,16 @@ This provider allows you to declaratively manage Lagoon hosting platform resourc
 
 ## Project Status
 
-**Status**: v0.1.0 Released (Early Development)
+**Status**: v0.1.1 Released (Experimental)
 
-The initial release is available on PyPI (`pip install pulumi-lagoon`). This is a Python-based dynamic provider. A native Go provider may be built in the future.
+The provider is available on PyPI (`pip install pulumi-lagoon`). This is a Python-based dynamic provider with comprehensive resource support. A native Go provider may be built in the future.
 
 ## Architecture
 
 ### Phase 1: Dynamic Provider (Current)
 - Python-based Pulumi dynamic provider
 - Direct GraphQL API integration with Lagoon
-- Supports core resources: Projects, Environments, Variables, Deploy Targets
+- Supports resources: Projects, Environments, Variables, Deploy Targets, Deploy Target Configs, Tasks, and Notifications (Slack, RocketChat, Email, Microsoft Teams)
 
 ### Phase 2: Native Provider (Future)
 - Go-based native provider using Pulumi SDK
@@ -59,6 +59,8 @@ pulumi-lagoon-provider/
 │   ├── environment.py      # LagoonEnvironment resource
 │   ├── variable.py         # LagoonVariable resource
 │   ├── deploytarget.py     # LagoonDeployTarget resource
+│   ├── deploytarget_config.py  # LagoonDeployTargetConfig resource
+│   ├── task.py             # LagoonTask resource
 │   ├── notification_slack.py   # LagoonNotificationSlack resource
 │   ├── notification_rocketchat.py  # LagoonNotificationRocketChat resource
 │   ├── notification_email.py   # LagoonNotificationEmail resource
@@ -273,7 +275,8 @@ export LAGOON_TOKEN=<your-token>
 ### Long-term (Phase 3) - In Progress
 - [x] Notification resources (Slack, RocketChat, Email, Microsoft Teams)
 - [x] Project notification associations
-- [ ] Additional resources (Groups, Tasks)
+- [x] Task resources (advanced task definitions)
+- [ ] Additional resources (Groups)
 - [ ] Native Go provider
 - [ ] Multi-language SDK generation
 - [ ] Community adoption

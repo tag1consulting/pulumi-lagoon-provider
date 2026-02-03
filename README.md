@@ -11,7 +11,7 @@ A Pulumi dynamic provider for managing [Lagoon](https://www.lagoon.sh/) resource
 
 This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, etc.) using Pulumi, bringing infrastructure-as-code practices to your Lagoon workflows.
 
-**Status**: 🚧 Early Development
+**Status**: 🧪 Experimental (v0.1.1)
 
 ## Features
 
@@ -40,6 +40,11 @@ This provider enables you to manage Lagoon hosting platform resources (projects,
 
 ### Task Resources (Complete)
 - `LagoonTask` - Manage advanced task definitions (on-demand commands and container-based tasks)
+  - **Command tasks**: Execute commands in existing service containers (e.g., `yarn audit`, `drush cr`)
+  - **Image tasks**: Run specialized container images for complex operations (e.g., database backups)
+  - Supports scoping to projects, environments, groups, or system-wide
+  - Configurable permissions (guest, developer, maintainer)
+  - Optional user confirmation prompts and custom arguments
 
 ### Planned
 - `LagoonGroup` - Manage user groups and permissions
@@ -166,6 +171,19 @@ project_notification = lagoon.LagoonProjectNotification("project-slack",
         notification_name=slack_alerts.name,
     ),
     opts=pulumi.ResourceOptions(depends_on=[project, slack_alerts])
+)
+
+# Create an advanced task definition (command type)
+yarn_audit = lagoon.LagoonTask("yarn-audit",
+    lagoon.LagoonTaskArgs(
+        name="run-yarn-audit",
+        type="command",
+        service="node",
+        command="yarn audit",
+        project_id=project.id,
+        permission="developer",
+        description="Run yarn security audit",
+    )
 )
 
 # Export project details
