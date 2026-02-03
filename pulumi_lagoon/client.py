@@ -1523,6 +1523,7 @@ class LagoonClient:
                 return True
 
         return False
+
     # Advanced Task Definition operations
     def add_advanced_task_definition(
         self,
