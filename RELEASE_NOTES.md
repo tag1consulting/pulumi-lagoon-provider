@@ -1,6 +1,113 @@
+# Release v0.1.1
+
+This release adds notification and task management resources to the Pulumi Lagoon Provider.
+
+## Highlights
+
+- **Notification Resources**: Full CRUD support for all Lagoon notification types (Slack, RocketChat, Email, Microsoft Teams) plus project notification linking
+- **Task Resources**: Manage advanced task definitions for on-demand commands and container-based tasks
+- **Expanded Test Coverage**: 467+ unit tests
+
+## New Features
+
+### Notification Resources
+- **LagoonNotificationSlack** - Create and manage Slack webhook notifications
+- **LagoonNotificationRocketChat** - Create and manage RocketChat webhook notifications
+- **LagoonNotificationEmail** - Create and manage email notifications
+- **LagoonNotificationMicrosoftTeams** - Create and manage Microsoft Teams webhook notifications
+- **LagoonProjectNotification** - Link notifications to projects for deployment alerts
+
+### Task Resources
+- **LagoonTask** - Create and manage advanced task definitions with support for:
+  - Command-type tasks (execute commands in existing service containers)
+  - Image-type tasks (run custom container images)
+  - Multiple scope options: project, environment, group, or system-wide
+  - Permission levels: guest, developer, maintainer
+  - Task arguments with configurable types
+  - Confirmation text before execution
+
+### Import Support
+All new resources support `pulumi import`:
+- `pulumi import lagoon:index:NotificationSlack my-slack deploy-alerts`
+- `pulumi import lagoon:index:NotificationRocketChat my-rc team-chat`
+- `pulumi import lagoon:index:NotificationEmail my-email ops-team`
+- `pulumi import lagoon:index:NotificationMicrosoftTeams my-teams teams-alerts`
+- `pulumi import lagoon:index:ProjectNotification my-assoc my-project:slack:deploy-alerts`
+- `pulumi import lagoon:index:Task my-task 123`
+
+## Example Usage
+
+### Notifications
+```python
+import pulumi_lagoon as lagoon
+
+# Create a Slack notification
+slack_notify = lagoon.LagoonNotificationSlack("deploy-alerts",
+    name="deploy-alerts",
+    webhook="https://hooks.slack.com/services/xxx/yyy/zzz",
+    channel="#deployments",
+)
+
+# Link notification to a project
+project_notify = lagoon.LagoonProjectNotification("project-slack",
+    project_name="my-project",
+    notification_type="slack",
+    notification_name="deploy-alerts",
+)
+```
+
+### Tasks
+```python
+import pulumi_lagoon as lagoon
+
+# Create a command-type task
+yarn_audit = lagoon.LagoonTask("yarn-audit",
+    name="run-yarn-audit",
+    type="command",
+    service="node",
+    command="yarn audit",
+    project_id=project.id,
+    permission="developer",
+    description="Run yarn security audit",
+)
+
+# Create an image-type task
+backup_task = lagoon.LagoonTask("db-backup",
+    name="database-backup",
+    type="image",
+    service="cli",
+    image="amazeeio/database-tools:latest",
+    project_id=project.id,
+    permission="maintainer",
+    confirmation_text="This will create a full database backup. Continue?",
+)
+```
+
+## Documentation
+
+- See [docs/notifications.md](docs/notifications.md) for detailed notification resource documentation
+
+## Requirements
+
+- Python 3.8+
+- Pulumi CLI 3.x
+- Access to a Lagoon instance with API credentials
+
+## Installation
+
+```bash
+pip install pulumi-lagoon
+```
+
+## Full Changelog
+
+See the [commit history](https://github.com/tag1consulting/pulumi-lagoon-provider/compare/v0.1.0...v0.1.1) for all changes.
+
+---
+
 # Release v0.1.0
 
-The initial release of the Pulumi Lagoon Provider - a Python dynamic provider for managing [Lagoon](https://www.lagoon.sh/) resources as infrastructure-as-code.
+The initial release of the Pulumi Lagoon Provider, providing a Python dynamic provider for managing [Lagoon](https://www.lagoon.sh/) resources as infrastructure-as-code.
 
 ## Highlights
 
@@ -44,12 +151,7 @@ This release provides a complete, working dynamic provider that enables declarat
 ## Installation
 
 ```bash
-# Clone and install in development mode
-git clone https://github.com/tag1consulting/pulumi-lagoon-provider.git
-cd pulumi-lagoon-provider
-python3 -m venv venv
-source venv/bin/activate
-pip install -e .
+pip install pulumi-lagoon
 ```
 
 ## Quick Start
@@ -87,13 +189,6 @@ var = lagoon.LagoonVariable("api-key",
 
 - This is a **dynamic provider** (Python-based), not a native provider
 - Dynamic providers run in a subprocess and cannot access Pulumi config secrets directly - use environment variables for `LAGOON_TOKEN`
-- Not yet published to PyPI (install from source)
-
-## What's Next
-
-- PyPI package publishing
-- Additional resources (Groups, Notifications)
-- Native Go provider for multi-language SDK support
 
 ## License
 
