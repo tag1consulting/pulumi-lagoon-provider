@@ -11,7 +11,7 @@ A Pulumi dynamic provider for managing [Lagoon](https://www.lagoon.sh/) resource
 
 This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, etc.) using Pulumi, bringing infrastructure-as-code practices to your Lagoon workflows.
 
-**Status**: 🚧 Early Development
+**Status**: 🧪 Experimental (v0.1.1)
 
 ## Features
 
@@ -40,6 +40,11 @@ This provider enables you to manage Lagoon hosting platform resources (projects,
 
 ### Task Resources (Complete)
 - `LagoonTask` - Manage advanced task definitions (on-demand commands and container-based tasks)
+  - **Command tasks**: Execute commands in existing service containers (e.g., `yarn audit`, `drush cr`)
+  - **Image tasks**: Run specialized container images for complex operations (e.g., database backups)
+  - Supports scoping to projects, environments, groups, or system-wide
+  - Configurable permissions (guest, developer, maintainer)
+  - Optional user confirmation prompts and custom arguments
 
 ### Planned
 - `LagoonGroup` - Manage user groups and permissions
@@ -71,7 +76,7 @@ make example-up
 - Python virtual environment with provider installed
 - Example project ready to deploy
 
-**Total setup time: ~15-20 minutes**
+**Setup time:** ~5 minutes for single-cluster, ~15-20 minutes for multi-cluster with full Lagoon stack
 
 ## Installation
 
@@ -168,6 +173,19 @@ project_notification = lagoon.LagoonProjectNotification("project-slack",
     opts=pulumi.ResourceOptions(depends_on=[project, slack_alerts])
 )
 
+# Create an advanced task definition (command type)
+yarn_audit = lagoon.LagoonTask("yarn-audit",
+    lagoon.LagoonTaskArgs(
+        name="run-yarn-audit",
+        type="command",
+        service="node",
+        command="yarn audit",
+        project_id=project.id,
+        permission="developer",
+        description="Run yarn security audit",
+    )
+)
+
 # Export project details
 pulumi.export("project_id", project.id)
 pulumi.export("production_url", prod_env.route)
@@ -182,6 +200,8 @@ See the `examples/` directory for complete examples:
 - `multi-cluster/` - Production-like deployment with separate prod/nonprod Kind clusters
 
 ### Multi-Cluster Example
+
+> **Prerequisites**: Docker, Kind, kubectl, Helm, and Pulumi CLI must be installed. See [Development](#development) for details.
 
 The multi-cluster example demonstrates a production-like Lagoon deployment with:
 
@@ -331,8 +351,8 @@ make help               # Show all available targets
 
 **Note**: All targets that interact with Lagoon automatically handle:
 - Port-forward setup (temporary, cleaned up after)
-- Token refresh (5-minute token expiration handled)
-- Direct Access Grants enablement in Keycloak
+- Token refresh (Lagoon OAuth tokens expire after 5 minutes; scripts automatically acquire fresh tokens)
+- Direct Access Grants enablement in Keycloak (required for CLI authentication)
 - User and deploy target creation (if needed)
 
 ### Manual Setup
@@ -362,6 +382,7 @@ pulumi-lagoon-provider/
 │   ├── config.py           # Provider configuration
 │   ├── exceptions.py       # Custom exceptions
 │   ├── validators.py       # Input validation
+│   ├── import_utils.py     # Import ID parsing utilities
 │   ├── project.py          # LagoonProject resource
 │   ├── environment.py      # LagoonEnvironment resource
 │   ├── variable.py         # LagoonVariable resource
@@ -428,10 +449,11 @@ For detailed architecture information, see `memory-bank/architecture.md`.
 - [x] CORS and TLS configuration for browser access with self-signed certificates
 - [x] Comprehensive documentation for browser access setup
 
-### Phase 3: Production Ready (Current)
+### Phase 3: Production Ready (In Progress)
 - [x] PyPI package publishing
 - [x] Notification resources (Slack, RocketChat, Email, Microsoft Teams)
 - [x] Project notification associations
+- [x] Task resources (advanced task definitions)
 - [ ] Additional resources (Group)
 - [ ] Advanced examples
 - [ ] Community feedback integration
@@ -443,7 +465,7 @@ For detailed architecture information, see `memory-bank/architecture.md`.
 
 ## Contributing
 
-This project is in early development. Contributions, feedback, and bug reports are welcome!
+This project is in active development. Contributions, feedback, and bug reports are welcome!
 
 1. Fork the repository
 2. Create a feature branch
@@ -465,7 +487,7 @@ Apache License 2.0 - See [LICENSE](LICENSE) for details.
 
 For issues and questions:
 - GitHub Issues: [Create an issue](https://github.com/tag1consulting/pulumi-lagoon-provider/issues)
-- Lagoon Community: [Slack](https://amazeeio.rocket.chat/)
+- Lagoon Community: [RocketChat](https://amazeeio.rocket.chat/)
 
 ## Acknowledgments
 

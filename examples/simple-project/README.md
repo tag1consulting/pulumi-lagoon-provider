@@ -20,6 +20,8 @@ Uses the `pulumi_lagoon` provider to create:
 ```bash
 # 1. Ensure Lagoon is running (use single-cluster or multi-cluster)
 cd ../single-cluster && pulumi up
+# Verify pods are running:
+kubectl get pods -n lagoon-core --context kind-lagoon
 
 # 2. Come back to this example
 cd ../simple-project
@@ -27,9 +29,9 @@ cd ../simple-project
 # 3. Initialize Pulumi stack
 pulumi stack init test
 
-# 4. Configure deploy target ID (get it from Lagoon)
-./scripts/list-deploy-targets.sh
-pulumi config set deploytargetId <ID>
+# 4. Get deploy target ID and configure it
+./scripts/list-deploy-targets.sh  # Shows available deploy targets with IDs
+pulumi config set deploytargetId <ID>  # Use the ID from the output above
 
 # 5. Deploy using the wrapper (handles token refresh)
 ./scripts/run-pulumi.sh up
@@ -55,7 +57,7 @@ Lagoon Project: example-drupal-site
 
 ## Helper Scripts
 
-All scripts are symlinks to the shared `scripts/` directory:
+All scripts are symlinks to the shared `../../scripts/` directory at the repository root:
 
 | Script | Description |
 |--------|-------------|

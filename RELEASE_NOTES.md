@@ -1,4 +1,4 @@
-# Release v0.1.1
+# Release v0.1.1 (2026-02-02)
 
 This release adds notification and task management resources to the Pulumi Lagoon Provider.
 
@@ -86,6 +86,7 @@ backup_task = lagoon.LagoonTask("db-backup",
 ## Documentation
 
 - See [docs/notifications.md](docs/notifications.md) for detailed notification resource documentation
+- Task resource documentation and examples are included in the main [README.md](README.md#supported-resources)
 
 ## Requirements
 
@@ -105,7 +106,7 @@ See the [commit history](https://github.com/tag1consulting/pulumi-lagoon-provide
 
 ---
 
-# Release v0.1.0
+# Release v0.1.0 (2026-01-30)
 
 The initial release of the Pulumi Lagoon Provider, providing a Python dynamic provider for managing [Lagoon](https://www.lagoon.sh/) resources as infrastructure-as-code.
 

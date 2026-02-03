@@ -10,16 +10,16 @@ This provider allows you to declaratively manage Lagoon hosting platform resourc
 
 ## Project Status
 
-**Status**: v0.1.0 Released (Early Development)
+**Status**: v0.1.1 Released (Experimental)
 
-The initial release is available on PyPI (`pip install pulumi-lagoon`). This is a Python-based dynamic provider. A native Go provider may be built in the future.
+The provider is available on PyPI (`pip install pulumi-lagoon`). This is a Python-based dynamic provider with comprehensive resource support. A native Go provider may be built in the future.
 
 ## Architecture
 
 ### Phase 1: Dynamic Provider (Current)
 - Python-based Pulumi dynamic provider
 - Direct GraphQL API integration with Lagoon
-- Supports core resources: Projects, Environments, Variables, Deploy Targets
+- Supports resources: Projects, Environments, Variables, Deploy Targets, Deploy Target Configs, Tasks, and Notifications (Slack, RocketChat, Email, Microsoft Teams)
 
 ### Phase 2: Native Provider (Future)
 - Go-based native provider using Pulumi SDK
@@ -59,6 +59,8 @@ pulumi-lagoon-provider/
 │   ├── environment.py      # LagoonEnvironment resource
 │   ├── variable.py         # LagoonVariable resource
 │   ├── deploytarget.py     # LagoonDeployTarget resource
+│   ├── deploytarget_config.py  # LagoonDeployTargetConfig resource
+│   ├── task.py             # LagoonTask resource
 │   ├── notification_slack.py   # LagoonNotificationSlack resource
 │   ├── notification_rocketchat.py  # LagoonNotificationRocketChat resource
 │   ├── notification_email.py   # LagoonNotificationEmail resource
@@ -196,6 +198,24 @@ Links a notification to a project.
 - `notification_type`: Type of notification (slack, rocketchat, email, microsoftteams)
 - `notification_name`: Name of the notification to link
 
+### LagoonTask
+Manages advanced task definitions (on-demand commands and container-based tasks).
+
+**Properties:**
+- `name`: Task definition name
+- `type`: Task type (`command` or `image`)
+- `service`: Service container name to run the task in
+- `command`: Command to execute (required if type='command')
+- `image`: Container image to run (required if type='image')
+- `project_id`: Project ID (for project-scoped tasks)
+- `environment_id`: Environment ID (for environment-scoped tasks)
+- `group_name`: Group name (for group-scoped tasks)
+- `system_wide`: If true, task is available system-wide (platform admin only)
+- `permission`: Permission level (`guest`, `developer`, `maintainer`)
+- `description`: Task description (optional)
+- `confirmation_text`: Text to display for user confirmation (optional)
+- `arguments`: List of argument definitions (optional)
+
 ## Lagoon API Integration
 
 ### GraphQL API
@@ -273,7 +293,8 @@ export LAGOON_TOKEN=<your-token>
 ### Long-term (Phase 3) - In Progress
 - [x] Notification resources (Slack, RocketChat, Email, Microsoft Teams)
 - [x] Project notification associations
-- [ ] Additional resources (Groups, Tasks)
+- [x] Task resources (advanced task definitions)
+- [ ] Additional resources (Groups)
 - [ ] Native Go provider
 - [ ] Multi-language SDK generation
 - [ ] Community adoption
