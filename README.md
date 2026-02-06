@@ -11,7 +11,7 @@ A Pulumi dynamic provider for managing [Lagoon](https://www.lagoon.sh/) resource
 
 This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, etc.) using Pulumi, bringing infrastructure-as-code practices to your Lagoon workflows.
 
-**Status**: 🧪 Experimental (v0.1.1)
+**Status**: 🧪 Experimental (v0.1.2)
 
 ## Features
 

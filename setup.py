@@ -7,7 +7,7 @@ with open("README.md", encoding="utf-8") as fh:
 
 setup(
     name="pulumi-lagoon",
-    version="0.1.1",
+    version="0.1.2",
     author="Greg Chaix",
     author_email="greg@tag1consulting.com",
     description="A Pulumi dynamic provider for managing Lagoon resources",
