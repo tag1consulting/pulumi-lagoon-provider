@@ -404,3 +404,371 @@ class TestLagoonDeployTargetProviderValidation:
 
         assert result.outs["cloud_provider"] == "kind"
         assert result.outs["cloud_region"] == "local"
+
+
+class TestLagoonDeployTargetProviderClientConfig:
+    """Tests for LagoonDeployTargetProvider client configuration."""
+
+    def test_get_client_with_api_token(self, sample_deploy_target):
+        """Test creating client with explicit api_url and api_token."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
+
+        # Patch the client import inside the module
+        with patch("pulumi_lagoon.client.LagoonClient") as mock_client_class:
+            mock_client = Mock()
+            mock_client.add_kubernetes.return_value = sample_deploy_target
+            mock_client_class.return_value = mock_client
+
+            provider = LagoonDeployTargetProvider()
+
+            inputs = {
+                "name": "test-cluster",
+                "console_url": "https://kubernetes.default.svc",
+                "api_url": "https://api.lagoon.example.com/graphql",
+                "api_token": "test-bearer-token",
+            }
+
+            provider.create(inputs)
+
+            # Verify LagoonClient was created with correct args
+            mock_client_class.assert_called_once_with(
+                "https://api.lagoon.example.com/graphql",
+                "test-bearer-token",
+                verify_ssl=True,
+            )
+
+    def test_get_client_with_verify_ssl_false(self, sample_deploy_target):
+        """Test creating client with verify_ssl=False for self-signed certs."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
+
+        with patch("pulumi_lagoon.client.LagoonClient") as mock_client_class:
+            mock_client = Mock()
+            mock_client.add_kubernetes.return_value = sample_deploy_target
+            mock_client_class.return_value = mock_client
+
+            provider = LagoonDeployTargetProvider()
+
+            inputs = {
+                "name": "test-cluster",
+                "console_url": "https://kubernetes.default.svc",
+                "api_url": "https://api.lagoon.local/graphql",
+                "api_token": "test-bearer-token",
+                "verify_ssl": False,
+            }
+
+            provider.create(inputs)
+
+            # Verify LagoonClient was created with verify_ssl=False
+            mock_client_class.assert_called_once_with(
+                "https://api.lagoon.local/graphql",
+                "test-bearer-token",
+                verify_ssl=False,
+            )
+
+    def test_get_client_with_jwt_secret(self, sample_deploy_target):
+        """Test creating client with jwt_secret for token generation."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
+
+        with patch("pulumi_lagoon.client.LagoonClient") as mock_client_class:
+            mock_client = Mock()
+            mock_client.add_kubernetes.return_value = sample_deploy_target
+            mock_client_class.return_value = mock_client
+
+            provider = LagoonDeployTargetProvider()
+
+            inputs = {
+                "name": "test-cluster",
+                "console_url": "https://kubernetes.default.svc",
+                "api_url": "https://api.lagoon.example.com/graphql",
+                "jwt_secret": "test-jwt-secret-key",
+            }
+
+            provider.create(inputs)
+
+            # Verify LagoonClient was called (we can't easily verify the token)
+            mock_client_class.assert_called_once()
+            call_args = mock_client_class.call_args
+            assert call_args[0][0] == "https://api.lagoon.example.com/graphql"
+            # Token should be a JWT string
+            assert isinstance(call_args[0][1], str)
+            assert call_args[1]["verify_ssl"] is True
+
+    def test_get_client_with_jwt_secret_and_verify_ssl_false(self, sample_deploy_target):
+        """Test creating client with jwt_secret and verify_ssl=False."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
+
+        with patch("pulumi_lagoon.client.LagoonClient") as mock_client_class:
+            mock_client = Mock()
+            mock_client.add_kubernetes.return_value = sample_deploy_target
+            mock_client_class.return_value = mock_client
+
+            provider = LagoonDeployTargetProvider()
+
+            inputs = {
+                "name": "test-cluster",
+                "console_url": "https://kubernetes.default.svc",
+                "api_url": "https://api.lagoon.local/graphql",
+                "jwt_secret": "test-jwt-secret-key",
+                "verify_ssl": False,
+            }
+
+            provider.create(inputs)
+
+            # Verify verify_ssl=False was passed
+            call_args = mock_client_class.call_args
+            assert call_args[1]["verify_ssl"] is False
+
+
+class TestLagoonDeployTargetProviderJWTGeneration:
+    """Tests for JWT token generation in LagoonDeployTargetProvider."""
+
+    def test_generate_admin_token_valid(self):
+        """Test that _generate_admin_token produces a valid JWT."""
+        import jwt as pyjwt
+
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
+
+        provider = LagoonDeployTargetProvider()
+        secret = "test-secret-key"
+
+        token = provider._generate_admin_token(secret)
+
+        # Verify it's a valid JWT that can be decoded (without audience verification)
+        decoded = pyjwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
+
+        assert decoded["role"] == "admin"
+        assert decoded["iss"] == "lagoon-api"
+        assert decoded["sub"] == "lagoonadmin"
+        assert decoded["aud"] == "api.dev"
+        assert "iat" in decoded
+        assert "exp" in decoded
+        # Token should be valid for about an hour
+        assert decoded["exp"] - decoded["iat"] == 3600
+
+    def test_generate_admin_token_different_secrets(self):
+        """Test that different secrets produce different tokens."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
+
+        provider = LagoonDeployTargetProvider()
+
+        token1 = provider._generate_admin_token("secret-one")
+        token2 = provider._generate_admin_token("secret-two")
+
+        assert token1 != token2
+
+
+class TestLagoonDeployTargetResourceInit:
+    """Tests for LagoonDeployTarget resource initialization."""
+
+    def test_resource_init_constructs_inputs_correctly(self):
+        """Test that LagoonDeployTarget.__init__ constructs inputs dict from args."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTarget, LagoonDeployTargetArgs
+
+        # Mock the parent class __init__ to capture inputs
+        with patch("pulumi.dynamic.Resource.__init__") as mock_init:
+            mock_init.return_value = None
+
+            args = LagoonDeployTargetArgs(
+                name="test-cluster",
+                console_url="https://kubernetes.example.com:6443",
+                cloud_provider="aws",
+                cloud_region="us-east-1",
+                ssh_host="ssh.example.com",
+                ssh_port="22",
+                build_image="custom-build:v1",
+                disabled=False,
+                router_pattern="${env}.${project}.example.com",
+                shared_bastion_secret="bastion-secret",
+                api_url="https://api.lagoon.example.com/graphql",
+                api_token="test-token",
+                jwt_secret=None,
+                verify_ssl=False,
+            )
+
+            LagoonDeployTarget("test-resource", args)
+
+            # Verify parent __init__ was called
+            mock_init.assert_called_once()
+            call_args = mock_init.call_args
+
+            # Check the inputs dict (second positional arg after provider)
+            inputs = call_args[0][2]  # provider, name, inputs, opts
+
+            assert inputs["name"] == "test-cluster"
+            assert inputs["console_url"] == "https://kubernetes.example.com:6443"
+            assert inputs["cloud_provider"] == "aws"
+            assert inputs["cloud_region"] == "us-east-1"
+            assert inputs["ssh_host"] == "ssh.example.com"
+            assert inputs["ssh_port"] == "22"
+            assert inputs["build_image"] == "custom-build:v1"
+            assert inputs["disabled"] is False
+            assert inputs["router_pattern"] == "${env}.${project}.example.com"
+            assert inputs["shared_bastion_secret"] == "bastion-secret"
+            assert inputs["api_url"] == "https://api.lagoon.example.com/graphql"
+            assert inputs["api_token"] == "test-token"
+            assert inputs["jwt_secret"] is None
+            assert inputs["verify_ssl"] is False
+            assert inputs["id"] is None  # Output placeholder
+            assert inputs["created"] is None  # Output placeholder
+
+    def test_resource_init_with_minimal_args(self):
+        """Test that LagoonDeployTarget.__init__ works with minimal required args."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTarget, LagoonDeployTargetArgs
+
+        with patch("pulumi.dynamic.Resource.__init__") as mock_init:
+            mock_init.return_value = None
+
+            args = LagoonDeployTargetArgs(
+                name="minimal-cluster",
+                console_url="https://kubernetes.default.svc",
+            )
+
+            LagoonDeployTarget("minimal-resource", args)
+
+            mock_init.assert_called_once()
+            call_args = mock_init.call_args
+            inputs = call_args[0][2]
+
+            assert inputs["name"] == "minimal-cluster"
+            assert inputs["console_url"] == "https://kubernetes.default.svc"
+            # Optional fields should be None
+            assert inputs["cloud_provider"] is None
+            assert inputs["cloud_region"] is None
+            assert inputs["ssh_host"] is None
+
+    def test_resource_init_passes_opts(self):
+        """Test that LagoonDeployTarget.__init__ passes ResourceOptions correctly."""
+        import pulumi
+
+        from pulumi_lagoon.deploytarget import LagoonDeployTarget, LagoonDeployTargetArgs
+
+        with patch("pulumi.dynamic.Resource.__init__") as mock_init:
+            mock_init.return_value = None
+
+            args = LagoonDeployTargetArgs(
+                name="test-cluster",
+                console_url="https://kubernetes.default.svc",
+            )
+
+            opts = pulumi.ResourceOptions(protect=True)
+            LagoonDeployTarget("test-resource", args, opts=opts)
+
+            mock_init.assert_called_once()
+            call_args = mock_init.call_args
+
+            # opts is the 4th positional argument
+            passed_opts = call_args[0][3]
+            assert passed_opts is opts
+
+
+class TestLagoonDeployTargetProviderUpdateValidation:
+    """Tests for update validation in LagoonDeployTargetProvider."""
+
+    @patch("pulumi_lagoon.deploytarget.LagoonConfig")
+    def test_update_validates_cloud_provider_when_changed(
+        self, mock_config_class, sample_deploy_target
+    ):
+        """Test that cloud_provider is validated only when it changes."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
+
+        provider = LagoonDeployTargetProvider()
+
+        old_inputs = {
+            "name": "test-cluster",
+            "console_url": "https://kubernetes.default.svc",
+            "cloud_provider": "kind",
+        }
+        new_inputs = {
+            "name": "test-cluster",
+            "console_url": "https://kubernetes.default.svc",
+            "cloud_provider": "invalid_provider",  # Invalid
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.update("1", old_inputs, new_inputs)
+        assert "cloud_provider" in str(exc.value)
+
+    @patch("pulumi_lagoon.deploytarget.LagoonConfig")
+    def test_update_validates_ssh_host_when_changed(self, mock_config_class, sample_deploy_target):
+        """Test that ssh_host is validated only when it changes."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
+
+        provider = LagoonDeployTargetProvider()
+
+        old_inputs = {
+            "name": "test-cluster",
+            "console_url": "https://kubernetes.default.svc",
+            "ssh_host": "ssh.example.com",
+        }
+        new_inputs = {
+            "name": "test-cluster",
+            "console_url": "https://kubernetes.default.svc",
+            "ssh_host": "invalid host with spaces",  # Invalid
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.update("1", old_inputs, new_inputs)
+        assert "ssh_host" in str(exc.value)
+
+    @patch("pulumi_lagoon.deploytarget.LagoonConfig")
+    def test_update_validates_ssh_port_when_changed(self, mock_config_class, sample_deploy_target):
+        """Test that ssh_port is validated only when it changes."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
+
+        provider = LagoonDeployTargetProvider()
+
+        old_inputs = {
+            "name": "test-cluster",
+            "console_url": "https://kubernetes.default.svc",
+            "ssh_port": "22",
+        }
+        new_inputs = {
+            "name": "test-cluster",
+            "console_url": "https://kubernetes.default.svc",
+            "ssh_port": "99999",  # Invalid - out of range
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.update("1", old_inputs, new_inputs)
+        assert "ssh_port" in str(exc.value)
+
+    @patch("pulumi_lagoon.deploytarget.LagoonConfig")
+    def test_update_with_multiple_field_changes(self, mock_config_class, sample_deploy_target):
+        """Test update with multiple fields changing."""
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
+
+        updated_target = sample_deploy_target.copy()
+        updated_target["sshHost"] = "new-ssh.example.com"
+        updated_target["sshPort"] = "2222"
+        updated_target["buildImage"] = "new-build:v2"
+
+        mock_client = Mock()
+        mock_client.update_kubernetes.return_value = updated_target
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonDeployTargetProvider()
+
+        old_inputs = {
+            "name": "prod-cluster",
+            "console_url": "https://kubernetes.example.com:6443",
+            "ssh_host": "old-ssh.example.com",
+            "ssh_port": "22",
+            "build_image": "old-build:v1",
+        }
+        new_inputs = {
+            "name": "prod-cluster",
+            "console_url": "https://kubernetes.example.com:6443",
+            "ssh_host": "new-ssh.example.com",
+            "ssh_port": "2222",
+            "build_image": "new-build:v2",
+        }
+
+        provider.update("1", old_inputs, new_inputs)
+
+        # Verify all changed fields were included
+        call_kwargs = mock_client.update_kubernetes.call_args[1]
+        assert call_kwargs["sshHost"] == "new-ssh.example.com"
+        assert call_kwargs["sshPort"] == "2222"
+        assert call_kwargs["buildImage"] == "new-build:v2"

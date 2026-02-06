@@ -49,6 +49,9 @@ htmlcov/
 *.cover
 .hypothesis/
 
+# Real cluster testing (temporary)
+test-real-cluster/
+
 # Type checking
 .mypy_cache/
 .dmypy.json

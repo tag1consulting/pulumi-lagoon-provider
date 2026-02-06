@@ -9,6 +9,11 @@ The CRDs define:
 
 These CRDs must be installed before the lagoon-remote Helm chart with
 lagoon-build-deploy enabled, otherwise the controller will fail to start.
+
+Version compatibility:
+- lagoon-remote requires BOTH v1beta1 and v1beta2 API versions to be served
+- Lagoon <= v2.28.0 (chart < 1.58.0): Uses v1beta1 as storage version
+- Lagoon >= v2.29.0 (chart >= 1.58.0): Uses v1beta2 as storage version
 """
 
 from typing import Optional
@@ -18,38 +23,56 @@ import pulumi_kubernetes as k8s
 from pulumi_command import local as command
 
 
-def install_lagoon_build_deploy_crds(
-    name: str,
-    provider: k8s.Provider,
-    context: Optional[str] = None,
-    opts: Optional[pulumi.ResourceOptions] = None,
-) -> command.Command:
-    """Install the Lagoon build-deploy CRDs.
+def _parse_version(version: str) -> tuple:
+    """Parse a semver version string into a tuple for comparison."""
+    # Handle versions like "1.56.0" or "v2.28.0"
+    version = version.lstrip("v")
+    parts = version.split(".")
+    return tuple(int(p) for p in parts[:3])
 
-    These CRDs are required by the lagoon-build-deploy controller and must
-    be installed before the lagoon-remote Helm release.
 
-    Uses kubectl apply to install CRDs, which is more reliable than
-    pulumi-kubernetes YAML parsing for complex CRDs.
+def _get_storage_version(lagoon_core_version: str) -> str:
+    """Determine which CRD API version should be the storage version.
 
     Args:
-        name: Pulumi resource name prefix
-        provider: Kubernetes provider for the target cluster (kept for API compat)
-        context: Kubernetes context name (e.g., "kind-lagoon")
-        opts: Pulumi resource options
+        lagoon_core_version: The lagoon-core Helm chart version (e.g., "1.56.0")
 
     Returns:
-        Command resource that applies the CRDs
+        "v1beta1" for older versions, "v1beta2" for newer versions
     """
-    # CRD definitions from lagoon-build-deploy chart v0.39.0
-    # Generated with: helm show crds uselagoon/lagoon-build-deploy --version ~0.39.0
-    crd_yaml = """
+    try:
+        version_tuple = _parse_version(lagoon_core_version)
+        # Chart version 1.58.0 and later use v1beta2 as storage
+        # Chart versions before 1.58.0 use v1beta1 as storage
+        if version_tuple >= (1, 58, 0):
+            return "v1beta2"
+        else:
+            return "v1beta1"
+    except (ValueError, IndexError):
+        # Default to v1beta2 for unparseable versions (assume latest)
+        return "v1beta2"
+
+
+def _generate_crd_yaml(storage_version: str) -> str:
+    """Generate CRD YAML with both v1beta1 and v1beta2 served.
+
+    lagoon-remote requires both API versions to be available. The storage_version
+    parameter determines which version is used for storing objects.
+
+    Args:
+        storage_version: Either "v1beta1" or "v1beta2"
+
+    Returns:
+        YAML string with both CRD definitions
+    """
+    v1beta1_storage = "true" if storage_version == "v1beta1" else "false"
+    v1beta2_storage = "true" if storage_version == "v1beta2" else "false"
+
+    return f"""
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
   name: lagoonbuilds.crd.lagoon.sh
 spec:
   group: crd.lagoon.sh
@@ -60,282 +83,68 @@ spec:
     singular: lagoonbuild
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - description: Status of the LagoonBuild
-      jsonPath: .status.phase
-      name: Status
-      type: string
-    - description: The build step of the LagoonBuild
-      jsonPath: .status.conditions[?(@.type == "BuildStep")].reason
-      name: BuildStep
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    name: v1beta1
-    schema:
-      openAPIV3Schema:
-        description: LagoonBuild is the Schema for the lagoonbuilds API
-        properties:
-          apiVersion:
-            type: string
-          kind:
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: LagoonBuildSpec defines the desired state of LagoonBuild
-            type: object
-          status:
-            description: LagoonBuildStatus defines the observed state of LagoonBuild
-            properties:
-              conditions:
-                items:
-                  properties:
-                    lastTransitionTime:
-                      format: date-time
-                      type: string
-                    message:
-                      maxLength: 32768
-                      type: string
-                    observedGeneration:
-                      format: int64
-                      minimum: 0
-                      type: integer
-                    reason:
-                      maxLength: 1024
-                      minLength: 1
-                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                      type: string
-                    status:
-                      enum:
-                      - "True"
-                      - "False"
-                      - Unknown
-                      type: string
-                    type:
-                      maxLength: 316
-                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                      type: string
-                  required:
-                  - lastTransitionTime
-                  - message
-                  - reason
-                  - status
-                  - type
-                  type: object
-                type: array
-              phase:
-                type: string
-            type: object
-        type: object
-    served: false
-    storage: false
-    subresources: {}
-  - additionalPrinterColumns:
-    - description: Status of the LagoonBuild
-      jsonPath: .status.phase
-      name: Status
-      type: string
-    - description: The build step of the LagoonBuild
-      jsonPath: .status.conditions[?(@.type == "BuildStep")].reason
-      name: BuildStep
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    name: v1beta2
-    schema:
-      openAPIV3Schema:
-        description: LagoonBuild is the Schema for the lagoonbuilds API
-        properties:
-          apiVersion:
-            type: string
-          kind:
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: LagoonBuildSpec defines the desired state of LagoonBuild
-            properties:
-              branch:
-                properties:
-                  name:
-                    type: string
-                type: object
-              build:
-                properties:
-                  bulkId:
-                    type: string
-                  ci:
-                    type: string
-                  image:
-                    type: string
-                  priority:
-                    type: integer
-                  type:
-                    type: string
-                required:
-                - type
-                type: object
-              gitReference:
-                type: string
-              project:
-                properties:
-                  deployTarget:
-                    type: string
-                  environment:
-                    type: string
-                  environmentId:
-                    type: integer
-                  environmentIdling:
-                    type: integer
-                  environmentType:
-                    type: string
-                  gitUrl:
-                    type: string
-                  id:
-                    type: integer
-                  key:
-                    format: byte
-                    type: string
-                  monitoring:
-                    properties:
-                      contact:
-                        type: string
-                      statuspageID:
-                        type: string
-                    type: object
-                  name:
-                    type: string
-                  namespacePattern:
-                    type: string
-                  organization:
-                    properties:
-                      id:
-                        type: integer
-                      name:
-                        type: string
-                    type: object
-                  productionEnvironment:
-                    type: string
-                  projectIdling:
-                    type: integer
-                  projectSecret:
-                    type: string
-                  registry:
-                    type: string
-                  routerPattern:
-                    type: string
-                  standbyEnvironment:
-                    type: string
-                  storageCalculator:
-                    type: integer
-                  subfolder:
-                    type: string
-                  uiLink:
-                    type: string
-                  variables:
-                    properties:
-                      environment:
-                        format: byte
-                        type: string
-                      project:
-                        format: byte
-                        type: string
-                    type: object
-                required:
-                - deployTarget
-                - environment
-                - environmentType
-                - gitUrl
-                - key
-                - monitoring
-                - name
-                - productionEnvironment
-                - projectSecret
-                - standbyEnvironment
-                - variables
-                type: object
-              promote:
-                properties:
-                  sourceEnvironment:
-                    type: string
-                  sourceProject:
-                    type: string
-                type: object
-              pullrequest:
-                properties:
-                  baseBranch:
-                    type: string
-                  baseSha:
-                    type: string
-                  headBranch:
-                    type: string
-                  headSha:
-                    type: string
-                  number:
-                    type: string
-                  title:
-                    type: string
-                type: object
-            required:
-            - build
-            - gitReference
-            - project
-            type: object
-          status:
-            description: LagoonBuildStatus defines the observed state of LagoonBuild
-            properties:
-              conditions:
-                items:
-                  properties:
-                    lastTransitionTime:
-                      format: date-time
-                      type: string
-                    message:
-                      maxLength: 32768
-                      type: string
-                    observedGeneration:
-                      format: int64
-                      minimum: 0
-                      type: integer
-                    reason:
-                      maxLength: 1024
-                      minLength: 1
-                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                      type: string
-                    status:
-                      enum:
-                      - "True"
-                      - "False"
-                      - Unknown
-                      type: string
-                    type:
-                      maxLength: 316
-                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                      type: string
-                  required:
-                  - lastTransitionTime
-                  - message
-                  - reason
-                  - status
-                  - type
-                  type: object
-                type: array
-              phase:
-                type: string
-            type: object
-        type: object
+  - name: v1beta1
     served: true
-    storage: true
-    subresources: {}
+    storage: {v1beta1_storage}
+    additionalPrinterColumns:
+    - description: Status of the LagoonBuild
+      jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    schema:
+      openAPIV3Schema:
+        description: LagoonBuild is the Schema for the lagoonbuilds API
+        type: object
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+    subresources: {{}}
+  - name: v1beta2
+    served: true
+    storage: {v1beta2_storage}
+    additionalPrinterColumns:
+    - description: Status of the LagoonBuild
+      jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    schema:
+      openAPIV3Schema:
+        description: LagoonBuild is the Schema for the lagoonbuilds API
+        type: object
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+    subresources: {{}}
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
   name: lagoontasks.crd.lagoon.sh
 spec:
   group: crd.lagoon.sh
@@ -346,245 +155,112 @@ spec:
     singular: lagoontask
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - description: Status of the LagoonTask
-      jsonPath: .status.phase
-      name: Status
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    name: v1beta1
-    schema:
-      openAPIV3Schema:
-        description: LagoonTask is the Schema for the lagoontasks API
-        properties:
-          apiVersion:
-            type: string
-          kind:
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: LagoonTaskSpec defines the desired state of LagoonTask
-            type: object
-          status:
-            description: LagoonTaskStatus defines the observed state of LagoonTask
-            properties:
-              conditions:
-                items:
-                  properties:
-                    lastTransitionTime:
-                      format: date-time
-                      type: string
-                    message:
-                      maxLength: 32768
-                      type: string
-                    observedGeneration:
-                      format: int64
-                      minimum: 0
-                      type: integer
-                    reason:
-                      maxLength: 1024
-                      minLength: 1
-                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                      type: string
-                    status:
-                      enum:
-                      - "True"
-                      - "False"
-                      - Unknown
-                      type: string
-                    type:
-                      maxLength: 316
-                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                      type: string
-                  required:
-                  - lastTransitionTime
-                  - message
-                  - reason
-                  - status
-                  - type
-                  type: object
-                type: array
-              phase:
-                type: string
-            type: object
-        type: object
-    served: false
-    storage: false
-    subresources: {}
-  - additionalPrinterColumns:
-    - description: Status of the LagoonTask
-      jsonPath: .status.phase
-      name: Status
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    name: v1beta2
-    schema:
-      openAPIV3Schema:
-        description: LagoonTask is the Schema for the lagoontasks API
-        properties:
-          apiVersion:
-            type: string
-          kind:
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: LagoonTaskSpec defines the desired state of LagoonTask
-            properties:
-              advancedTask:
-                properties:
-                  JSONPayload:
-                    type: string
-                  deployerToken:
-                    type: boolean
-                  runnerImage:
-                    type: string
-                  sshKey:
-                    type: boolean
-                type: object
-              environment:
-                properties:
-                  environmentType:
-                    type: string
-                  id:
-                    type: integer
-                  name:
-                    type: string
-                  project:
-                    type: string
-                required:
-                - environmentType
-                - name
-                - project
-                type: object
-              key:
-                type: string
-              misc:
-                properties:
-                  backup:
-                    properties:
-                      backupId:
-                        type: string
-                      id:
-                        type: string
-                      source:
-                        type: string
-                    required:
-                    - backupId
-                    - id
-                    - source
-                    type: object
-                  id:
-                    type: string
-                  miscResource:
-                    format: byte
-                    type: string
-                  name:
-                    type: string
-                required:
-                - id
-                type: object
-              project:
-                properties:
-                  id:
-                    type: integer
-                  name:
-                    type: string
-                  namespacePattern:
-                    type: string
-                  organization:
-                    properties:
-                      id:
-                        type: integer
-                      name:
-                        type: string
-                    type: object
-                  variables:
-                    properties:
-                      environment:
-                        format: byte
-                        type: string
-                      project:
-                        format: byte
-                        type: string
-                    type: object
-                required:
-                - name
-                type: object
-              task:
-                properties:
-                  apiHost:
-                    type: string
-                  command:
-                    type: string
-                  id:
-                    type: string
-                  name:
-                    type: string
-                  service:
-                    type: string
-                  sshHost:
-                    type: string
-                  sshPort:
-                    type: string
-                  taskName:
-                    type: string
-                required:
-                - id
-                type: object
-            type: object
-          status:
-            description: LagoonTaskStatus defines the observed state of LagoonTask
-            properties:
-              conditions:
-                items:
-                  properties:
-                    lastTransitionTime:
-                      format: date-time
-                      type: string
-                    message:
-                      maxLength: 32768
-                      type: string
-                    observedGeneration:
-                      format: int64
-                      minimum: 0
-                      type: integer
-                    reason:
-                      maxLength: 1024
-                      minLength: 1
-                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                      type: string
-                    status:
-                      enum:
-                      - "True"
-                      - "False"
-                      - Unknown
-                      type: string
-                    type:
-                      maxLength: 316
-                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                      type: string
-                  required:
-                  - lastTransitionTime
-                  - message
-                  - reason
-                  - status
-                  - type
-                  type: object
-                type: array
-              phase:
-                type: string
-            type: object
-        type: object
+  - name: v1beta1
     served: true
-    storage: true
-    subresources: {}
+    storage: {v1beta1_storage}
+    additionalPrinterColumns:
+    - description: Status of the LagoonTask
+      jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    schema:
+      openAPIV3Schema:
+        description: LagoonTask is the Schema for the lagoontasks API
+        type: object
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+    subresources: {{}}
+  - name: v1beta2
+    served: true
+    storage: {v1beta2_storage}
+    additionalPrinterColumns:
+    - description: Status of the LagoonTask
+      jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    schema:
+      openAPIV3Schema:
+        description: LagoonTask is the Schema for the lagoontasks API
+        type: object
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+    subresources: {{}}
 """
+
+
+def install_lagoon_build_deploy_crds(
+    name: str,
+    provider: k8s.Provider,
+    context: Optional[str] = None,
+    lagoon_core_version: Optional[str] = None,
+    opts: Optional[pulumi.ResourceOptions] = None,
+) -> command.Command:
+    """Install the Lagoon build-deploy CRDs.
+
+    These CRDs are required by the lagoon-build-deploy controller and must
+    be installed before the lagoon-remote Helm release.
+
+    Uses kubectl apply to install CRDs, which is more reliable than
+    pulumi-kubernetes YAML parsing for complex CRDs.
+
+    Both v1beta1 and v1beta2 API versions are always served (required by
+    lagoon-remote). The storage version is selected based on the Lagoon version:
+    - Lagoon <= v2.28.0 (chart < 1.58.0): v1beta1 is storage version
+    - Lagoon >= v2.29.0 (chart >= 1.58.0): v1beta2 is storage version
+
+    Args:
+        name: Pulumi resource name prefix
+        provider: Kubernetes provider for the target cluster (kept for API compat)
+        context: Kubernetes context name (e.g., "kind-lagoon")
+        lagoon_core_version: The lagoon-core Helm chart version (e.g., "1.56.0")
+            Used to determine which CRD API version is the storage version.
+            If not provided, defaults to v1beta2 (latest).
+        opts: Pulumi resource options
+
+    Returns:
+        Command resource that applies the CRDs
+    """
+    # Determine which version should be storage
+    if lagoon_core_version:
+        storage_version = _get_storage_version(lagoon_core_version)
+    else:
+        storage_version = "v1beta2"  # Default to latest
+
+    pulumi.log.info(
+        f"Installing Lagoon CRDs with {storage_version} as storage version "
+        f"(for Lagoon chart {lagoon_core_version or 'default'})"
+    )
+
+    # Generate CRD YAML with appropriate storage version
+    crd_yaml = _generate_crd_yaml(storage_version)
 
     # Write CRDs to a temp file and apply with kubectl
     # This avoids pulumi-kubernetes YAML parsing issues with complex CRDs
@@ -597,6 +273,8 @@ spec:
     crds = command.Command(
         f"{name}-lagoon-crds",
         create=kubectl_cmd,
+        # Include version in triggers to force re-apply when version changes
+        triggers=[storage_version, lagoon_core_version or "default"],
         opts=pulumi.ResourceOptions(
             parent=opts.parent if opts else None,
             depends_on=opts.depends_on if opts else None,
