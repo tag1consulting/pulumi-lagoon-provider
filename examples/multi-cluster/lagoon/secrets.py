@@ -65,12 +65,21 @@ def generate_lagoon_secrets(
         opts=pulumi.ResourceOptions(parent=parent),
     )
 
+    # Generate JWT secret for API token generation
+    jwt_secret = RandomPassword(
+        f"{name}-jwt-secret",
+        length=64,
+        special=False,
+        opts=pulumi.ResourceOptions(parent=parent),
+    )
+
     return LagoonSecretsOutputs(
         ssh_private_key=ssh_key.private_key_openssh,
         ssh_public_key=ssh_key.public_key_openssh,
         rabbitmq_password=rabbitmq_password.result,
         keycloak_admin_password=keycloak_password.result,
         api_db_password=api_db_password.result,
+        jwt_secret=jwt_secret.result,
     )
 
 

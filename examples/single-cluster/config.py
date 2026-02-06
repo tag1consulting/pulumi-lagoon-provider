@@ -19,7 +19,11 @@ VERSIONS = {
     "ingress_nginx": "4.10.1",
     "cert_manager": "v1.14.4",
     "harbor": "1.14.2",
-    "lagoon_core": "1.59.0",
+    # Lagoon versions for backward compatibility testing:
+    # - v2.30.0: lagoon_core="1.59.0", lagoon_remote="0.103.0"
+    # - v2.28.0: lagoon_core="1.56.0", lagoon_remote="0.96.0"
+    # - v2.24.1: lagoon_core="1.52.0", lagoon_remote="0.90.0"
+    "lagoon_core": "1.59.0",  # v2.30.0
     "lagoon_remote": "0.103.0",
 }
 
@@ -191,6 +195,7 @@ class LagoonSecretsOutputs:
     rabbitmq_password: pulumi.Output[str]
     keycloak_admin_password: pulumi.Output[str]
     api_db_password: pulumi.Output[str]
+    jwt_secret: Optional[pulumi.Output[str]] = None
 
 
 @dataclass

@@ -60,6 +60,9 @@ class LagoonDeployTargetArgs:
     jwt_secret: Optional[pulumi.Input[str]] = None
     """JWT secret for generating admin tokens. Alternative to api_token."""
 
+    verify_ssl: Optional[pulumi.Input[bool]] = None
+    """Whether to verify SSL certificates. Default: True. Set to False for self-signed certs."""
+
 
 class LagoonDeployTargetProvider(dynamic.ResourceProvider):
     """Dynamic provider implementation for Lagoon deploy targets (Kubernetes clusters)."""
@@ -78,15 +81,16 @@ class LagoonDeployTargetProvider(dynamic.ResourceProvider):
             api_url = inputs.get("api_url")
             api_token = inputs.get("api_token")
             jwt_secret = inputs.get("jwt_secret")
+            verify_ssl = inputs.get("verify_ssl", True)
 
             # If we have explicit configuration, use it
             if api_url and (api_token or jwt_secret):
                 if api_token:
-                    return LagoonClient(api_url, api_token)
+                    return LagoonClient(api_url, api_token, verify_ssl=verify_ssl)
                 elif jwt_secret:
                     # Generate admin token from JWT secret
                     token = self._generate_admin_token(jwt_secret)
-                    return LagoonClient(api_url, token)
+                    return LagoonClient(api_url, token, verify_ssl=verify_ssl)
 
         # Fall back to default configuration
         config = LagoonConfig()
@@ -383,6 +387,7 @@ class LagoonDeployTarget(dynamic.Resource):
             "api_url": args.api_url,
             "api_token": args.api_token,
             "jwt_secret": args.jwt_secret,
+            "verify_ssl": args.verify_ssl,
             # Outputs (set by provider)
             "id": None,
             "created": None,
