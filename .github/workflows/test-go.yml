@@ -1,0 +1,63 @@
+name: Go Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ['1.24']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: provider/go.sum
+
+      - name: Run Go unit tests with coverage
+        working-directory: provider
+        run: |
+          go test ./... -v -race -coverprofile=coverage.out -covermode=atomic
+
+      - name: Display coverage summary
+        working-directory: provider
+        run: go tool cover -func=coverage.out
+
+  vet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: provider/go.sum
+
+      - name: Run go vet
+        working-directory: provider
+        run: go vet ./...
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: provider/go.sum
+
+      - name: Build provider binary
+        working-directory: provider
+        run: CGO_ENABLED=0 go build -o bin/pulumi-resource-lagoon ./cmd/pulumi-resource-lagoon/
