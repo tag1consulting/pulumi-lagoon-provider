@@ -1,3 +1,84 @@
+# Release v0.1.2 (2026-02-06)
+
+This release adds multi-version Lagoon API compatibility, supporting Lagoon versions v2.24.1 through v2.30.0.
+
+## Highlights
+
+- **Multi-Version API Compatibility**: Automatic fallback to older API queries/mutations for Lagoon versions prior to v2.30.0
+- **CRD Version Detection**: Automatic selection of correct CRD storage version based on Lagoon chart version
+- **SSL Verification Option**: Support for self-signed certificates in development environments
+- **Expanded Test Coverage**: 507 unit tests with 92% code coverage
+
+## New Features
+
+### Multi-Version Lagoon API Support
+
+The provider now automatically detects and adapts to different Lagoon API versions:
+
+| Lagoon Version | Chart Version | Status |
+|----------------|---------------|--------|
+| v2.30.0 | 1.59.0 | Primary API |
+| v2.28.0 | 1.56.0 | Fallback support |
+| v2.24.1 | 1.52.0 | Fallback support |
+
+**API Changes Handled:**
+- `get_project_by_id`: Uses `allProjects` + filter (projectById doesn't exist in older versions)
+- `get_kubernetes_by_id`: Uses `allKubernetes` + filter
+- `add_env_variable`: Falls back to `addEnvVariable` mutation
+- `delete_env_variable`: Falls back to `deleteEnvVariable` mutation
+- `get_env_variable_by_name`: Falls back to `envVariablesByProjectEnvironment` query
+- `get_advanced_tasks_by_environment`: Falls back to `advancedTasksByEnvironment` query
+
+### CRD Version Detection
+
+For Kubernetes deployments, the provider automatically selects the correct CRD storage version:
+- **Chart < 1.58.0** (Lagoon ≤ v2.28.0): v1beta1 as storage version
+- **Chart ≥ 1.58.0** (Lagoon ≥ v2.29.0): v1beta2 as storage version
+- Both v1beta1 and v1beta2 are always served (required by lagoon-remote controller)
+
+### SSL Verification Option
+
+`LagoonDeployTarget` now supports a `verify_ssl` parameter for environments with self-signed certificates:
+
+```python
+deploy_target = lagoon.LagoonDeployTarget("local-cluster",
+    name="local-kind",
+    console_url="https://kubernetes.default.svc",
+    api_url="https://api.lagoon.local/graphql",
+    jwt_secret=jwt_secret,
+    verify_ssl=False,  # For self-signed certs
+)
+```
+
+## Bug Fixes
+
+- Fixed `get_project_by_id` to work with Lagoon versions that don't support `projectById` query
+- Fixed environment variable operations for older Lagoon API versions
+- Fixed advanced task queries to handle different response formats across versions
+
+## Documentation
+
+- Updated README with multi-version compatibility information
+- Added version compatibility table to documentation
+
+## Requirements
+
+- Python 3.8+
+- Pulumi CLI 3.x
+- Lagoon v2.24.1 or later
+
+## Installation
+
+```bash
+pip install pulumi-lagoon==0.1.2
+```
+
+## Full Changelog
+
+See the [commit history](https://github.com/tag1consulting/pulumi-lagoon-provider/compare/v0.1.1...v0.1.2) for all changes.
+
+---
+
 # Release v0.1.1 (2026-02-02)
 
 This release adds notification and task management resources to the Pulumi Lagoon Provider.
