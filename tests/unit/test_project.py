@@ -451,9 +451,9 @@ class TestLagoonProjectResourceInit:
 
     def test_resource_init_passes_opts(self):
         """Test that LagoonProject.__init__ passes ResourceOptions correctly."""
-        from pulumi_lagoon.project import LagoonProject, LagoonProjectArgs
-
         import pulumi
+
+        from pulumi_lagoon.project import LagoonProject, LagoonProjectArgs
 
         with patch("pulumi.dynamic.Resource.__init__") as mock_init:
             mock_init.return_value = None
@@ -539,9 +539,9 @@ class TestLagoonProjectProviderJWTGeneration:
 
     def test_generate_admin_token_valid(self):
         """Test that _generate_admin_token produces a valid JWT."""
-        from pulumi_lagoon.project import LagoonProjectProvider
-
         import jwt as pyjwt
+
+        from pulumi_lagoon.project import LagoonProjectProvider
 
         provider = LagoonProjectProvider()
         secret = "test-secret-key"

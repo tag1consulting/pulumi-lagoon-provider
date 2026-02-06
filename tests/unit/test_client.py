@@ -1353,16 +1353,20 @@ class TestAPIFallbackCode:
         # 1. get_project_by_id (via allProjects fallback since projectById may fail)
         # 2. addOrUpdateEnvVariableByName (fails with "Cannot query field")
         # 3. addEnvVariable (old API, succeeds)
-        project_response = mock_response(
-            data={"allProjects": [{"id": 1, "name": "test-project"}]}
-        )
+        project_response = mock_response(data={"allProjects": [{"id": 1, "name": "test-project"}]})
         error_response = mock_response(
             errors=[{"message": "Cannot query field 'addOrUpdateEnvVariableByName'"}]
         )
         success_response = mock_response(
-            data={"addEnvVariable": {"id": 1, "name": "TEST_VAR", "value": "test", "scope": "RUNTIME"}}
+            data={
+                "addEnvVariable": {"id": 1, "name": "TEST_VAR", "value": "test", "scope": "RUNTIME"}
+            }
         )
-        lagoon_client.session.post.side_effect = [project_response, error_response, success_response]
+        lagoon_client.session.post.side_effect = [
+            project_response,
+            error_response,
+            success_response,
+        ]
 
         result = lagoon_client.add_env_variable(
             name="TEST_VAR", value="test", scope="runtime", project=1
@@ -1378,17 +1382,25 @@ class TestAPIFallbackCode:
         # 2. environmentById (may fail but we handle it)
         # 3. addOrUpdateEnvVariableByName (fails)
         # 4. addEnvVariable (old API, succeeds)
-        project_response = mock_response(
-            data={"allProjects": [{"id": 1, "name": "test-project"}]}
-        )
-        env_response = mock_response(
-            data={"environmentById": {"id": 5, "name": "main"}}
-        )
+        project_response = mock_response(data={"allProjects": [{"id": 1, "name": "test-project"}]})
+        env_response = mock_response(data={"environmentById": {"id": 5, "name": "main"}})
         error_response = mock_response(errors=[{"message": "Cannot query field"}])
         success_response = mock_response(
-            data={"addEnvVariable": {"id": 2, "name": "DB_HOST", "value": "localhost", "scope": "RUNTIME"}}
+            data={
+                "addEnvVariable": {
+                    "id": 2,
+                    "name": "DB_HOST",
+                    "value": "localhost",
+                    "scope": "RUNTIME",
+                }
+            }
         )
-        lagoon_client.session.post.side_effect = [project_response, env_response, error_response, success_response]
+        lagoon_client.session.post.side_effect = [
+            project_response,
+            env_response,
+            error_response,
+            success_response,
+        ]
 
         result = lagoon_client.add_env_variable(
             name="DB_HOST", value="localhost", scope="runtime", project=1, environment=5
@@ -1406,9 +1418,7 @@ class TestAPIFallbackCode:
         # Call sequence:
         # 1. get_project_by_id (success)
         # 2. addOrUpdateEnvVariableByName (fails with unrelated error)
-        project_response = mock_response(
-            data={"allProjects": [{"id": 1, "name": "test-project"}]}
-        )
+        project_response = mock_response(data={"allProjects": [{"id": 1, "name": "test-project"}]})
         error_response = mock_response(errors=[{"message": "Permission denied"}])
         lagoon_client.session.post.side_effect = [project_response, error_response]
 
@@ -1423,9 +1433,7 @@ class TestAPIFallbackCode:
         # 1. get_project_by_id (success)
         # 2. getEnvVariablesByProjectEnvironmentName (fails)
         # 3. envVariablesByProjectEnvironment (old API, success)
-        project_response = mock_response(
-            data={"allProjects": [{"id": 1, "name": "test-project"}]}
-        )
+        project_response = mock_response(data={"allProjects": [{"id": 1, "name": "test-project"}]})
         error_response = mock_response(errors=[{"message": "Cannot query field"}])
         old_api_response = mock_response(
             data={
@@ -1434,7 +1442,11 @@ class TestAPIFallbackCode:
                 ]
             }
         )
-        lagoon_client.session.post.side_effect = [project_response, error_response, old_api_response]
+        lagoon_client.session.post.side_effect = [
+            project_response,
+            error_response,
+            old_api_response,
+        ]
 
         result = lagoon_client.get_env_variable_by_name("TEST_VAR", project=1)
 
@@ -1448,12 +1460,14 @@ class TestAPIFallbackCode:
         # 1. get_project_by_id (success)
         # 2. deleteEnvVariableByName (fails)
         # 3. deleteEnvVariable old API (success)
-        project_response = mock_response(
-            data={"allProjects": [{"id": 1, "name": "test-project"}]}
-        )
+        project_response = mock_response(data={"allProjects": [{"id": 1, "name": "test-project"}]})
         error_response = mock_response(errors=[{"message": "Cannot query field"}])
         success_response = mock_response(data={"deleteEnvVariable": "success"})
-        lagoon_client.session.post.side_effect = [project_response, error_response, success_response]
+        lagoon_client.session.post.side_effect = [
+            project_response,
+            error_response,
+            success_response,
+        ]
 
         result = lagoon_client.delete_env_variable(name="TEST_VAR", project=1)
 
@@ -1480,7 +1494,9 @@ class TestAPIFallbackCode:
 
         assert result is None
 
-    def test_get_kubernetes_by_id_uses_get_all(self, lagoon_client, mock_response, sample_deploy_target):
+    def test_get_kubernetes_by_id_uses_get_all(
+        self, lagoon_client, mock_response, sample_deploy_target
+    ):
         """Test that get_kubernetes_by_id filters from get_all_kubernetes."""
         all_k8s_response = mock_response(data={"allKubernetes": [sample_deploy_target]})
         lagoon_client.session.post.return_value = all_k8s_response

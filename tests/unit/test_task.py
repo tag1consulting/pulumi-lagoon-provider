@@ -864,8 +864,8 @@ class TestLagoonTaskClientMethods:
         assert result[0]["projectId"] == 1
 
 
-class TestLagoonTaskProviderUpdate:
-    """Tests for LagoonTaskProvider update method."""
+class TestLagoonTaskProviderUpdateAdvanced:
+    """Advanced tests for LagoonTaskProvider update method."""
 
     @patch("pulumi_lagoon.task.LagoonConfig")
     def test_update_with_arguments_validation(self, mock_config_class, sample_task):
@@ -909,8 +909,8 @@ class TestLagoonTaskProviderUpdate:
     @patch("pulumi_lagoon.task.LagoonConfig")
     def test_update_delete_failure_continues(self, mock_config_class, sample_task):
         """Test update continues even if delete fails."""
-        from pulumi_lagoon.task import LagoonTaskProvider
         from pulumi_lagoon.client import LagoonAPIError
+        from pulumi_lagoon.task import LagoonTaskProvider
 
         mock_client = Mock()
         # Delete fails (task doesn't exist or already deleted)
@@ -946,8 +946,8 @@ class TestLagoonTaskProviderUpdate:
     @patch("pulumi_lagoon.task.LagoonConfig")
     def test_update_with_invalid_argument_type(self, mock_config_class):
         """Test update rejects invalid argument types."""
-        from pulumi_lagoon.task import LagoonTaskProvider
         from pulumi_lagoon.exceptions import LagoonValidationError
+        from pulumi_lagoon.task import LagoonTaskProvider
 
         provider = LagoonTaskProvider()
 

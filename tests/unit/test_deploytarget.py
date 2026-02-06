@@ -524,9 +524,9 @@ class TestLagoonDeployTargetProviderJWTGeneration:
 
     def test_generate_admin_token_valid(self):
         """Test that _generate_admin_token produces a valid JWT."""
-        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
-
         import jwt as pyjwt
+
+        from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
 
         provider = LagoonDeployTargetProvider()
         secret = "test-secret-key"
@@ -638,9 +638,9 @@ class TestLagoonDeployTargetResourceInit:
 
     def test_resource_init_passes_opts(self):
         """Test that LagoonDeployTarget.__init__ passes ResourceOptions correctly."""
-        from pulumi_lagoon.deploytarget import LagoonDeployTarget, LagoonDeployTargetArgs
-
         import pulumi
+
+        from pulumi_lagoon.deploytarget import LagoonDeployTarget, LagoonDeployTargetArgs
 
         with patch("pulumi.dynamic.Resource.__init__") as mock_init:
             mock_init.return_value = None
@@ -665,7 +665,9 @@ class TestLagoonDeployTargetProviderUpdateValidation:
     """Tests for update validation in LagoonDeployTargetProvider."""
 
     @patch("pulumi_lagoon.deploytarget.LagoonConfig")
-    def test_update_validates_cloud_provider_when_changed(self, mock_config_class, sample_deploy_target):
+    def test_update_validates_cloud_provider_when_changed(
+        self, mock_config_class, sample_deploy_target
+    ):
         """Test that cloud_provider is validated only when it changes."""
         from pulumi_lagoon.deploytarget import LagoonDeployTargetProvider
 
@@ -763,7 +765,7 @@ class TestLagoonDeployTargetProviderUpdateValidation:
             "build_image": "new-build:v2",
         }
 
-        result = provider.update("1", old_inputs, new_inputs)
+        provider.update("1", old_inputs, new_inputs)
 
         # Verify all changed fields were included
         call_kwargs = mock_client.update_kubernetes.call_args[1]
