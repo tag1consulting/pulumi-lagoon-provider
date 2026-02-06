@@ -475,3 +475,147 @@ class TestLagoonEnvironmentProviderImport:
         with pytest.raises(LagoonValidationError) as exc:
             provider.read("invalid-no-colon", {})
         assert "project_id:env_name" in str(exc.value)
+
+
+class TestLagoonEnvironmentProviderUpdateOptionalFields:
+    """Tests for update with optional fields in LagoonEnvironmentProvider."""
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_update_with_deploy_base_ref(self, mock_config_class, sample_environment):
+        """Test update includes deploy_base_ref when provided."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        updated_env = sample_environment.copy()
+        updated_env["deployBaseRef"] = "develop"
+
+        mock_client = Mock()
+        mock_client.add_or_update_environment.return_value = updated_env
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonEnvironmentProvider()
+
+        old_inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "branch",
+            "environment_type": "production",
+        }
+        new_inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "branch",
+            "environment_type": "production",
+            "deploy_base_ref": "develop",
+        }
+
+        provider.update("1", old_inputs, new_inputs)
+
+        call_kwargs = mock_client.add_or_update_environment.call_args[1]
+        assert call_kwargs["deployBaseRef"] == "develop"
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_update_with_deploy_head_ref(self, mock_config_class, sample_environment):
+        """Test update includes deploy_head_ref when provided."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        updated_env = sample_environment.copy()
+        updated_env["deployHeadRef"] = "feature/new"
+
+        mock_client = Mock()
+        mock_client.add_or_update_environment.return_value = updated_env
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonEnvironmentProvider()
+
+        old_inputs = {
+            "name": "pr-123",
+            "project_id": 1,
+            "deploy_type": "pullrequest",
+            "environment_type": "development",
+        }
+        new_inputs = {
+            "name": "pr-123",
+            "project_id": 1,
+            "deploy_type": "pullrequest",
+            "environment_type": "development",
+            "deploy_head_ref": "feature/new",
+        }
+
+        provider.update("1", old_inputs, new_inputs)
+
+        call_kwargs = mock_client.add_or_update_environment.call_args[1]
+        assert call_kwargs["deployHeadRef"] == "feature/new"
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_update_with_deploy_title(self, mock_config_class, sample_environment):
+        """Test update includes deploy_title when provided."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        updated_env = sample_environment.copy()
+        updated_env["deployTitle"] = "PR #123: New Feature"
+
+        mock_client = Mock()
+        mock_client.add_or_update_environment.return_value = updated_env
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonEnvironmentProvider()
+
+        old_inputs = {
+            "name": "pr-123",
+            "project_id": 1,
+            "deploy_type": "pullrequest",
+            "environment_type": "development",
+        }
+        new_inputs = {
+            "name": "pr-123",
+            "project_id": 1,
+            "deploy_type": "pullrequest",
+            "environment_type": "development",
+            "deploy_title": "PR #123: New Feature",
+        }
+
+        provider.update("1", old_inputs, new_inputs)
+
+        call_kwargs = mock_client.add_or_update_environment.call_args[1]
+        assert call_kwargs["deployTitle"] == "PR #123: New Feature"
+
+    @patch("pulumi_lagoon.environment.LagoonConfig")
+    def test_update_with_auto_idle(self, mock_config_class, sample_environment):
+        """Test update includes auto_idle when provided."""
+        from pulumi_lagoon.environment import LagoonEnvironmentProvider
+
+        updated_env = sample_environment.copy()
+        updated_env["autoIdle"] = 0  # Disabled
+
+        mock_client = Mock()
+        mock_client.add_or_update_environment.return_value = updated_env
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonEnvironmentProvider()
+
+        old_inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "branch",
+            "environment_type": "production",
+        }
+        new_inputs = {
+            "name": "main",
+            "project_id": 1,
+            "deploy_type": "branch",
+            "environment_type": "production",
+            "auto_idle": 0,
+        }
+
+        provider.update("1", old_inputs, new_inputs)
+
+        call_kwargs = mock_client.add_or_update_environment.call_args[1]
+        assert call_kwargs["autoIdle"] == 0

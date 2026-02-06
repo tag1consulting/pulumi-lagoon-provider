@@ -186,6 +186,9 @@ class LagoonClient:
         """
         Get project details by ID.
 
+        Note: Lagoon v2.30.0+ does not have a projectById query, so we query
+        allProjects and filter by ID.
+
         Args:
             project_id: Project ID
 
@@ -193,8 +196,8 @@ class LagoonClient:
             Project data or None if not found
         """
         query = """
-        query ProjectById($id: Int!) {
-            projectById(id: $id) {
+        query AllProjects {
+            allProjects {
                 id
                 name
                 gitUrl
@@ -210,14 +213,18 @@ class LagoonClient:
         }
         """
 
-        result = self._execute(query, {"id": project_id})
-        project = result.get("projectById")
+        result = self._execute(query)
+        all_projects = result.get("allProjects", [])
 
-        # Normalize openshift to just the ID for consistency
-        if project and project.get("openshift") and isinstance(project["openshift"], dict):
-            project["openshift"] = project["openshift"].get("id")
+        # Filter for the specific project ID
+        for project in all_projects:
+            if project.get("id") == project_id:
+                # Normalize openshift to just the ID for consistency
+                if project.get("openshift") and isinstance(project["openshift"], dict):
+                    project["openshift"] = project["openshift"].get("id")
+                return project
 
-        return project
+        return None
 
     def update_project(self, project_id: int, **kwargs) -> Dict[str, Any]:
         """
@@ -405,10 +412,18 @@ class LagoonClient:
 
         Returns:
             Variable data
+
+        Note:
+            Uses addOrUpdateEnvVariableByName for Lagoon v2.30.0+
+            (which takes project/environment names as Strings)
+            with fallback to addEnvVariable for older versions
+            (which takes project/environment IDs as Ints).
         """
-        mutation = """
-        mutation AddEnvVariable($input: EnvVariableInput!) {
-            addEnvVariable(input: $input) {
+        # Try newer API first (Lagoon v2.30.0+)
+        # The new API uses project NAME (String) not ID (Int)
+        mutation_new = """
+        mutation AddOrUpdateEnvVariableByName($input: EnvVariableByNameInput!) {
+            addOrUpdateEnvVariableByName(input: $input) {
                 id
                 name
                 value
@@ -417,28 +432,78 @@ class LagoonClient:
         }
         """
 
-        # Lagoon uses type/typeId to specify whether this is a project or environment variable
-        if environment is not None:
-            input_data = {
-                "name": name,
-                "value": value,
-                "type": "ENVIRONMENT",
-                "typeId": environment,
-                "scope": scope.upper(),  # Lagoon expects uppercase
-                **kwargs,
-            }
-        else:
-            input_data = {
-                "name": name,
-                "value": value,
-                "type": "PROJECT",
-                "typeId": project,
-                "scope": scope.upper(),  # Lagoon expects uppercase
-                **kwargs,
-            }
+        # Get project name from ID for the new API
+        project_data = self.get_project_by_id(project)
+        if project_data is None:
+            raise LagoonAPIError(f"Project with ID {project} not found")
+        project_name = project_data.get("name")
 
-        result = self._execute(mutation, {"input": input_data})
-        return result.get("addEnvVariable", {})
+        # Build input for new API using names
+        input_data_new: Dict[str, Any] = {
+            "name": name,
+            "value": value,
+            "scope": scope.upper(),
+            "project": project_name,
+        }
+
+        # If environment is specified, get environment name
+        if environment is not None:
+            env_query = """
+            query EnvironmentById($id: Int!) {
+                environmentById(id: $id) {
+                    id
+                    name
+                }
+            }
+            """
+            try:
+                env_result = self._execute(env_query, {"id": environment})
+                env_data = env_result.get("environmentById")
+                if env_data:
+                    input_data_new["environment"] = env_data.get("name")
+            except (LagoonAPIError, LagoonConnectionError):
+                # If environmentById fails, we'll handle it in the fallback
+                pass
+
+        try:
+            result = self._execute(mutation_new, {"input": input_data_new})
+            return result.get("addOrUpdateEnvVariableByName", {})
+        except (LagoonAPIError, LagoonConnectionError) as e:
+            # Fallback to older API for Lagoon versions < 2.30.0
+            if "Cannot query field" in str(e) or "400" in str(e) or "Unknown argument" in str(e):
+                mutation_old = """
+                mutation AddEnvVariable($input: EnvVariableInput!) {
+                    addEnvVariable(input: $input) {
+                        id
+                        name
+                        value
+                        scope
+                    }
+                }
+                """
+                # Lagoon uses type/typeId to specify whether this is a project or environment variable
+                if environment is not None:
+                    input_data_old = {
+                        "name": name,
+                        "value": value,
+                        "type": "ENVIRONMENT",
+                        "typeId": environment,
+                        "scope": scope.upper(),
+                        **kwargs,
+                    }
+                else:
+                    input_data_old = {
+                        "name": name,
+                        "value": value,
+                        "type": "PROJECT",
+                        "typeId": project,
+                        "scope": scope.upper(),
+                        **kwargs,
+                    }
+                result = self._execute(mutation_old, {"input": input_data_old})
+                return result.get("addEnvVariable", {})
+            else:
+                raise
 
     def get_env_variable_by_name(
         self, name: str, project: int, environment: Optional[int] = None
@@ -453,34 +518,87 @@ class LagoonClient:
 
         Returns:
             Variable data or None if not found
+
+        Note:
+            Uses getEnvVariablesByProjectEnvironmentName for Lagoon v2.30.0+
+            (which takes project/environment names as Strings)
+            with fallback to envVariablesByProjectEnvironment for older versions
+            (which takes project/environment IDs as Ints).
         """
-        # Note: Lagoon doesn't have a direct query for single variable
-        # We need to get all variables and filter
-        query = """
-        query EnvVariablesByProjectEnvironment($project: Int!, $environment: Int) {
-            envVariablesByProjectEnvironment(input: {project: $project, environment: $environment}) {
+        # Try newer API first (Lagoon v2.30.0+)
+        # The new API uses project NAME (String) not ID (Int)
+        # Note: The new API returns EnvKeyValue type which doesn't have project/environment fields
+        query_new = """
+        query GetEnvVariablesByProjectEnvironmentName($input: EnvVariableByProjectEnvironmentNameInput!) {
+            getEnvVariablesByProjectEnvironmentName(input: $input) {
                 id
                 name
                 value
                 scope
-                project {
-                    id
-                    name
-                }
-                environment {
-                    id
-                    name
-                }
             }
         }
         """
 
-        variables = {"project": project}
-        if environment is not None:
-            variables["environment"] = environment
+        # Get project name from ID for the new API
+        project_data = self.get_project_by_id(project)
+        if project_data is None:
+            return None
+        project_name = project_data.get("name")
 
-        result = self._execute(query, variables)
-        all_vars = result.get("envVariablesByProjectEnvironment", [])
+        # Build input for new API using names
+        input_data: Dict[str, Any] = {"project": project_name}
+
+        # If environment is specified, we need to get environment name too
+        if environment is not None:
+            # Query the environment to get its name
+            env_query = """
+            query EnvironmentById($id: Int!) {
+                environmentById(id: $id) {
+                    id
+                    name
+                }
+            }
+            """
+            try:
+                env_result = self._execute(env_query, {"id": environment})
+                env_data = env_result.get("environmentById")
+                if env_data:
+                    input_data["environment"] = env_data.get("name")
+            except (LagoonAPIError, LagoonConnectionError):
+                # If environmentById fails, we'll handle it in the fallback
+                pass
+
+        try:
+            result = self._execute(query_new, {"input": input_data})
+            all_vars = result.get("getEnvVariablesByProjectEnvironmentName", [])
+        except (LagoonAPIError, LagoonConnectionError) as e:
+            # Fallback to older API for Lagoon versions < 2.30.0
+            if "Cannot query field" in str(e) or "400" in str(e):
+                query_old = """
+                query EnvVariablesByProjectEnvironment($project: Int!, $environment: Int) {
+                    envVariablesByProjectEnvironment(input: {project: $project, environment: $environment}) {
+                        id
+                        name
+                        value
+                        scope
+                        project {
+                            id
+                            name
+                        }
+                        environment {
+                            id
+                            name
+                        }
+                    }
+                }
+                """
+                variables = {"project": project}
+                if environment is not None:
+                    variables["environment"] = environment
+                result = self._execute(query_old, variables)
+                all_vars = result.get("envVariablesByProjectEnvironment", [])
+            else:
+                raise
 
         # Filter for the specific variable name
         for var in all_vars:
@@ -502,20 +620,67 @@ class LagoonClient:
 
         Returns:
             Success message
+
+        Note:
+            Uses deleteEnvVariableByName for Lagoon v2.30.0+
+            (which takes project/environment names as Strings)
+            with fallback to deleteEnvVariable for older versions
+            (which takes project/environment IDs as Ints).
         """
-        mutation = """
-        mutation DeleteEnvVariable($input: DeleteEnvVariableInput!) {
-            deleteEnvVariable(input: $input)
+        # Try newer API first (Lagoon v2.30.0+)
+        # The new API uses project NAME (String) not ID (Int)
+        mutation_new = """
+        mutation DeleteEnvVariableByName($input: DeleteEnvVariableByNameInput!) {
+            deleteEnvVariableByName(input: $input)
         }
         """
 
-        input_data = {"name": name, "project": project}
+        # Get project name from ID for the new API
+        project_data = self.get_project_by_id(project)
+        if project_data is None:
+            raise LagoonAPIError(f"Project with ID {project} not found")
+        project_name = project_data.get("name")
 
+        # Build input for new API using names
+        input_data_new: Dict[str, Any] = {"name": name, "project": project_name}
+
+        # If environment is specified, get environment name
         if environment is not None:
-            input_data["environment"] = environment
+            env_query = """
+            query EnvironmentById($id: Int!) {
+                environmentById(id: $id) {
+                    id
+                    name
+                }
+            }
+            """
+            try:
+                env_result = self._execute(env_query, {"id": environment})
+                env_data = env_result.get("environmentById")
+                if env_data:
+                    input_data_new["environment"] = env_data.get("name")
+            except (LagoonAPIError, LagoonConnectionError):
+                # If environmentById fails, we'll handle it in the fallback
+                pass
 
-        result = self._execute(mutation, {"input": input_data})
-        return result.get("deleteEnvVariable", "")
+        try:
+            result = self._execute(mutation_new, {"input": input_data_new})
+            return result.get("deleteEnvVariableByName", "")
+        except (LagoonAPIError, LagoonConnectionError) as e:
+            # Fallback to older API for Lagoon versions < 2.30.0
+            if "Cannot query field" in str(e) or "400" in str(e):
+                mutation_old = """
+                mutation DeleteEnvVariable($input: DeleteEnvVariableInput!) {
+                    deleteEnvVariable(input: $input)
+                }
+                """
+                input_data_old: Dict[str, Any] = {"name": name, "project": project}
+                if environment is not None:
+                    input_data_old["environment"] = environment
+                result = self._execute(mutation_old, {"input": input_data_old})
+                return result.get("deleteEnvVariable", "")
+            else:
+                raise
 
     # Deploy target (Kubernetes) operations
     def add_kubernetes(
@@ -600,32 +765,23 @@ class LagoonClient:
         """
         Get Kubernetes deploy target by ID.
 
+        Note: Lagoon v2.30.0+ does not have a kubernetes(id:) query, so we query
+        allKubernetes and filter by ID.
+
         Args:
             k8s_id: Kubernetes/deploy target ID
 
         Returns:
             Deploy target data or None if not found
         """
-        query = """
-        query KubernetesById($id: Int!) {
-            kubernetes(id: $id) {
-                id
-                name
-                consoleUrl
-                cloudProvider
-                cloudRegion
-                sshHost
-                sshPort
-                buildImage
-                disabled
-                routerPattern
-                created
-            }
-        }
-        """
+        # Query all and filter - compatible with all Lagoon versions
+        all_k8s = self.get_all_kubernetes()
 
-        result = self._execute(query, {"id": k8s_id})
-        return result.get("kubernetes")
+        for k8s in all_k8s:
+            if k8s.get("id") == k8s_id:
+                return k8s
+
+        return None
 
     def get_kubernetes_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """
@@ -1782,10 +1938,16 @@ class LagoonClient:
 
         Returns:
             List of task definition data
+
+        Note:
+            Uses advancedTasksForEnvironment for Lagoon v2.30.0+
+            with fallback to advancedTasksByEnvironment for older versions.
         """
-        query = """
-        query AdvancedTasksByEnvironment($environment: Int!) {
-            advancedTasksByEnvironment(environment: $environment) {
+        # Try newer API first (Lagoon v2.30.0+)
+        # Note: In v2.30.0+, project and environment are Int IDs, not objects
+        query_new = """
+        query AdvancedTasksForEnvironment($environment: Int!) {
+            advancedTasksForEnvironment(environment: $environment) {
                 ... on AdvancedTaskDefinitionCommand {
                     id
                     name
@@ -1794,14 +1956,8 @@ class LagoonClient:
                     service
                     command
                     permission
-                    project {
-                        id
-                        name
-                    }
-                    environment {
-                        id
-                        name
-                    }
+                    project
+                    environment
                     groupName
                 }
                 ... on AdvancedTaskDefinitionImage {
@@ -1812,28 +1968,86 @@ class LagoonClient:
                     service
                     image
                     permission
-                    project {
-                        id
-                        name
-                    }
-                    environment {
-                        id
-                        name
-                    }
+                    project
+                    environment
                     groupName
                 }
             }
         }
         """
 
-        result = self._execute(query, {"environment": environment_id})
-        tasks = result.get("advancedTasksByEnvironment", [])
+        try:
+            result = self._execute(query_new, {"environment": environment_id})
+            tasks = result.get("advancedTasksForEnvironment", [])
+        except (LagoonAPIError, LagoonConnectionError) as e:
+            # Fallback to older API for Lagoon versions < 2.30.0
+            if "Cannot query field" in str(e) or "400" in str(e):
+                query_old = """
+                query AdvancedTasksByEnvironment($environment: Int!) {
+                    advancedTasksByEnvironment(environment: $environment) {
+                        ... on AdvancedTaskDefinitionCommand {
+                            id
+                            name
+                            description
+                            type
+                            service
+                            command
+                            permission
+                            project {
+                                id
+                                name
+                            }
+                            environment {
+                                id
+                                name
+                            }
+                            groupName
+                        }
+                        ... on AdvancedTaskDefinitionImage {
+                            id
+                            name
+                            description
+                            type
+                            service
+                            image
+                            permission
+                            project {
+                                id
+                                name
+                            }
+                            environment {
+                                id
+                                name
+                            }
+                            groupName
+                        }
+                    }
+                }
+                """
+                result = self._execute(query_old, {"environment": environment_id})
+                tasks = result.get("advancedTasksByEnvironment", [])
+            else:
+                raise
 
-        # Normalize nested objects for each task
+        # Normalize project/environment fields for consistency
+        # Old API returns objects: {"id": 1, "name": "..."}
+        # New API returns Int IDs directly: 1
         for task in tasks:
-            if task.get("project") and isinstance(task["project"], dict):
-                task["projectId"] = task["project"].get("id")
-            if task.get("environment") and isinstance(task["environment"], dict):
-                task["environmentId"] = task["environment"].get("id")
+            project_val = task.get("project")
+            env_val = task.get("environment")
+
+            if isinstance(project_val, dict):
+                # Old API format
+                task["projectId"] = project_val.get("id")
+            elif isinstance(project_val, int):
+                # New API format
+                task["projectId"] = project_val
+
+            if isinstance(env_val, dict):
+                # Old API format
+                task["environmentId"] = env_val.get("id")
+            elif isinstance(env_val, int):
+                # New API format
+                task["environmentId"] = env_val
 
         return tasks

@@ -109,8 +109,8 @@ def install_lagoon_core(
         "routeSuffix": f".{domain_config.base}",
         # Git server configuration
         "gitHost": f"git.{domain_config.base}",
-        # API JWT secret
-        "apiJWTSecret": "changeme-jwt-secret-for-local-dev-only",
+        # API JWT secret - use generated secret if available, otherwise fallback to default
+        "apiJWTSecret": secrets.jwt_secret if secrets.jwt_secret else "changeme-jwt-secret-for-local-dev-only",
         "api": {
             "enabled": True,
             # Use single replica to prevent migration lock race condition.

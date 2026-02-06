@@ -167,8 +167,12 @@ class TestProjectOperations:
         assert result is None
 
     def test_get_project_by_id(self, lagoon_client, mock_response, sample_project):
-        """Test getting project by ID."""
-        response = mock_response(data={"projectById": sample_project})
+        """Test getting project by ID.
+
+        Note: The implementation now uses allProjects and filters by ID
+        for compatibility with Lagoon v2.30.0+ which doesn't have projectById.
+        """
+        response = mock_response(data={"allProjects": [sample_project]})
         lagoon_client.session.post.return_value = response
 
         result = lagoon_client.get_project_by_id(1)
@@ -256,12 +260,21 @@ class TestEnvironmentOperations:
 
 
 class TestVariableOperations:
-    """Tests for variable CRUD operations."""
+    """Tests for variable CRUD operations.
 
-    def test_add_project_variable(self, lagoon_client, mock_response, sample_variable):
+    Note: Variable methods now call get_project_by_id internally to convert
+    project IDs to names for Lagoon v2.30.0+ compatibility. Tests need to
+    mock both the allProjects query and the actual mutation.
+    """
+
+    def test_add_project_variable(
+        self, lagoon_client, mock_response, sample_variable, sample_project
+    ):
         """Test adding a project-level variable."""
-        response = mock_response(data={"addEnvVariable": sample_variable})
-        lagoon_client.session.post.return_value = response
+        # Mock responses for: 1) allProjects (to get project name), 2) mutation
+        project_response = mock_response(data={"allProjects": [sample_project]})
+        mutation_response = mock_response(data={"addOrUpdateEnvVariableByName": sample_variable})
+        lagoon_client.session.post.side_effect = [project_response, mutation_response]
 
         result = lagoon_client.add_env_variable(
             name="DATABASE_HOST", value="mysql.example.com", project=1, scope="runtime"
@@ -269,18 +282,17 @@ class TestVariableOperations:
 
         assert result["name"] == "DATABASE_HOST"
 
-        # Verify PROJECT type was used
-        call_kwargs = lagoon_client.session.post.call_args[1]
-        input_data = call_kwargs["json"]["variables"]["input"]
-        assert input_data["type"] == "PROJECT"
-        assert input_data["typeId"] == 1
-
-    def test_add_environment_variable(self, lagoon_client, mock_response, sample_variable):
+    def test_add_environment_variable(
+        self, lagoon_client, mock_response, sample_variable, sample_project, sample_environment
+    ):
         """Test adding an environment-level variable."""
         env_var = sample_variable.copy()
         env_var["environment"] = {"id": 1, "name": "main"}
-        response = mock_response(data={"addEnvVariable": env_var})
-        lagoon_client.session.post.return_value = response
+        # Mock responses for: 1) allProjects, 2) environmentById, 3) mutation
+        project_response = mock_response(data={"allProjects": [sample_project]})
+        env_response = mock_response(data={"environmentById": sample_environment})
+        mutation_response = mock_response(data={"addOrUpdateEnvVariableByName": env_var})
+        lagoon_client.session.post.side_effect = [project_response, env_response, mutation_response]
 
         lagoon_client.add_env_variable(
             name="DATABASE_HOST",
@@ -290,71 +302,93 @@ class TestVariableOperations:
             environment=1,
         )
 
-        # Verify ENVIRONMENT type was used
-        call_kwargs = lagoon_client.session.post.call_args[1]
-        input_data = call_kwargs["json"]["variables"]["input"]
-        assert input_data["type"] == "ENVIRONMENT"
-        assert input_data["typeId"] == 1
+        # Verify mutation was called (3rd call)
+        assert lagoon_client.session.post.call_count == 3
 
-    def test_add_variable_uppercase_scope(self, lagoon_client, mock_response, sample_variable):
+    def test_add_variable_uppercase_scope(
+        self, lagoon_client, mock_response, sample_variable, sample_project
+    ):
         """Test that scope is uppercased."""
-        response = mock_response(data={"addEnvVariable": sample_variable})
-        lagoon_client.session.post.return_value = response
+        project_response = mock_response(data={"allProjects": [sample_project]})
+        mutation_response = mock_response(data={"addOrUpdateEnvVariableByName": sample_variable})
+        lagoon_client.session.post.side_effect = [project_response, mutation_response]
 
         lagoon_client.add_env_variable(name="TEST", value="value", project=1, scope="build")
 
-        call_kwargs = lagoon_client.session.post.call_args[1]
+        # Check the mutation call (2nd call)
+        call_kwargs = lagoon_client.session.post.call_args_list[1][1]
         input_data = call_kwargs["json"]["variables"]["input"]
         assert input_data["scope"] == "BUILD"
 
-    def test_get_variable_by_name(self, lagoon_client, mock_response, sample_variable):
+    def test_get_variable_by_name(
+        self, lagoon_client, mock_response, sample_variable, sample_project
+    ):
         """Test getting variable by name."""
-        response = mock_response(data={"envVariablesByProjectEnvironment": [sample_variable]})
-        lagoon_client.session.post.return_value = response
+        # Mock responses for: 1) allProjects (to get project name), 2) variable query
+        project_response = mock_response(data={"allProjects": [sample_project]})
+        var_response = mock_response(
+            data={"getEnvVariablesByProjectEnvironmentName": [sample_variable]}
+        )
+        lagoon_client.session.post.side_effect = [project_response, var_response]
 
         result = lagoon_client.get_env_variable_by_name(name="DATABASE_HOST", project=1)
 
         assert result["name"] == "DATABASE_HOST"
 
-    def test_get_variable_not_found(self, lagoon_client, mock_response):
+    def test_get_variable_not_found(self, lagoon_client, mock_response, sample_project):
         """Test getting nonexistent variable returns None."""
-        response = mock_response(data={"envVariablesByProjectEnvironment": []})
-        lagoon_client.session.post.return_value = response
+        project_response = mock_response(data={"allProjects": [sample_project]})
+        var_response = mock_response(data={"getEnvVariablesByProjectEnvironmentName": []})
+        lagoon_client.session.post.side_effect = [project_response, var_response]
 
         result = lagoon_client.get_env_variable_by_name(name="NONEXISTENT", project=1)
 
         assert result is None
 
-    def test_get_variable_with_environment(self, lagoon_client, mock_response, sample_variable):
+    def test_get_variable_with_environment(
+        self, lagoon_client, mock_response, sample_variable, sample_project, sample_environment
+    ):
         """Test getting environment-scoped variable."""
-        response = mock_response(data={"envVariablesByProjectEnvironment": [sample_variable]})
-        lagoon_client.session.post.return_value = response
+        # Mock responses for: 1) allProjects, 2) environmentById, 3) variable query
+        project_response = mock_response(data={"allProjects": [sample_project]})
+        env_response = mock_response(data={"environmentById": sample_environment})
+        var_response = mock_response(
+            data={"getEnvVariablesByProjectEnvironmentName": [sample_variable]}
+        )
+        lagoon_client.session.post.side_effect = [project_response, env_response, var_response]
 
         lagoon_client.get_env_variable_by_name(name="DATABASE_HOST", project=1, environment=1)
 
-        call_kwargs = lagoon_client.session.post.call_args[1]
-        variables = call_kwargs["json"]["variables"]
-        assert variables["environment"] == 1
+        # Verify variable query includes environment name (from 3rd call)
+        call_kwargs = lagoon_client.session.post.call_args_list[2][1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["environment"] == "main"  # Environment name, not ID
 
-    def test_delete_variable(self, lagoon_client, mock_response):
+    def test_delete_variable(self, lagoon_client, mock_response, sample_project):
         """Test deleting a variable."""
-        response = mock_response(data={"deleteEnvVariable": "success"})
-        lagoon_client.session.post.return_value = response
+        project_response = mock_response(data={"allProjects": [sample_project]})
+        delete_response = mock_response(data={"deleteEnvVariableByName": "success"})
+        lagoon_client.session.post.side_effect = [project_response, delete_response]
 
         result = lagoon_client.delete_env_variable(name="DATABASE_HOST", project=1)
 
         assert result == "success"
 
-    def test_delete_environment_variable(self, lagoon_client, mock_response):
+    def test_delete_environment_variable(
+        self, lagoon_client, mock_response, sample_project, sample_environment
+    ):
         """Test deleting an environment-scoped variable."""
-        response = mock_response(data={"deleteEnvVariable": "success"})
-        lagoon_client.session.post.return_value = response
+        project_response = mock_response(data={"allProjects": [sample_project]})
+        env_response = mock_response(data={"environmentById": sample_environment})
+        delete_response = mock_response(data={"deleteEnvVariableByName": "success"})
+        lagoon_client.session.post.side_effect = [project_response, env_response, delete_response]
 
         lagoon_client.delete_env_variable(name="DATABASE_HOST", project=1, environment=1)
 
-        call_kwargs = lagoon_client.session.post.call_args[1]
+        # Verify delete was called with environment name
+        call_kwargs = lagoon_client.session.post.call_args_list[2][1]
         input_data = call_kwargs["json"]["variables"]["input"]
-        assert input_data["environment"] == 1
+        assert input_data["environment"] == "main"
 
 
 class TestNotificationSlackOperations:
@@ -1069,8 +1103,12 @@ class TestKubernetesOperations:
         assert result == []
 
     def test_get_kubernetes_by_id(self, lagoon_client, mock_response, sample_deploy_target):
-        """Test getting Kubernetes deploy target by ID."""
-        response = mock_response(data={"kubernetes": sample_deploy_target})
+        """Test getting Kubernetes deploy target by ID.
+
+        Note: The implementation now uses allKubernetes and filters by ID
+        for compatibility with Lagoon v2.30.0+ which doesn't have kubernetes(id:).
+        """
+        response = mock_response(data={"allKubernetes": [sample_deploy_target]})
         lagoon_client.session.post.return_value = response
 
         result = lagoon_client.get_kubernetes_by_id(1)
@@ -1080,7 +1118,7 @@ class TestKubernetesOperations:
 
     def test_get_kubernetes_by_id_not_found(self, lagoon_client, mock_response):
         """Test getting nonexistent Kubernetes deploy target returns None."""
-        response = mock_response(data={"kubernetes": None})
+        response = mock_response(data={"allKubernetes": []})
         lagoon_client.session.post.return_value = response
 
         result = lagoon_client.get_kubernetes_by_id(999)
@@ -1304,3 +1342,248 @@ class TestDeployTargetConfigOperations:
         input_data = call_kwargs["json"]["variables"]["input"]
         assert input_data["id"] == 1
         assert input_data["project"] == 1
+
+
+class TestAPIFallbackCode:
+    """Tests for backward compatibility fallback code for older Lagoon API versions."""
+
+    def test_add_env_variable_fallback_on_cannot_query_field(self, lagoon_client, mock_response):
+        """Test that add_env_variable falls back to old API on 'Cannot query field' error."""
+        # Call sequence:
+        # 1. get_project_by_id (via allProjects fallback since projectById may fail)
+        # 2. addOrUpdateEnvVariableByName (fails with "Cannot query field")
+        # 3. addEnvVariable (old API, succeeds)
+        project_response = mock_response(data={"allProjects": [{"id": 1, "name": "test-project"}]})
+        error_response = mock_response(
+            errors=[{"message": "Cannot query field 'addOrUpdateEnvVariableByName'"}]
+        )
+        success_response = mock_response(
+            data={
+                "addEnvVariable": {"id": 1, "name": "TEST_VAR", "value": "test", "scope": "RUNTIME"}
+            }
+        )
+        lagoon_client.session.post.side_effect = [
+            project_response,
+            error_response,
+            success_response,
+        ]
+
+        result = lagoon_client.add_env_variable(
+            name="TEST_VAR", value="test", scope="runtime", project=1
+        )
+
+        assert result["id"] == 1
+        assert result["name"] == "TEST_VAR"
+
+    def test_add_env_variable_fallback_with_environment(self, lagoon_client, mock_response):
+        """Test that add_env_variable fallback works for environment variables."""
+        # Call sequence:
+        # 1. get_project_by_id (success)
+        # 2. environmentById (may fail but we handle it)
+        # 3. addOrUpdateEnvVariableByName (fails)
+        # 4. addEnvVariable (old API, succeeds)
+        project_response = mock_response(data={"allProjects": [{"id": 1, "name": "test-project"}]})
+        env_response = mock_response(data={"environmentById": {"id": 5, "name": "main"}})
+        error_response = mock_response(errors=[{"message": "Cannot query field"}])
+        success_response = mock_response(
+            data={
+                "addEnvVariable": {
+                    "id": 2,
+                    "name": "DB_HOST",
+                    "value": "localhost",
+                    "scope": "RUNTIME",
+                }
+            }
+        )
+        lagoon_client.session.post.side_effect = [
+            project_response,
+            env_response,
+            error_response,
+            success_response,
+        ]
+
+        result = lagoon_client.add_env_variable(
+            name="DB_HOST", value="localhost", scope="runtime", project=1, environment=5
+        )
+
+        assert result["id"] == 2
+        # Verify the old API format was used with ENVIRONMENT type
+        call_kwargs = lagoon_client.session.post.call_args_list[3][1]
+        input_data = call_kwargs["json"]["variables"]["input"]
+        assert input_data["type"] == "ENVIRONMENT"
+        assert input_data["typeId"] == 5
+
+    def test_add_env_variable_reraises_unrelated_error(self, lagoon_client, mock_response):
+        """Test that add_env_variable re-raises errors that are not API version related."""
+        # Call sequence:
+        # 1. get_project_by_id (success)
+        # 2. addOrUpdateEnvVariableByName (fails with unrelated error)
+        project_response = mock_response(data={"allProjects": [{"id": 1, "name": "test-project"}]})
+        error_response = mock_response(errors=[{"message": "Permission denied"}])
+        lagoon_client.session.post.side_effect = [project_response, error_response]
+
+        with pytest.raises(LagoonAPIError, match="Permission denied"):
+            lagoon_client.add_env_variable(
+                name="TEST_VAR", value="test", scope="runtime", project=1
+            )
+
+    def test_get_env_variable_fallback(self, lagoon_client, mock_response):
+        """Test that get_env_variable_by_name falls back to envVariablesByProjectEnvironment."""
+        # Call sequence:
+        # 1. get_project_by_id (success)
+        # 2. getEnvVariablesByProjectEnvironmentName (fails)
+        # 3. envVariablesByProjectEnvironment (old API, success)
+        project_response = mock_response(data={"allProjects": [{"id": 1, "name": "test-project"}]})
+        error_response = mock_response(errors=[{"message": "Cannot query field"}])
+        old_api_response = mock_response(
+            data={
+                "envVariablesByProjectEnvironment": [
+                    {"id": 1, "name": "TEST_VAR", "value": "test_value", "scope": "RUNTIME"}
+                ]
+            }
+        )
+        lagoon_client.session.post.side_effect = [
+            project_response,
+            error_response,
+            old_api_response,
+        ]
+
+        result = lagoon_client.get_env_variable_by_name("TEST_VAR", project=1)
+
+        assert result is not None
+        assert result["name"] == "TEST_VAR"
+        assert result["value"] == "test_value"
+
+    def test_delete_env_variable_fallback(self, lagoon_client, mock_response):
+        """Test that delete_env_variable falls back to old API format."""
+        # Call sequence:
+        # 1. get_project_by_id (success)
+        # 2. deleteEnvVariableByName (fails)
+        # 3. deleteEnvVariable old API (success)
+        project_response = mock_response(data={"allProjects": [{"id": 1, "name": "test-project"}]})
+        error_response = mock_response(errors=[{"message": "Cannot query field"}])
+        success_response = mock_response(data={"deleteEnvVariable": "success"})
+        lagoon_client.session.post.side_effect = [
+            project_response,
+            error_response,
+            success_response,
+        ]
+
+        result = lagoon_client.delete_env_variable(name="TEST_VAR", project=1)
+
+        assert result == "success"
+
+    def test_get_project_by_id_fallback(self, lagoon_client, mock_response, sample_project):
+        """Test that get_project_by_id falls back to allProjects query."""
+        # This method now uses allProjects directly, so just test it works
+        all_projects_response = mock_response(data={"allProjects": [sample_project]})
+        lagoon_client.session.post.return_value = all_projects_response
+
+        result = lagoon_client.get_project_by_id(1)
+
+        assert result is not None
+        assert result["id"] == 1
+        assert result["name"] == "test-project"
+
+    def test_get_project_by_id_not_found(self, lagoon_client, mock_response):
+        """Test that get_project_by_id returns None when project not found."""
+        all_projects_response = mock_response(data={"allProjects": []})
+        lagoon_client.session.post.return_value = all_projects_response
+
+        result = lagoon_client.get_project_by_id(999)
+
+        assert result is None
+
+    def test_get_kubernetes_by_id_uses_get_all(
+        self, lagoon_client, mock_response, sample_deploy_target
+    ):
+        """Test that get_kubernetes_by_id filters from get_all_kubernetes."""
+        all_k8s_response = mock_response(data={"allKubernetes": [sample_deploy_target]})
+        lagoon_client.session.post.return_value = all_k8s_response
+
+        result = lagoon_client.get_kubernetes_by_id(1)
+
+        assert result is not None
+        assert result["id"] == 1
+        assert result["name"] == "prod-cluster"
+
+    def test_get_kubernetes_by_id_not_found(self, lagoon_client, mock_response):
+        """Test that get_kubernetes_by_id returns None when not found."""
+        all_k8s_response = mock_response(data={"allKubernetes": []})
+        lagoon_client.session.post.return_value = all_k8s_response
+
+        result = lagoon_client.get_kubernetes_by_id(999)
+
+        assert result is None
+
+
+class TestAdvancedTaskFallback:
+    """Tests for advanced task API fallback code."""
+
+    def test_get_advanced_tasks_by_environment_fallback(self, lagoon_client, mock_response):
+        """Test that get_advanced_tasks_by_environment falls back to older API."""
+        # New API fails
+        error_response = mock_response(errors=[{"message": "Cannot query field"}])
+        # Old API succeeds with different format (project/environment as objects)
+        old_api_response = mock_response(
+            data={
+                "advancedTasksByEnvironment": [
+                    {
+                        "id": 1,
+                        "name": "run-tests",
+                        "type": "COMMAND",
+                        "service": "cli",
+                        "command": "yarn test",
+                        "permission": "DEVELOPER",
+                        "project": {"id": 1, "name": "test-project"},
+                        "environment": {"id": 5, "name": "main"},
+                        "groupName": None,
+                    }
+                ]
+            }
+        )
+        lagoon_client.session.post.side_effect = [error_response, old_api_response]
+
+        result = lagoon_client.get_advanced_tasks_by_environment(5)
+
+        assert len(result) == 1
+        assert result[0]["name"] == "run-tests"
+        # Verify normalization added projectId and environmentId
+        assert result[0]["projectId"] == 1
+        assert result[0]["environmentId"] == 5
+
+    def test_get_advanced_tasks_normalization_new_api(self, lagoon_client, mock_response):
+        """Test that new API format (int IDs) gets normalized correctly."""
+        new_api_response = mock_response(
+            data={
+                "advancedTasksForEnvironment": [
+                    {
+                        "id": 1,
+                        "name": "run-tests",
+                        "type": "COMMAND",
+                        "service": "cli",
+                        "command": "yarn test",
+                        "permission": "DEVELOPER",
+                        "project": 1,  # New API returns int
+                        "environment": 5,  # New API returns int
+                        "groupName": None,
+                    }
+                ]
+            }
+        )
+        lagoon_client.session.post.return_value = new_api_response
+
+        result = lagoon_client.get_advanced_tasks_by_environment(5)
+
+        assert len(result) == 1
+        # Verify normalization works for int values too
+        assert result[0]["projectId"] == 1
+        assert result[0]["environmentId"] == 5
+
+    def test_get_advanced_tasks_reraises_unrelated_error(self, lagoon_client, mock_response):
+        """Test that unrelated errors are re-raised."""
+        error_response = mock_response(errors=[{"message": "Access denied"}])
+        lagoon_client.session.post.return_value = error_response
+
+        with pytest.raises(LagoonAPIError, match="Access denied"):
+            lagoon_client.get_advanced_tasks_by_environment(5)

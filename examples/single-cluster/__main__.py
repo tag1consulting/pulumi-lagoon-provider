@@ -24,6 +24,7 @@ import pulumi_kubernetes as k8s
 from clusters import create_k8s_provider, create_kind_cluster
 from config import (
     config,
+    VERSIONS,
 )
 
 # Import infrastructure components
@@ -320,22 +321,25 @@ if provider is not None and config.install_lagoon:
 # =============================================================================
 
 lagoon_remote = None
+lagoon_crds = None
 
 if lagoon_core is not None and lagoon_secrets is not None:
     pulumi.log.info("Installing Lagoon remote (build-deploy controller)...")
 
-    # Install CRDs first
+    # Install CRDs first - version is automatically detected based on lagoon_core version
     lagoon_crds = install_lagoon_build_deploy_crds(
         "lagoon-crds",
         provider,
         context=cluster_config.context_name,
+        lagoon_core_version=VERSIONS["lagoon_core"],
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
         ),
     )
 
-    # Build dependencies for remote - include migrations if available
-    remote_depends = [lagoon_core.release, lagoon_crds]
+    # Build dependencies for remote - only depend on core and CRDs
+    # The knex_migrations check is now resilient and won't block on verification failures
+    remote_depends = [lagoon_core.release, lagoon_crds, keycloak_config]
     if knex_migrations is not None:
         remote_depends.append(knex_migrations)
 
@@ -357,17 +361,29 @@ if lagoon_core is not None and lagoon_secrets is not None:
     pulumi.export("deploy_target_name", config.deploy_target_name)
 
 # =============================================================================
-# Phase 7: Create Deploy Target and Example Project (Optional)
+# Phase 7: Create Deploy Target using pulumi-lagoon provider
 # =============================================================================
 
 deploy_target = None
 example_project = None
 
-if lagoon_core is not None and config.create_example_project:
-    pulumi.log.info("Creating deploy target and example project...")
+if lagoon_remote is not None:
+    pulumi.log.info("Creating deploy target using pulumi-lagoon provider...")
+
+    from pulumi_command import local as command
+
+    # Read the JWT secret from the k8s secret created by the Helm chart
+    # This ensures we use the same secret the API is configured with
+    read_jwt_secret = command.Command(
+        "read-jwt-secret",
+        create=f'kubectl --context {cluster_config.context_name} -n {namespace_config.lagoon_core} get secret lagoon-core-secrets -o jsonpath="{{.data.JWTSECRET}}" | base64 -d',
+        opts=pulumi.ResourceOptions(
+            depends_on=[lagoon_core.release],
+        ),
+    )
 
     # Determine dependencies for deploy target
-    deploy_target_deps = [lagoon_core.release, keycloak_config]
+    deploy_target_deps = [lagoon_remote.release, keycloak_config, read_jwt_secret]
     if knex_migrations is not None:
         deploy_target_deps.append(knex_migrations)
 
@@ -385,6 +401,13 @@ if lagoon_core is not None and config.create_example_project:
             # Router pattern determines how routes are generated
             # Format: ${environment}.${project}.${cluster-domain}
             router_pattern=f"${{environment}}.${{project}}.{domain_config.base}",
+            # API configuration for the pulumi-lagoon provider
+            # Use external API URL since Pulumi runs outside the cluster
+            api_url=lagoon_core.api_url,
+            # Use JWT secret from the deployed Helm chart (read from k8s secret)
+            jwt_secret=read_jwt_secret.stdout,
+            # Disable SSL verification for self-signed certificates (local development)
+            verify_ssl=False,
         ),
         opts=pulumi.ResourceOptions(
             depends_on=deploy_target_deps,
@@ -392,6 +415,13 @@ if lagoon_core is not None and config.create_example_project:
     )
 
     pulumi.export("deploy_target_id", deploy_target.id)
+
+# =============================================================================
+# Phase 8: Create Example Project (Optional)
+# =============================================================================
+
+if deploy_target is not None and config.create_example_project:
+    pulumi.log.info("Creating example project...")
 
     # Create the example Drupal project
     example_project = lagoon.LagoonProject(
@@ -436,6 +466,7 @@ pulumi.export(
         "harbor_installed": harbor is not None,
         "lagoon_installed": lagoon_core is not None,
         "build_deploy_installed": lagoon_remote is not None,
+        "deploy_target_created": deploy_target is not None,
         "example_project_created": config.create_example_project and example_project is not None,
     },
 )
