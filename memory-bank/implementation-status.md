@@ -1,7 +1,7 @@
 # Pulumi Lagoon Provider - Implementation Status
 
 **Last Updated**: 2026-02-03
-**Status**: v0.1.1 Released on PyPI - Phase 3 In Progress
+**Status**: v0.1.2 Released on PyPI - Phase 3 In Progress
 
 ---
 

@@ -10,7 +10,7 @@ This provider allows you to declaratively manage Lagoon hosting platform resourc
 
 ## Project Status
 
-**Status**: v0.1.1 Released (Experimental)
+**Status**: v0.1.2 Released (Experimental)
 
 The provider is available on PyPI (`pip install pulumi-lagoon`). This is a Python-based dynamic provider with comprehensive resource support. A native Go provider may be built in the future.
 

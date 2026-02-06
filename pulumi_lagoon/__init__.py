@@ -1,6 +1,6 @@
 """Pulumi Lagoon Provider - Manage Lagoon resources as infrastructure-as-code."""
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 # Configuration
 # Client (for advanced use cases)
