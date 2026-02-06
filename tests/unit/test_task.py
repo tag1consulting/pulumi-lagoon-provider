@@ -862,3 +862,113 @@ class TestLagoonTaskClientMethods:
         assert result[1]["name"] == "task2"
         # Verify projectId normalization works with Int IDs
         assert result[0]["projectId"] == 1
+
+
+class TestLagoonTaskProviderUpdate:
+    """Tests for LagoonTaskProvider update method."""
+
+    @patch("pulumi_lagoon.task.LagoonConfig")
+    def test_update_with_arguments_validation(self, mock_config_class, sample_task):
+        """Test update validates arguments when provided."""
+        from pulumi_lagoon.task import LagoonTaskProvider
+
+        mock_client = Mock()
+        mock_client.delete_advanced_task_definition.return_value = "success"
+        mock_client.add_advanced_task_definition.return_value = sample_task
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonTaskProvider()
+
+        old_inputs = {
+            "name": "run-yarn-audit",
+            "type": "command",
+            "service": "node",
+            "command": "yarn audit",
+            "project_id": 1,  # Required scope
+        }
+        new_inputs = {
+            "name": "run-yarn-audit",
+            "type": "command",
+            "service": "node",
+            "command": "yarn audit --json",
+            "project_id": 1,  # Required scope
+            "arguments": [
+                {"name": "severity", "type": "STRING"},
+            ],
+        }
+
+        result = provider.update("1", old_inputs, new_inputs)
+
+        assert result.outs["name"] == "run-yarn-audit"
+        # Delete and create should have been called
+        mock_client.delete_advanced_task_definition.assert_called_once()
+        mock_client.add_advanced_task_definition.assert_called_once()
+
+    @patch("pulumi_lagoon.task.LagoonConfig")
+    def test_update_delete_failure_continues(self, mock_config_class, sample_task):
+        """Test update continues even if delete fails."""
+        from pulumi_lagoon.task import LagoonTaskProvider
+        from pulumi_lagoon.client import LagoonAPIError
+
+        mock_client = Mock()
+        # Delete fails (task doesn't exist or already deleted)
+        mock_client.delete_advanced_task_definition.side_effect = LagoonAPIError("Task not found")
+        mock_client.add_advanced_task_definition.return_value = sample_task
+        mock_config = Mock()
+        mock_config.get_client.return_value = mock_client
+        mock_config_class.return_value = mock_config
+
+        provider = LagoonTaskProvider()
+
+        old_inputs = {
+            "name": "run-yarn-audit",
+            "type": "command",
+            "service": "node",
+            "command": "yarn audit",
+            "project_id": 1,  # Required scope
+        }
+        new_inputs = {
+            "name": "run-yarn-audit",
+            "type": "command",
+            "service": "node",
+            "command": "yarn audit --json",
+            "project_id": 1,  # Required scope
+        }
+
+        # Should not raise - continues with create
+        result = provider.update("1", old_inputs, new_inputs)
+
+        assert result.outs["name"] == "run-yarn-audit"
+        mock_client.add_advanced_task_definition.assert_called_once()
+
+    @patch("pulumi_lagoon.task.LagoonConfig")
+    def test_update_with_invalid_argument_type(self, mock_config_class):
+        """Test update rejects invalid argument types."""
+        from pulumi_lagoon.task import LagoonTaskProvider
+        from pulumi_lagoon.exceptions import LagoonValidationError
+
+        provider = LagoonTaskProvider()
+
+        old_inputs = {
+            "name": "run-task",
+            "type": "command",
+            "service": "cli",
+            "command": "echo hello",
+            "project_id": 1,  # Required scope
+        }
+        new_inputs = {
+            "name": "run-task",
+            "type": "command",
+            "service": "cli",
+            "command": "echo hello",
+            "project_id": 1,  # Required scope
+            "arguments": [
+                {"name": "arg1", "type": "INVALID_TYPE"},
+            ],
+        }
+
+        with pytest.raises(LagoonValidationError) as exc:
+            provider.update("1", old_inputs, new_inputs)
+        assert "argument" in str(exc.value).lower() or "type" in str(exc.value).lower()

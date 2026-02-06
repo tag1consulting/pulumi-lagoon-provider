@@ -322,3 +322,76 @@ class TestLagoonDeployTargetConfigArgs:
         assert args.pullrequests == "true"
         assert args.weight == 10
         assert args.deploy_target_project_pattern == "${project}-${env}"
+
+
+class TestLagoonDeployTargetConfigProviderClientConfig:
+    """Tests for LagoonDeployTargetConfigProvider client configuration."""
+
+    def test_get_client_with_api_token(self):
+        """Test creating client with explicit api_url and api_token."""
+        from pulumi_lagoon.deploytarget_config import LagoonDeployTargetConfigProvider
+
+        with patch("pulumi_lagoon.client.LagoonClient") as mock_client_class:
+            mock_client = Mock()
+            mock_client.add_deploy_target_config.return_value = {
+                "id": 1,
+                "weight": 1,
+                "branches": "^main$",
+                "pullrequests": "false",
+                "deployTarget": {"id": 1},
+                "project": {"id": 1},
+            }
+            mock_client_class.return_value = mock_client
+
+            provider = LagoonDeployTargetConfigProvider()
+
+            inputs = {
+                "project_id": 1,
+                "deploy_target_id": 1,
+                "branches": "^main$",
+                "api_url": "https://api.lagoon.example.com/graphql",
+                "api_token": "test-bearer-token",
+            }
+
+            provider.create(inputs)
+
+            # Verify LagoonClient was created with correct args
+            mock_client_class.assert_called_once_with(
+                "https://api.lagoon.example.com/graphql",
+                "test-bearer-token",
+            )
+
+    def test_get_client_with_jwt_secret(self):
+        """Test creating client with jwt_secret for token generation."""
+        from pulumi_lagoon.deploytarget_config import LagoonDeployTargetConfigProvider
+
+        with patch("pulumi_lagoon.client.LagoonClient") as mock_client_class:
+            mock_client = Mock()
+            mock_client.add_deploy_target_config.return_value = {
+                "id": 1,
+                "weight": 1,
+                "branches": "^main$",
+                "pullrequests": "false",
+                "deployTarget": {"id": 1},
+                "project": {"id": 1},
+            }
+            mock_client_class.return_value = mock_client
+
+            provider = LagoonDeployTargetConfigProvider()
+
+            inputs = {
+                "project_id": 1,
+                "deploy_target_id": 1,
+                "branches": "^main$",
+                "api_url": "https://api.lagoon.example.com/graphql",
+                "jwt_secret": "test-jwt-secret-key",
+            }
+
+            provider.create(inputs)
+
+            # Verify LagoonClient was called with generated token
+            mock_client_class.assert_called_once()
+            call_args = mock_client_class.call_args
+            assert call_args[0][0] == "https://api.lagoon.example.com/graphql"
+            # Token should be a JWT string
+            assert isinstance(call_args[0][1], str)
