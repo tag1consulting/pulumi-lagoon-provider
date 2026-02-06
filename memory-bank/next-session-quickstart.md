@@ -1,7 +1,7 @@
 # Next Session Quickstart - Pulumi Lagoon Provider
 
-**Date Updated**: 2026-02-03
-**Status**: Phase 3 In Progress - v0.1.1 Released
+**Date Updated**: 2026-02-06
+**Status**: Phase 3 In Progress - v0.1.2 Released
 
 ---
 
