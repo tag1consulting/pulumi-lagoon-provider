@@ -2,280 +2,166 @@
 
 **Last Updated**: 2026-02-06
 
-## System Architecture
+## Two Provider Implementations
+
+### 1. Python Dynamic Provider (v0.1.2, production)
+- Branch: `main`
+- Published on PyPI as `pulumi-lagoon`
+- Uses Pulumi dynamic provider interface
+- 11 resources, 513 unit tests
+
+### 2. Native Go Provider (in development)
+- Branch: `native-go-provider`
+- PR: #37 (Draft -> `develop`)
+- Uses `pulumi-go-provider` v0.25.0 with `infer` package
+- 11 resources, 191 unit tests
+- Resolves all HIGH/MEDIUM findings from provider-analysis.md
+
+---
+
+## Native Go Provider Architecture
 
 ### High-Level Overview
 
 ```
 ┌─────────────────┐
-│  Pulumi Program │  (User's __main__.py)
-│   (Python/TS)  │
+│  Pulumi Program │  (Python/TS/Go via generated SDK)
 └────────┬────────┘
-         │
-         │ Uses
+         │ gRPC
          ▼
 ┌──────────────────────────────────┐
-│  pulumi_lagoon Package           │
+│  pulumi-resource-lagoon binary   │
+│  (provider/cmd/.../main.go)      │
+│                                  │
 │  ┌────────────────────────────┐  │
-│  │ LagoonProject              │  │
-│  │ LagoonEnvironment          │  │
-│  │ LagoonVariable             │  │
-│  │ LagoonDeployTarget         │  │
-│  │ LagoonDeployTargetConfig   │  │
-│  │ LagoonTask                 │  │
-│  │ LagoonNotificationSlack    │  │
-│  │ LagoonNotificationRocketChat│ │
-│  │ LagoonNotificationEmail    │  │
-│  │ LagoonNotificationMSTeams  │  │
-│  │ LagoonProjectNotification  │  │
+│  │ provider.go                │  │  infer.Provider() wires everything
+│  │   Config: LagoonConfig     │  │
+│  │   Resources: [11 types]    │  │
+│  └────────────────────────────┘  │
+│                                  │
+│  ┌────────────────────────────┐  │
+│  │ config.go                  │  │  Auth, JWT, client factory
+│  │   Configure() validation   │  │  provider:"secret" tags
+│  │   NewClient() factory      │  │  Env var fallback
+│  └────────────────────────────┘  │
+│                                  │
+│  ┌────────────────────────────┐  │
+│  │ resources/*.go             │  │  11 resources, each with:
+│  │   Create/Read/Update/Delete│  │  - TArgs (inputs)
+│  │   Diff/Check               │  │  - TState (outputs)
 │  └────────────────────────────┘  │
 └────────┬─────────────────────────┘
          │
-         │ Calls
          ▼
 ┌─────────────────────────┐
-│   LagoonClient          │
-│   (GraphQL Client)      │
+│   client/*.go            │  GraphQL client layer
+│   - Retry (3x exp backoff)│
+│   - Token refresh         │
+│   - API version detection │
+│   - Typed errors          │
 └────────┬────────────────┘
-         │
          │ HTTP/GraphQL
          ▼
 ┌─────────────────────────┐
 │   Lagoon API Server     │
 │   (GraphQL Endpoint)    │
-└────────┬────────────────┘
-         │
-         │ Manages
-         ▼
-┌─────────────────────────┐
-│  Lagoon Core Services   │
-│  ┌──────────────────┐   │
-│  │ Projects         │   │
-│  │ Environments     │   │
-│  │ Deployments      │   │
-│  └──────────────────┘   │
 └─────────────────────────┘
 ```
 
-## Component Architecture
-
-### 1. Resource Layer
-
-Each resource type (Project, Environment, Variable, DeployTarget, DeployTargetConfig, Task, Notifications, ProjectNotification) implements the Pulumi Dynamic Provider interface:
-
-```python
-# Resource Definition
-class LagoonProject(pulumi.dynamic.Resource):
-    """User-facing resource class."""
-
-    # Inputs (what user provides)
-    name: str
-    git_url: str
-    deploytarget_id: int
-
-    # Outputs (what provider returns)
-    id: pulumi.Output[int]
-    created: pulumi.Output[str]
-
-    def __init__(self, name, args, opts=None):
-        # Initialize with provider
-        super().__init__(
-            LagoonProjectProvider(),
-            name,
-            {...},
-            opts
-        )
-
-# Provider Implementation
-class LagoonProjectProvider(pulumi.dynamic.ResourceProvider):
-    """CRUD operations implementation."""
-
-    def create(self, inputs) -> CreateResult:
-        # Create via API
-
-    def update(self, id, old, new) -> UpdateResult:
-        # Update via API
-
-    def delete(self, id, props):
-        # Delete via API
-
-    def read(self, id, props) -> ReadResult:
-        # Refresh from API
-```
-
-### 2. Client Layer
-
-The GraphQL client handles all API communication:
-
-```python
-class LagoonClient:
-    """GraphQL API client for Lagoon."""
-
-    def __init__(self, api_url: str, token: str):
-        self.api_url = api_url
-        self.token = token
-        self.session = requests.Session()
-
-    def _execute(self, query: str, variables: dict) -> dict:
-        """Execute GraphQL query with error handling."""
-
-    # High-level operations
-    def create_project(self, **kwargs):
-        """Create project via addProject mutation."""
-
-    def get_project_by_name(self, name: str):
-        """Get project details via query."""
-```
-
-### 3. Configuration Layer
-
-Configuration management for provider settings:
-
-```python
-class LagoonConfig:
-    """Provider configuration."""
-
-    def __init__(self):
-        config = pulumi.Config("lagoon")
-
-        # API endpoint
-        self.api_url = (
-            config.get("apiUrl") or
-            os.environ.get("LAGOON_API_URL") or
-            "https://api.lagoon.sh/graphql"
-        )
-
-        # Authentication
-        self.token = (
-            config.get_secret("token") or
-            os.environ.get("LAGOON_TOKEN")
-        )
-
-    def get_client(self) -> LagoonClient:
-        """Create configured client instance."""
-        return LagoonClient(self.api_url, self.token)
-```
-
-## Data Flow
-
-### Resource Creation Flow
+### Package Dependency Graph
 
 ```
-1. User Code
-   lagoon.LagoonProject("mysite", args)
-   │
-   ▼
-2. Resource Constructor
-   Validates inputs, initializes provider
-   │
-   ▼
-3. Provider.create()
-   Prepares API call
-   │
-   ▼
-4. LagoonClient.create_project()
-   Executes GraphQL mutation
-   │
-   ▼
-5. Lagoon API
-   Creates project, returns ID
-   │
-   ▼
-6. Provider.create() returns
-   CreateResult with outputs
-   │
-   ▼
-7. Pulumi State
-   Stores resource state
+main.go
+  └── provider/provider.go
+        ├── config/config.go
+        │     └── client/client.go
+        └── resources/*.go (11 resource files)
+              ├── config/config.go (via infer.GetConfig)
+              └── client/*.go (via config.NewClient())
 ```
 
-### State Refresh Flow
+### Resource Layer (`provider/pkg/resources/`)
 
-```
-1. Pulumi Refresh Command
-   │
-   ▼
-2. Provider.read()
-   │
-   ▼
-3. LagoonClient.get_project()
-   Query current state
-   │
-   ▼
-4. Lagoon API
-   Returns current state
-   │
-   ▼
-5. Provider.read() returns
-   ReadResult with current state
-   │
-   ▼
-6. Pulumi
-   Compares with stored state
-   Detects drift if different
-```
+Each resource implements the `infer` interfaces using plain function signatures (v0.25.0 API):
 
-## GraphQL API Integration
+```go
+type LagoonProject struct{}
 
-### Authentication
-
-```python
-# JWT Token in HTTP Headers
-headers = {
-    "Authorization": f"Bearer {token}",
-    "Content-Type": "application/json"
-}
-```
-
-### Query Structure
-
-```graphql
-# Create Project
-mutation AddProject($input: AddProjectInput!) {
-  addProject(input: $input) {
-    id
-    name
-    gitUrl
-    productionEnvironment
-    openshift
-    created
-  }
+// Input struct (what user provides)
+type LagoonProjectArgs struct {
+    Name                 string  `pulumi:"name"`
+    GitURL               string  `pulumi:"gitUrl"`
+    DeploytargetID       int     `pulumi:"deploytargetId"`
+    ProductionEnvironment *string `pulumi:"productionEnvironment,optional"`
+    // ...
 }
 
-# Variables
-{
-  "input": {
-    "name": "my-project",
-    "gitUrl": "git@github.com:org/repo.git",
-    "openshift": 1,
-    "productionEnvironment": "main"
-  }
+// Output struct (what provider returns)
+type LagoonProjectState struct {
+    LagoonProjectArgs              // Embeds all inputs
+    LagoonID int    `pulumi:"lagoonId"`
+    Created  string `pulumi:"created"`
 }
+
+// CRUD methods use plain signatures:
+func (r *LagoonProject) Create(ctx context.Context, name string, input LagoonProjectArgs, preview bool) (string, LagoonProjectState, error)
+func (r *LagoonProject) Read(ctx context.Context, id string, inputs LagoonProjectArgs, state LagoonProjectState) (string, LagoonProjectArgs, LagoonProjectState, error)
+func (r *LagoonProject) Update(ctx context.Context, id string, olds LagoonProjectState, news LagoonProjectArgs, preview bool) (LagoonProjectState, error)
+func (r *LagoonProject) Delete(ctx context.Context, id string, props LagoonProjectState) error
+func (r *LagoonProject) Diff(ctx context.Context, id string, olds LagoonProjectState, news LagoonProjectArgs) (p.DiffResponse, error)
 ```
 
-### Error Handling
+### Client Layer (`provider/pkg/client/`)
 
-```python
-try:
-    response = self.session.post(url, json=payload, headers=headers)
-    response.raise_for_status()
+Core client with retry and token management:
 
-    data = response.json()
+```go
+type Client struct {
+    endpoint  string
+    token     string
+    http      *http.Client
+    isNewAPI  bool           // v2.30.0+ detection result
+    tokenFunc func() string  // For JWT refresh
+}
 
-    if "errors" in data:
-        # GraphQL errors
-        raise LagoonAPIError(data["errors"])
-
-    return data["data"]
-
-except requests.HTTPError as e:
-    # HTTP errors
-    raise LagoonConnectionError(str(e))
+func (c *Client) Execute(ctx context.Context, query string, variables map[string]any) (json.RawMessage, error)
+// - Adds Bearer token header
+// - Checks/refreshes token before request
+// - Retries 3x with exponential backoff (1s, 2s, 4s) on 5xx/network errors
+// - Does NOT retry on 4xx or GraphQL errors
 ```
+
+Resource-specific files (project.go, environment.go, etc.) wrap Execute() with type-safe methods:
+
+```go
+func (c *Client) CreateProject(ctx context.Context, input map[string]any) (*Project, error)
+func (c *Client) GetProjectByName(ctx context.Context, name string) (*Project, error)
+// etc.
+```
+
+### Config Layer (`provider/pkg/config/`)
+
+```go
+type LagoonConfig struct {
+    APIUrl      string `pulumi:"apiUrl" provider:"secret"`
+    Token       string `pulumi:"token,optional" provider:"secret"`
+    JWTSecret   string `pulumi:"jwtSecret,optional" provider:"secret"`
+    JWTAudience string `pulumi:"jwtAudience,optional"`
+    Insecure    bool   `pulumi:"insecure,optional"`
+}
+
+func (c *LagoonConfig) Configure(ctx context.Context) error
+// - Token takes precedence over JWTSecret
+// - Falls back to LAGOON_TOKEN / LAGOON_JWT_SECRET env vars
+// - Generates JWT from secret if no token provided
+
+func (c *LagoonConfig) NewClient() *client.Client
+// - Creates client with token or tokenFunc (for auto-refresh)
+```
+
+---
 
 ## Resource Relationships
-
-### Dependency Graph
 
 ```
 LagoonProject
@@ -285,227 +171,82 @@ LagoonProject
     ├── LagoonVariable (many, project-scoped)
     ├── LagoonDeployTargetConfig (many)
     ├── LagoonProjectNotification (many)
-    │   └── references: LagoonNotificationSlack
-    │                    LagoonNotificationRocketChat
-    │                    LagoonNotificationEmail
-    │                    LagoonNotificationMicrosoftTeams
+    │   └── references: NotificationSlack / RocketChat / Email / MicrosoftTeams
     └── LagoonTask (many, project-scoped)
 
 LagoonDeployTarget
-    └── LagoonProject (many, via deploytarget_id)
+    └── LagoonProject (many, via deploytargetId)
         └── LagoonDeployTargetConfig (many)
-
-LagoonGroup (not yet implemented)
-    └── LagoonProject (many-to-many)
 ```
 
-### Pulumi Dependencies
+## Error Handling
 
-```python
-# Explicit dependency
-project = lagoon.LagoonProject("site", ...)
+```go
+// Typed errors in client/errors.go
+var ErrNotFound = errors.New("resource not found")
+var ErrValidation = errors.New("validation error")
+var ErrAPI = errors.New("API error")
+var ErrConnection = errors.New("connection error")
 
-env = lagoon.LagoonEnvironment("prod",
-    project_id=project.id,  # Implicit dependency
-    ...
-)
+// Concrete types wrap these sentinels
+type LagoonAPIError struct { Message string; Errors []GraphQLError }
+type LagoonConnectionError struct { Err error }
+type LagoonNotFoundError struct { Resource string; ID string }
+type LagoonValidationError struct { Field string; Message string }
 
-var = lagoon.LagoonVariable("db",
-    project_id=project.id,
-    environment_id=env.id,  # Depends on both
-    ...
-)
+// Usage: errors.Is(err, ErrNotFound) works with all concrete types
 ```
 
-## State Management
+## GraphQL API Integration
 
-### State Storage
-
-Pulumi stores resource state in its backend (local file, S3, Pulumi Cloud, etc.):
-
-```json
-{
-  "resources": [
-    {
-      "type": "lagoon:index:Project",
-      "urn": "urn:pulumi:dev::my-stack::lagoon:index:Project::mysite",
-      "id": "42",
-      "inputs": {
-        "name": "my-site",
-        "gitUrl": "git@github.com:org/repo.git",
-        "deploytargetId": 1
-      },
-      "outputs": {
-        "id": 42,
-        "created": "2025-10-14T12:00:00Z"
-      }
-    }
-  ]
-}
+### Authentication
+```go
+// Bearer token in HTTP headers
+req.Header.Set("Authorization", "Bearer "+c.token)
+req.Header.Set("Content-Type", "application/json")
 ```
 
-### Drift Detection
-
-Provider must implement `read()` to enable drift detection:
-
-```python
-def read(self, id, props):
-    """Refresh resource state from API."""
-    client = get_client()
-    current = client.get_project_by_id(int(id))
-
-    if not current:
-        # Resource deleted outside Pulumi
-        return None
-
-    return pulumi.dynamic.ReadResult(
-        id=id,
-        outs={
-            "name": current["name"],
-            "gitUrl": current["gitUrl"],
-            # ... other properties
-        }
-    )
+### API Version Detection
+```go
+// DetectAPIVersion() probes for v2.30.0+ features
+// Used by Variable resource for new vs legacy mutation format
+func (c *Client) DetectAPIVersion(ctx context.Context) error
+func (c *Client) IsNewAPI() bool
 ```
 
-## Error Handling Strategy
-
-### Error Categories
-
-1. **Configuration Errors**
-   - Missing API URL
-   - Invalid credentials
-   - Action: Fail fast with clear message
-
-2. **API Errors**
-   - Network failures
-   - Authentication failures
-   - Rate limiting
-   - Action: Retry with backoff, then fail
-
-3. **Resource Errors**
-   - Resource already exists
-   - Resource not found
-   - Invalid input
-   - Action: Surface GraphQL errors to user
-
-4. **State Errors**
-   - Drift detected
-   - Concurrent modification
-   - Action: Inform user, suggest refresh
-
-### Error Classes
-
-```python
-# In exceptions.py:
-class LagoonProviderError(Exception):
-    """Base exception for all Lagoon provider errors."""
-
-class LagoonValidationError(LagoonProviderError):
-    """Raised when input validation fails."""
-
-class LagoonResourceNotFoundError(LagoonProviderError):
-    """Raised when a referenced resource does not exist."""
-
-# In client.py (note: do NOT inherit from LagoonProviderError):
-class LagoonAPIError(Exception):
-    """API request failed."""
-
-class LagoonConnectionError(Exception):
-    """Network connection error."""
-
-# Note: LagoonAPIError and LagoonConnectionError are re-exported
-# from exceptions.py for convenience but do not share a base class
-# with LagoonProviderError. See issue #XX for tracking.
+### Dual API Support (Variables)
+```go
+// New API (v2.30.0+): addOrUpdateEnvVariableByName mutation
+// Legacy API: addEnvVariable mutation
+// Client auto-detects and falls back if new API returns "field not found" error
 ```
+
+## Security
+
+### Secrets in State
+Fields tagged with `provider:"secret"` are encrypted in Pulumi state:
+- `LagoonConfig.Token`
+- `LagoonConfig.JWTSecret`
+- `LagoonVariableState.Value`
+- `NotificationSlack/RocketChat/MicrosoftTeams.Webhook`
+
+### ForceNew (Replace) Fields
+Resources implement `Diff()` to mark immutable fields with `p.UpdateReplace`:
+- Names (project, environment, notifications)
+- Parent IDs (projectId, environmentId, deploytargetId)
+- Types (task type)
+- All fields on ProjectNotification (API doesn't support updates)
 
 ## Testing Strategy
 
-### Unit Tests
-Test individual components in isolation:
+### Unit Tests (191)
+- Mock GraphQL server using `net/http/httptest`
+- Shared helper in `testutil_test.go`
+- Tests cover: CRUD operations, error handling, normalization, Diff behavior
 
-```python
-def test_lagoon_client_create_project():
-    """Test GraphQL client project creation."""
-    mock_response = {"data": {"addProject": {"id": 42}}}
-
-    with patch('requests.Session.post') as mock_post:
-        mock_post.return_value.json.return_value = mock_response
-
-        client = LagoonClient("http://test", "token")
-        result = client.create_project(
-            name="test",
-            git_url="git@github.com:test/test.git",
-            openshift=1
-        )
-
-        assert result["id"] == 42
-```
-
-### Integration Tests
-Test against real/test Lagoon instance:
-
-```python
-@pytest.mark.integration
-def test_full_project_lifecycle():
-    """Test creating, updating, and deleting a project."""
-    # Requires LAGOON_TEST_API_URL and LAGOON_TEST_TOKEN
-    # Creates real resources, then cleans up
-```
-
-### Example Tests
-Validate example programs work:
-
-```bash
-cd examples/simple-project
-pulumi preview  # Should succeed
-```
-
-## Security Considerations
-
-### Secrets Management
-- API tokens stored as Pulumi secrets
-- Never log sensitive data
-- Secure credential rotation support
-
-### Network Security
-- HTTPS only for API communication
-- Certificate validation
-- Optional proxy support
-
-### Audit Trail
-- Log all API operations (without secrets)
-- Track resource changes
-- Enable Lagoon audit integration
-
-## Performance Considerations
-
-### API Rate Limiting
-- Implement backoff/retry
-- Batch operations where possible
-- Cache read-only data
-
-### Parallel Operations
-- Pulumi handles parallelism
-- Provider must be thread-safe
-- Use connection pooling
-
-## Future Enhancements
-
-### Phase 2 Features
-- Import existing resources
-- Bulk operations support
-- Advanced validation
-- Custom resource transformations
-
-### Phase 3 Features (Native Provider)
-- Multi-language SDKs
-- Improved performance
-- Better IDE integration
-- Component resources
-
-## References
-
-- [Pulumi Dynamic Providers](https://www.pulumi.com/docs/intro/concepts/resources/dynamic-providers/)
-- [Pulumi Resource Model](https://www.pulumi.com/docs/intro/concepts/resources/)
-- [Lagoon GraphQL API](https://api.lagoon.sh/graphql)
+### CI/CD
+- `.github/workflows/test-go.yml` - Three jobs:
+  1. `test` - Run tests with coverage
+  2. `vet` - Static analysis
+  3. `build` - Binary compilation
+- Triggers on push to main/develop and PRs

@@ -1,271 +1,176 @@
-# Next Session Quickstart - Pulumi Lagoon Provider
+# Next Session Quickstart - Native Go Pulumi Lagoon Provider
 
 **Date Updated**: 2026-02-06
-**Status**: Phase 3 In Progress - v0.1.2 Released
+**Status**: Phase 3 COMPLETE - Tests + PR Open
 
 ---
 
-## 🚨 CONTINUE FROM PREVIOUS SESSION
+## RESUME FROM HERE (Monday)
 
-**Branch**: `deploytarget-multi-cluster`
-**PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/10 (Draft)
+**Branch**: `native-go-provider`
+**PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/37 (Draft, targeting `develop`)
+**Commit**: `a0eda7d` - "Add native Go provider with 11 resources and 191 unit tests"
 
-### What to do first:
+### What's Done
+- All 11 resources implemented and compiling
+- 191 unit tests passing across 3 packages (client, config, resources)
+- GitHub Actions workflow for Go tests (`.github/workflows/test-go.yml`)
+- Draft PR #37 open targeting `develop`
 
-1. Check if Kind clusters still exist:
+### What to do Monday
+
+1. **Check PR status**:
    ```bash
-   kind get clusters
+   gh pr view 37
+   gh pr checks 37
    ```
 
-2. If clusters exist, check pod status:
+2. **Verify tests still pass**:
    ```bash
-   kubectl --context kind-lagoon-prod get pods -n lagoon-core
-   kubectl --context kind-lagoon-prod get pods -n harbor
-   kubectl --context kind-lagoon-prod get pods -n lagoon
-   kubectl --context kind-lagoon-nonprod get pods -n lagoon
+   cd provider && CGO_ENABLED=0 go test ./... -count=1
    ```
 
-3. If clusters don't exist or need fresh start:
-   ```bash
-   make multi-cluster-down  # Clean up any remnants
-   make multi-cluster-up    # Deploy fresh
-   ```
-
-### Issues Fixed (2026-01-28)
-
-1. **Keycloak Config Job Secret Name**: Fixed in `__main__.py:289-290`
-   - Root cause: Keycloak config job referenced `prod-core-keycloak` but actual secret is `prod-core-lagoon-core-keycloak`
-   - Fix: Changed `keycloak_service` and `keycloak_admin_secret` to use correct names
-
-### Issues Fixed (2026-01-20)
-
-1. **RabbitMQ CrashLoopBackOff**: Fixed by deleting PVCs to clear corrupted Mnesia data
-   - Root cause: Mnesia table sync timeout between broker pods
-   - Fix: Scale StatefulSet to 0, delete PVCs, scale back up, delete pods to force recreation
-
-2. **Service Selector Bug**: Fixed in `lagoon/core.py`
-   - Root cause: `create_rabbitmq_nodeport_service()` used selector `app.kubernetes.io/component: broker`
-   - Fix: Changed to `app.kubernetes.io/component: {release_name}-lagoon-core-broker`
-
-3. **Cross-cluster RabbitMQ IP**: The nonprod remote had wrong IP
-   - Root cause: Pulumi state had stale IP from initial deployment
-   - Code fix: Added dynamic IP refresh using container ID triggers
-
-4. **Keycloak Direct Access Grants**: OAuth password grant wasn't working
-   - Root cause: The `lagoon-ui` Keycloak client doesn't have Direct Access Grants enabled by default
-   - Fix: Added Pulumi Job (`lagoon/keycloak.py`) that auto-configures Keycloak after install
-   - Also creates `lagoonadmin` user with `platform-owner` role
+3. **Decide next steps** (see "Remaining Work" below)
 
 ---
 
-## TL;DR - Quick Commands
+## Quick Reference
 
+### Build & Test Commands
 ```bash
-# Multi-cluster example (current work)
-make multi-cluster-up       # Deploy prod + nonprod clusters
-make multi-cluster-down     # Tear down everything
-make multi-cluster-status   # Check outputs
+# Build the provider binary
+cd provider && CGO_ENABLED=0 go build -o bin/pulumi-resource-lagoon ./cmd/pulumi-resource-lagoon
 
-# Simple example (original, still works)
-make setup-all              # Complete setup (~5 min)
-make example-up             # Deploy example
-make clean-all              # Full teardown
+# Run all tests
+cd provider && CGO_ENABLED=0 go test ./... -v
+
+# Run tests with coverage
+cd provider && CGO_ENABLED=0 go test ./... -coverprofile=coverage.out
+go tool cover -func=coverage.out
+
+# Type check only (fast)
+cd provider && go vet ./...
+```
+
+### CRITICAL: CGO_ENABLED=0
+Both `go build` AND `go test` require `CGO_ENABLED=0` on this system due to Linuxbrew ld vs system gcc conflict. Without it, you get linker errors.
+
+---
+
+## Project Structure (Native Go Provider)
+
+```
+pulumi-lagoon-provider-native/
+├── provider/
+│   ├── cmd/pulumi-resource-lagoon/
+│   │   └── main.go                     # Binary entry point
+│   ├── pkg/
+│   │   ├── config/
+│   │   │   ├── config.go               # Provider config (auth, JWT, client factory)
+│   │   │   └── config_test.go          # 13 tests
+│   │   ├── client/
+│   │   │   ├── client.go               # Core GraphQL client (retry, token refresh)
+│   │   │   ├── errors.go               # Typed errors (LagoonAPIError, etc.)
+│   │   │   ├── queries.go              # GraphQL query/mutation constants
+│   │   │   ├── project.go              # Project CRUD
+│   │   │   ├── environment.go          # Environment CRUD
+│   │   │   ├── variable.go             # Variable CRUD (dual API v2.30.0+/legacy)
+│   │   │   ├── deploytarget.go         # Deploy target + config CRUD
+│   │   │   ├── notification.go         # All 4 notification types + project notification
+│   │   │   ├── task.go                 # Task definition CRUD
+│   │   │   ├── testutil_test.go        # Mock GraphQL server helper
+│   │   │   ├── client_test.go          # 26 tests
+│   │   │   ├── errors_test.go          # 11 tests
+│   │   │   ├── project_test.go         # 9 tests
+│   │   │   ├── environment_test.go     # 7 tests
+│   │   │   ├── variable_test.go        # 10 tests
+│   │   │   ├── deploytarget_test.go    # 15 tests
+│   │   │   ├── notification_test.go    # 21 tests
+│   │   │   └── task_test.go            # 12 tests
+│   │   ├── resources/
+│   │   │   ├── project.go              # LagoonProject resource
+│   │   │   ├── environment.go          # LagoonEnvironment
+│   │   │   ├── variable.go             # LagoonVariable
+│   │   │   ├── deploytarget.go         # LagoonDeployTarget
+│   │   │   ├── deploytarget_config.go  # LagoonDeployTargetConfig
+│   │   │   ├── notification_slack.go   # LagoonNotificationSlack
+│   │   │   ├── notification_rocketchat.go
+│   │   │   ├── notification_email.go
+│   │   │   ├── notification_microsoftteams.go
+│   │   │   ├── project_notification.go # LagoonProjectNotification
+│   │   │   ├── task.go                 # LagoonTask
+│   │   │   ├── helpers.go              # Shared helpers
+│   │   │   ├── helpers_test.go         # 6 tests
+│   │   │   └── diff_test.go            # 40+ tests (Diff for all resources)
+│   │   └── provider/
+│   │       └── provider.go             # Provider assembly (wires config + resources)
+│   ├── bin/                            # Build output (gitignored)
+│   └── go.mod                          # Go 1.24, pulumi-go-provider v0.25.0
+├── .github/workflows/
+│   ├── test.yml                        # Python tests (existing)
+│   └── test-go.yml                     # Go tests (NEW - 3 jobs: test, vet, build)
+└── memory-bank/                        # This documentation
 ```
 
 ---
 
-## Current State
+## Remaining Work (Plan Phases)
 
-### What's Working
-- ✅ `LagoonDeployTarget` resource implemented with validators
-- ✅ Multi-cluster example code complete
-- ✅ Kind clusters created successfully
-- ✅ Harbor registry deploys successfully
-- ✅ Lagoon core running (RabbitMQ fixed)
-- ✅ Cross-cluster RabbitMQ communication working
-- ✅ Port-forwarding access to Lagoon UI tested and working
-- ✅ CLI/API authentication via OAuth password grant working
-- ✅ Browser authentication documented (requires hosts file entry)
+### Phase 4: SDK Generation (NOT STARTED)
+- Generate Python SDK: `pulumi package gen-sdk ./bin/pulumi-resource-lagoon --language python`
+- Generate TypeScript SDK: `pulumi package gen-sdk ./bin/pulumi-resource-lagoon --language nodejs`
+- Set up `.goreleaser.yml` for cross-platform builds
+- Create `examples/py-native/` and `examples/ts-native/`
+- Update Makefile with Go build targets
 
-### Project Structure
-```
-pulumi-lagoon-provider/
-├── Makefile                    # Main automation (includes multi-cluster targets)
-├── pulumi_lagoon/              # Provider package
-│   ├── deploytarget.py         # NEW: LagoonDeployTarget resource
-│   ├── validators.py           # Updated with deploy target validators
-│   └── client.py               # Updated with Kubernetes GraphQL ops
-├── examples/
-│   ├── simple-project/         # Original example (working)
-│   └── multi-cluster/          # NEW: Prod/nonprod clusters
-│       ├── __main__.py         # Main orchestration
-│       ├── clusters/           # Kind cluster creation
-│       ├── infrastructure/     # Ingress, cert-manager, CoreDNS
-│       ├── registry/           # Harbor installation
-│       └── lagoon/             # Lagoon core + remote
-├── test-cluster/               # Kind + Lagoon Pulumi program
-└── memory-bank/                # Documentation
-```
+### Phase 5: CI/CD + Docs + Migration (NOT STARTED)
+- `.github/workflows/release.yml` - goreleaser + SDK publish
+- Update `CLAUDE.md` and `README.md` with Go provider docs
+- Write `docs/migration-guide.md` (dynamic v0.1.x -> native v0.2.0)
+
+### Optional Improvements
+- Increase test coverage (currently 191 tests, good but could add edge cases)
+- Integration tests against live Lagoon
+- `pulumi import` verification for all 11 resource types
+- Secret verification (`pulumi stack export` shows encrypted values)
 
 ---
 
-## Multi-Cluster Example Details
+## Key Technical Details
 
-### Architecture
-```
-+---------------------------+     +---------------------------+
-|    lagoon-prod cluster    |     |  lagoon-nonprod cluster   |
-|---------------------------|     |---------------------------|
-| lagoon-core namespace:    |     |                           |
-|   - API, UI, Keycloak     |     |                           |
-|   - RabbitMQ (broker)     |<----+-- lagoon namespace:       |
-|   - SSH, webhooks         |     |     - remote-controller   |
-|                           |     |       (nonprod builds)    |
-| harbor namespace:         |     |                           |
-|   - Harbor Registry       |     |                           |
-|                           |     |                           |
-| lagoon namespace:         |     |                           |
-|   - remote-controller     |     |                           |
-|     (prod builds)         |     |                           |
-+---------------------------+     +---------------------------+
+### pulumi-go-provider v0.25.0 API
+The v0.25.0 API uses **plain function signatures**, NOT request/response structs:
+```go
+func (r *Resource) Create(ctx context.Context, name string, input TArgs, preview bool) (id string, output TState, err error)
+func (r *Resource) Read(ctx context.Context, id string, inputs TArgs, state TState) (canonicalID string, normalizedInputs TArgs, normalizedState TState, err error)
+func (r *Resource) Update(ctx context.Context, id string, olds TState, news TArgs, preview bool) (TState, error)
+func (r *Resource) Delete(ctx context.Context, id string, props TState) error
+func (r *Resource) Diff(ctx context.Context, id string, olds TState, news TArgs) (p.DiffResponse, error)
 ```
 
-### Key Technical Details
-
-| Component | Details |
-|-----------|---------|
-| Cross-cluster RabbitMQ | NodePort 30672 (custom service, chart doesn't support fixed NodePort) |
-| Keycloak internal URL | `http://{release}-lagoon-core-keycloak.{ns}.svc.cluster.local:8080/auth` |
-| Service naming | `{release}-lagoon-core-{component}` (e.g., `prod-core-lagoon-core-api`) |
-| lagoon-build-deploy | v0.39.0 (required for K8s 1.22+ CRD compatibility) |
-
-### Accessing Services (Port Forwarding)
-
-```bash
-# Start all port-forwards (API, Keycloak, UI)
-cd examples/multi-cluster
-make port-forwards-all
-
-# Test that everything is accessible
-make test-ui
+### Provider Config Pattern
+```go
+// Get config in any resource method:
+cfg := infer.GetConfig[config.LagoonConfig](ctx)
+c := cfg.NewClient()
 ```
 
-**Service URLs:**
-| Service | URL |
-|---------|-----|
-| Lagoon UI | http://localhost:3000 |
-| Lagoon API | http://localhost:7080/graphql |
-| Keycloak | http://localhost:8080/auth |
-
-**Important**: For browser authentication, add to `/etc/hosts`:
-```
-127.0.0.1 prod-core-lagoon-core-keycloak.lagoon-core.svc.cluster.local
-```
+### Test Pattern
+Tests use `net/http/httptest` mock GraphQL server (see `testutil_test.go`).
+Important gotcha: JSON numbers decode as `float64` in Go, not `int`.
 
 ---
 
-## Makefile Targets Reference
+## Python Dynamic Provider (Still Active)
 
-### Multi-Cluster Example
-```bash
-make multi-cluster-up       # Create prod + nonprod Kind clusters with Lagoon
-make multi-cluster-down     # Destroy multi-cluster environment
-make multi-cluster-preview  # Preview changes
-make multi-cluster-status   # Show stack outputs
-make multi-cluster-clusters # List Kind clusters
-make multi-cluster-port-forwards  # Start port-forwards for API/Keycloak
-make multi-cluster-test-api       # Test Lagoon API access
-```
-
-### Multi-Cluster Example (from examples/multi-cluster/)
-```bash
-make port-forwards          # Start port-forwards for API and Keycloak
-make port-forwards-all      # Start all port-forwards (API, Keycloak, UI)
-make port-forwards-stop     # Stop all port-forwards
-make test-ui                # Test all services via port-forward
-make test-api               # Test API with authentication
-```
-
-### Simple Example (Original)
-```bash
-make setup-all              # Complete setup: venv, provider, Kind, Lagoon
-make example-up             # Deploy example resources
-make example-down           # Destroy resources
-make clean-all              # Full cleanup
-```
-
-### Development
-```bash
-make provider-install       # Reinstall provider after code changes
-pytest tests/unit/ -v       # Run unit tests
-```
+The original Python dynamic provider (v0.1.2) is in the same repo on `main` branch:
+- 11 resources, 513 Python unit tests
+- Published on PyPI as `pulumi-lagoon`
+- Still the production version until native Go provider is ready
 
 ---
 
-## Debugging Commands
-
-```bash
-# Check pod status
-kubectl --context kind-lagoon-prod get pods -n lagoon-core
-kubectl --context kind-lagoon-prod get pods -n harbor
-kubectl --context kind-lagoon-prod get pods -n lagoon
-kubectl --context kind-lagoon-nonprod get pods -n lagoon
-
-# View logs
-kubectl --context kind-lagoon-prod logs -n lagoon-core -l app.kubernetes.io/component=api --tail=50
-kubectl --context kind-lagoon-prod logs -n lagoon-core -l app.kubernetes.io/component=keycloak --tail=50
-kubectl --context kind-lagoon-prod logs -n lagoon -l app.kubernetes.io/name=lagoon-build-deploy --tail=50
-
-# Check services
-kubectl --context kind-lagoon-prod get svc -n lagoon-core
-kubectl --context kind-lagoon-prod get svc -n lagoon-core | grep broker
-
-# Check cross-cluster connectivity
-kubectl --context kind-lagoon-nonprod exec -it -n lagoon <pod> -- nc -zv <prod-node-ip> 30672
-```
-
----
-
-## Helm Chart Versions
-
-| Chart | Version | Notes |
-|-------|---------|-------|
-| ingress-nginx | 4.10.1 | Standard Kubernetes ingress |
-| cert-manager | v1.14.4 | TLS certificate management |
-| harbor | 1.14.2 | Container registry |
-| lagoon-core | 1.0.0 | Lagoon core services |
-| lagoon-build-deploy | 0.39.0 | Updated for K8s 1.22+ CRDs |
-
----
-
-## Known Limitations
-
-1. **Browser Auth**: UI redirects to internal K8s URLs - requires hosts file entry for port-forwarding
-2. **Self-Signed Certs**: Browsers show security warnings
-3. **S3/MinIO**: Disabled (placeholder config)
-4. **Elasticsearch**: Disabled (placeholder config)
-
----
-
-## Documentation Files
-
-- **Session Summary (2026-01-16)**: `memory-bank/session-summary-2026-01-16.md`
-- **Multi-Cluster README**: `examples/multi-cluster/README.md`
-- **Implementation Status**: `memory-bank/implementation-status.md`
-- **Main README**: `README.md`
-
----
-
-## Next Steps
-
-1. ✅ ~~Debug Lagoon core timeout issue~~ (Fixed: RabbitMQ Mnesia data)
-2. ✅ ~~Verify cross-cluster RabbitMQ communication~~ (Working)
-3. ✅ ~~Test browser-based authentication with port-forwarding~~ (Working, documented)
-4. ✅ ~~Run `pulumi up` to apply the service selector fix~~ (Applied)
-5. ✅ ~~Fix Keycloak config job secret name~~ (Fixed 2026-01-28)
-6. Mark PR as ready for review
-7. Consider adding integration tests
-
----
-
-**Summary**: Multi-cluster infrastructure is fully operational! All issues fixed and port-forwarding tested successfully on 2026-01-28. Branch is `deploytarget-multi-cluster`, PR #10 is open as draft. Ready for review.
+## Git Branches
+- `main` - Python dynamic provider (v0.1.2, production)
+- `develop` - Integration branch (PR target)
+- `native-go-provider` - Native Go provider work (current, PR #37 open)
