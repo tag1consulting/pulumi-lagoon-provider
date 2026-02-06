@@ -1,430 +1,174 @@
 # Pulumi Lagoon Provider - Implementation Status
 
 **Last Updated**: 2026-02-06
-**Status**: v0.1.2 Released on PyPI - Phase 3 In Progress
+**Status**: Native Go Provider - Phases 1-3 COMPLETE, PR #37 Open
 
 ---
 
-## Current Work (2026-01-21)
+## Native Go Provider (Current Work)
 
-### LagoonDeployTarget Resource
-**Status**: ✅ COMPLETE (code) | ⏳ TESTING
+### Overview
+Migration from Python dynamic provider (v0.1.2) to native Go provider using `pulumi-go-provider` v0.25.0 with `infer` package.
 
-New resource for managing Kubernetes deploy targets:
-- `pulumi_lagoon/deploytarget.py` - Full CRUD implementation
-- `pulumi_lagoon/validators.py` - Deploy target validators added
-- `pulumi_lagoon/client.py` - Kubernetes GraphQL operations added
-- `tests/unit/test_deploytarget.py` - Unit tests
-- `tests/unit/test_validators.py` - Validator tests
+**Branch**: `native-go-provider`
+**PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/37 (Draft -> `develop`)
+**Commit**: `a0eda7d`
 
-GraphQL Operations:
-- `add_kubernetes()` - Create deploy target
-- `get_all_kubernetes()` - List all deploy targets
-- `get_kubernetes_by_id()` - Query by ID
-- `get_kubernetes_by_name()` - Query by name
-- `update_kubernetes()` - Update deploy target
-- `delete_kubernetes()` - Delete deploy target
+### Phase 1: Scaffolding + GraphQL Client - COMPLETE
+- Go module initialized (`go.mod` with Go 1.24, pulumi-go-provider v0.25.0)
+- Provider binary entry point (`provider/cmd/pulumi-resource-lagoon/main.go`)
+- Centralized config with JWT generation, secret tags (`provider/pkg/config/config.go`)
+- Full GraphQL client with retry, token refresh, API version detection (`provider/pkg/client/`)
+- All GraphQL queries/mutations ported from Python (`provider/pkg/client/queries.go`, 644 lines)
 
-### Multi-Cluster Example
-**Status**: ✅ COMPLETE (2026-01-28)
+### Phase 2: Core Resources - COMPLETE
+- LagoonProject - full CRUD + Diff + Check + Read(import)
+- LagoonEnvironment - depends on Project
+- LagoonVariable - dual API support (v2.30.0+ "new" / legacy), secret value
 
-Location: `examples/multi-cluster/`
+### Phase 3: Remaining Resources + Tests - COMPLETE
+- LagoonDeployTarget + LagoonDeployTargetConfig
+- All 4 notification resources (Slack, RocketChat, Email, Microsoft Teams)
+- LagoonProjectNotification
+- LagoonTask (dual API, scope validation)
+- 191 unit tests across 3 packages
+- GitHub Actions workflow (`test-go.yml`)
 
-Architecture:
-- Production cluster (`lagoon-prod`): Lagoon core, Harbor, prod remote controller
-- Non-production cluster (`lagoon-nonprod`): Nonprod remote controller
+### Phase 4: SDK Generation - NOT STARTED
+- Generate Python SDK via `pulumi package gen-sdk`
+- Generate TypeScript SDK
+- `.goreleaser.yml` for cross-platform builds
+- Example programs using generated SDKs
 
-Components:
-- `clusters/` - Kind cluster creation
-- `infrastructure/` - ingress-nginx, cert-manager, CoreDNS
-- `registry/` - Harbor container registry
-- `lagoon/` - Lagoon core and remote (build-deploy)
-
-Issues Fixed (2026-01-28):
-- Keycloak config job secret name: Changed `prod-core-keycloak` to `prod-core-lagoon-core-keycloak`
-
-Issues Fixed (2026-01-20):
-- RabbitMQ CrashLoopBackOff: Cleared corrupted Mnesia data by deleting PVCs
-- Service selector bug in `lagoon/core.py`: Changed selector to match actual pod labels
-- Cross-cluster RabbitMQ IP: Added dynamic IP refresh using container ID triggers
-- Keycloak Direct Access Grants: Added `lagoon/keycloak.py` for automatic configuration
-
-New Features:
-- `lagoon/keycloak.py`: Kubernetes Job that configures Keycloak for CLI auth
-  - Enables Direct Access Grants for lagoon-ui client (OAuth password grant)
-  - Creates lagoonadmin user with platform-owner role
-- Dynamic IP refresh: Cluster IPs now automatically refresh when Kind clusters change
-- Port-forwarding make targets: `make port-forwards-all`, `make test-ui`
-
-Completed:
-- All code fixes applied via `pulumi up`
-- Port-forwarding access to Lagoon UI tested and working
-- CLI authentication via OAuth password grant tested and working
-- Browser authentication setup documented (requires hosts file entry)
-
-**Branch**: `deploytarget-multi-cluster`
-**PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/10 (Draft)
+### Phase 5: CI/CD + Docs + Migration - NOT STARTED
+- Release workflow (goreleaser + SDK publish)
+- Documentation updates (CLAUDE.md, README.md)
+- Migration guide (dynamic v0.1.x -> native v0.2.0)
 
 ---
 
-## Completed Work
+## Test Coverage Summary
 
-### 1. GraphQL Client (pulumi_lagoon/client.py)
-**Status**: ✅ COMPLETE
+### Go Tests (Native Provider) - 191 tests
+| Package | Tests | Time | Description |
+|---------|-------|------|-------------|
+| `pkg/client` | 111 | ~5s | GraphQL client, all resource CRUD operations |
+| `pkg/config` | 13 | <1s | JWT generation, Configure() validation, client factory |
+| `pkg/resources` | 67 | <1s | Helper functions, Diff() for all 11 resources |
 
-All core operations implemented:
-- **Project Operations**:
-  - `create_project()` - Create new project
-  - `get_project_by_name()` - Query by name
-  - `get_project_by_id()` - Query by ID
-  - `update_project()` - Update existing project
-  - `delete_project()` - Delete project
+Test files:
+- `client/testutil_test.go` - Mock GraphQL server helper
+- `client/errors_test.go` - 11 tests (error types, Is(), Unwrap())
+- `client/client_test.go` - 26 tests (Execute, retry, token refresh, API detection)
+- `client/project_test.go` - 9 tests
+- `client/environment_test.go` - 7 tests
+- `client/variable_test.go` - 10 tests (including dual API)
+- `client/deploytarget_test.go` - 15 tests (deploy targets + configs)
+- `client/notification_test.go` - 21 tests (all 4 types + project notification)
+- `client/task_test.go` - 12 tests (polymorphic project/environment fields)
+- `config/config_test.go` - 13 tests
+- `resources/helpers_test.go` - 6 tests
+- `resources/diff_test.go` - 40+ subtests (Diff for all 11 resources)
 
-- **Environment Operations**:
-  - `add_or_update_environment()` - Create/update environment
-  - `get_environment_by_name()` - Query environment
-  - `delete_environment()` - Delete environment
+### Python Tests (Dynamic Provider) - 513 tests
+(Still on `main` branch, separate test suite)
 
-- **Variable Operations**:
-  - `add_env_variable()` - Create variable
-  - `get_env_variable_by_name()` - Query variable
-  - `delete_env_variable()` - Delete variable
+---
 
-- **Error Handling**:
-  - `LagoonAPIError` - API/GraphQL errors
-  - `LagoonConnectionError` - Network errors
-  - Proper timeout and retry logic
+## Key Issues Encountered & Resolved
 
-### 2. Configuration (pulumi_lagoon/config.py)
-**Status**: ✅ COMPLETE
+### 1. pulumi-go-provider v0.25.0 API Mismatch
+**Problem**: Initial implementation used CreateRequest/CreateResponse structs that don't exist in v0.25.0.
+**Solution**: v0.25.0 uses plain function signatures. All 11 resources rewritten.
+**Reference**: `memory/api-signatures.md` (auto-memory)
 
-Features:
-- Pulumi config integration (`lagoon:apiUrl`, `lagoon:token`)
-- Environment variable fallback (`LAGOON_API_URL`, `LAGOON_TOKEN`)
-- Secret management for tokens
-- Client factory method
+### 2. CGO_ENABLED=0 Required
+**Problem**: `go build` and `go test` fail with Linuxbrew ld vs system gcc linker errors.
+**Solution**: Always use `CGO_ENABLED=0` prefix. `go vet` works without it.
 
-### 3. Resource Providers
-**Status**: ✅ ALL COMPLETE
+### 3. JSON float64 in Tests
+**Problem**: `TestUpdateProject` failed because JSON numbers decode as `float64`, not `int`.
+**Solution**: Type-assert to float64 before comparing: `if id, ok := input["id"].(float64); !ok || int(id) != 42`
 
-#### LagoonProject (pulumi_lagoon/project.py)
-- Full CRUD implementation
-- Dynamic provider with proper state management
-- Drift detection via `read()` method
-- Properties: name, git_url, deploytarget_id, production_environment, branches, pullrequests, etc.
-- 268 lines, fully documented
+### 4. json.RawMessage for Polymorphic Fields
+**Problem**: Lagoon API returns nested objects (e.g., `openshift: {id: 1, name: "cluster"}`) that need to be normalized to flat IDs.
+**Solution**: Use `json.RawMessage` in raw structs, then `normalizeX()` functions to extract IDs.
 
-#### LagoonEnvironment (pulumi_lagoon/environment.py)
-- Full CRUD implementation
-- Depends on project_id
-- Properties: name, deploy_type, environment_type, route, routes, etc.
-- 294 lines, fully documented
+---
 
-#### LagoonVariable (pulumi_lagoon/variable.py)
-- Full CRUD implementation
-- Supports project-level and environment-level variables
-- Properties: name, value, scope, project_id, environment_id
-- 277 lines, fully documented
+## Provider Analysis Resolution Status
 
-### 4. Package Structure (pulumi_lagoon/__init__.py)
-**Status**: ✅ COMPLETE
+| Finding | Severity | Status | How Resolved |
+|---------|----------|--------|-------------|
+| H1 - Delete-then-recreate | HIGH | RESOLVED | `Update()` calls mutation directly; `Diff()` forces replace only on immutable fields |
+| H2 - JWT duplication | HIGH | RESOLVED | Single `config.go` with centralized JWT, configurable audience |
+| H3 - Plaintext credentials | HIGH | RESOLVED | `provider:"secret"` struct tags encrypt token/jwtSecret in state |
+| H4 - O(n) fetch-all queries | HIGH | PARTIAL | Client-level caching planned but not yet implemented |
+| H5 - No diff() | HIGH | RESOLVED | All 11 resources implement `Diff()` with forceNew fields |
+| H6 - Dual build config | HIGH | RESOLVED | Go module replaces Python packaging |
+| M2 - Inconsistent credentials | MEDIUM | RESOLVED | All resources use `infer.GetConfig[LagoonConfig](ctx)` |
+| M3/M4 - read() drops fields | MEDIUM | RESOLVED | Schema-driven: all fields in State struct always returned |
+| M5 - Brittle API fallback | MEDIUM | RESOLVED | `DetectAPIVersion()` probes once, stores result |
+| M7 - Exception hierarchy | MEDIUM | RESOLVED | Clean Go error types with `errors.Is()`/`errors.As()` |
+| M9 - No retry | MEDIUM | RESOLVED | HTTP client with exponential backoff (3 retries, 1s/2s/4s) |
+| M10 - Secret bypass | MEDIUM | RESOLVED | Native secret support via struct tags |
+| M11 - No token refresh | MEDIUM | RESOLVED | Client checks expiry before each request, auto-refreshes |
 
-Clean exports:
-- All three resource classes
-- All argument dataclasses
-- Client classes for advanced usage
-- Configuration class
+---
 
-### 5. Example Code (examples/simple-project/)
-**Status**: ✅ COMPLETE
+## Resource Specifications (All 11 Implemented)
 
-Features:
-- Complete working example using all three resources
-- Demonstrates resource dependencies
-- Shows project → environments → variables workflow
-- Comprehensive README with setup instructions
-- Includes troubleshooting guide
+### LagoonProject (`lagoon:index:Project`)
+- ForceNew: `name`
+- Computed: `lagoonId`, `created`
 
-### 6. Automation Scripts (examples/simple-project/scripts/)
-**Status**: ✅ COMPLETE
+### LagoonEnvironment (`lagoon:index:Environment`)
+- ForceNew: `name`, `projectId`
+- Computed: `lagoonId`, `route`, `routes`, `created`
 
-Scripts:
-- `run-pulumi.sh` - Wrapper that handles token refresh before each command
-- `quickstart.sh` - Full automated first-time setup
-- `create-lagoon-admin.sh` - Creates lagoonadmin user in Keycloak
-- `ensure-deploy-target.sh` - Creates deploy target if none exist
-- `get-lagoon-token.sh` - Manual token acquisition
-- `enable-direct-access-grants.sh` - Enable password auth in Keycloak
-- `fix-rabbitmq-password.sh` - Fix RabbitMQ auth issues
-- Various utility scripts for debugging
+### LagoonVariable (`lagoon:index:Variable`)
+- ForceNew: `name`, `projectId`, `environmentId`
+- Secret: `value`
+- Computed: `lagoonId`
 
-### 7. Makefile Automation
-**Status**: ✅ COMPLETE
+### LagoonDeployTarget (`lagoon:index:DeployTarget`)
+- ForceNew: `name`
+- Computed: `lagoonId`, `created`
 
-Targets:
-- `setup-all` - Complete setup from scratch (~5 minutes)
-- `ensure-lagoon-admin` - Create Keycloak user with fresh token
-- `ensure-deploy-target` - Create deploy target with fresh token
-- `example-up/preview/down` - Example project management
-- `clean-all` - Full teardown (cluster, venvs, temp files)
+### LagoonDeployTargetConfig (`lagoon:index:DeployTargetConfig`)
+- ForceNew: `projectId`, `deployTargetId`
+- Computed: `lagoonId`
 
-Token Handling:
-- Each target starts temporary port-forwards
-- Each script fetches fresh tokens (handles 5-min expiration)
-- Port-forwards cleaned up after each operation
+### LagoonTask (`lagoon:index:Task`)
+- ForceNew: `type`, `projectId`, `environmentId`, `groupName`, `systemWide`
+- Computed: `lagoonId`, `created`
 
-## Remaining Work
+### Notification Resources
+- **NotificationSlack**: ForceNew `name`, Secret `webhook`
+- **NotificationRocketChat**: ForceNew `name`, Secret `webhook`
+- **NotificationEmail**: ForceNew `name`
+- **NotificationMicrosoftTeams**: ForceNew `name`, Secret `webhook`
 
-### Code Cleanup
-**Status**: ⏸️ LOW PRIORITY
+### LagoonProjectNotification (`lagoon:index:ProjectNotification`)
+- ForceNew: ALL fields (Lagoon API doesn't support updating associations)
 
-1. **Clarify lagoon imports in single-cluster example** (2026-01-26)
-   - `examples/single-cluster/__main__.py` has confusing imports:
-     - `from lagoon import ...` - local infrastructure deployment functions
-     - `import pulumi_lagoon as lagoon` - Lagoon API provider
-   - Both end up using `lagoon.` prefix which is confusing
-   - Suggested fix: Rename `import pulumi_lagoon as lagoon` to just `import pulumi_lagoon`
-   - Then use `pulumi_lagoon.LagoonDeployTarget(...)` instead of `lagoon.LagoonDeployTarget(...)`
-   - **Note**: This is a minor code style issue that doesn't affect functionality. Deferred to future cleanup.
+---
 
-### Provider Features
-**Status**: ✅ PARTIAL
+## Python Dynamic Provider Status (v0.1.2)
 
-1. **Import functionality** (Phase 2) - ✅ COMPLETE
-   - All resources support `pulumi import` with composite ID formats
-   - LagoonProject: `{numeric_id}`
-   - LagoonDeployTarget: `{numeric_id}`
-   - LagoonEnvironment: `{project_id}:{env_name}`
-   - LagoonVariable: `{project_id}:{env_id}:{var_name}` or `{project_id}::{var_name}`
-   - LagoonDeployTargetConfig: `{project_id}:{config_id}`
-   - Import utilities in `pulumi_lagoon/import_utils.py`
-   - Full unit test coverage in `tests/unit/test_import_utils.py`
-
-2. **Add SSH key authentication** (Phase 2+)
-   - Currently only JWT token authentication is supported
-   - SSH key auth would enable service account workflows
-   - Would require changes to `pulumi_lagoon/config.py` and `client.py`
-
-### Testing
-**Status**: ✅ COMPLETE (2026-02-06)
-
-All unit tests implemented and passing (513 test functions across 16 files):
-- `tests/unit/test_client.py` - GraphQL client tests (96 tests)
-- `tests/unit/test_config.py` - Configuration tests (15 tests)
-- `tests/unit/test_project.py` - Project resource tests (21 tests)
-- `tests/unit/test_environment.py` - Environment resource tests (24 tests)
-- `tests/unit/test_variable.py` - Variable resource tests (26 tests)
-- `tests/unit/test_deploytarget.py` - Deploy target tests (29 tests)
-- `tests/unit/test_deploytarget_config.py` - Deploy target config tests (15 tests)
-- `tests/unit/test_task.py` - Task resource tests (37 tests)
-- `tests/unit/test_validators.py` - Validator tests (135 tests)
-- `tests/unit/test_import_utils.py` - Import utility tests (43 tests)
-- `tests/unit/test_notification_slack.py` - Slack notification tests (13 tests)
-- `tests/unit/test_notification_rocketchat.py` - RocketChat notification tests (9 tests)
-- `tests/unit/test_notification_email.py` - Email notification tests (12 tests)
-- `tests/unit/test_notification_microsoftteams.py` - MS Teams notification tests (10 tests)
-- `tests/unit/test_project_notification.py` - Project notification tests (22 tests)
-- `tests/integration/test_resources.py` - Integration tests (6 tests, require live Lagoon)
-
-Run tests with: `pytest tests/unit/ -v`
-
-### Documentation Updates
-**Status**: ✅ COMPLETE (2026-01-26)
-
-README.md includes:
-- Complete usage examples (LagoonProject, LagoonEnvironment, LagoonVariable)
-- Testing instructions (`pytest tests/`)
-- Make targets documentation
-- Project structure overview
-- Examples directory descriptions
-
-No significant API quirks discovered during testing.
-
-## How to Use Right Now
-
-### Installation
-```bash
-cd /home/gchaix/repos/pulumi-lagoon-provider
-pip install -e .
-```
-
-### Basic Usage
-```python
-import pulumi
-import pulumi_lagoon as lagoon
-
-# Create a project
-project = lagoon.LagoonProject("my-site",
-    lagoon.LagoonProjectArgs(
-        name="my-drupal-site",
-        git_url="git@github.com:org/repo.git",
-        deploytarget_id=1,
-        production_environment="main",
-    )
-)
-
-# Create an environment
-env = lagoon.LagoonEnvironment("prod",
-    lagoon.LagoonEnvironmentArgs(
-        name="main",
-        project_id=project.id,
-        deploy_type="branch",
-        environment_type="production",
-    )
-)
-
-# Create a variable
-var = lagoon.LagoonVariable("db-host",
-    lagoon.LagoonVariableArgs(
-        name="DATABASE_HOST",
-        value="mysql.prod.example.com",
-        project_id=project.id,
-        environment_id=env.id,
-        scope="runtime",
-    )
-)
-```
-
-### Configuration
-```bash
-pulumi config set lagoon:apiUrl https://api.lagoon.example.com/graphql
-pulumi config set lagoon:token YOUR_TOKEN --secret
-```
-
-## Next Steps
-
-### Immediate (Phase 1 Completion) - ✅ DONE
-1. ~~**Test against real Lagoon instance**~~ ✅ Tested and working
-2. ~~**Implement automation scripts**~~ ✅ Complete
-3. ~~**Update README**~~ ✅ Updated with Makefile targets
-
-### Remaining (Optional)
-1. **Implement unit tests**
-   - Mock GraphQL responses
-   - Test error handling
-   - Test resource lifecycle
-
-2. **Additional documentation**
-   - API quirks discovered during testing
-   - Advanced usage examples
-
-### Phase 2 (Complete)
-- ✅ LagoonDeployTarget resource implemented
-- ✅ LagoonDeployTargetConfig resource implemented
-- ✅ Multi-cluster example complete and working
-- ✅ CI/CD pipeline (GitHub Actions)
-- ✅ PyPI publication (v0.1.0 released 2026-01-30)
-- ⏳ Additional resources (Group, Notification) - deferred to Phase 3
-
-### Phase 3 (Long-term)
-- Native Go provider
-- Multi-language SDK generation
+The original Python provider remains on `main` branch and is the production version:
+- 11 resources, 513 unit tests, published on PyPI
+- Still works, still supported
+- Will be superseded by native Go provider at v0.2.0
 
 ## File Locations
 
-### Core Implementation
-- `pulumi_lagoon/__init__.py` - Package exports and __version__
-- `pulumi_lagoon/config.py` - Configuration
-- `pulumi_lagoon/client.py` - GraphQL client (multi-version API support)
-- `pulumi_lagoon/exceptions.py` - Centralized exception hierarchy
-- `pulumi_lagoon/validators.py` - Input validation (~470 lines)
-- `pulumi_lagoon/import_utils.py` - Import ID parsing for pulumi import
-
-### Resource Providers (11 resources)
-- `pulumi_lagoon/project.py` - Project resource
-- `pulumi_lagoon/environment.py` - Environment resource
-- `pulumi_lagoon/variable.py` - Variable resource
-- `pulumi_lagoon/deploytarget.py` - Deploy target resource
-- `pulumi_lagoon/deploytarget_config.py` - Deploy target config resource
-- `pulumi_lagoon/task.py` - Task resource
-- `pulumi_lagoon/notification_slack.py` - Slack notification resource
-- `pulumi_lagoon/notification_rocketchat.py` - RocketChat notification resource
-- `pulumi_lagoon/notification_email.py` - Email notification resource
-- `pulumi_lagoon/notification_microsoftteams.py` - MS Teams notification resource
-- `pulumi_lagoon/project_notification.py` - Project-notification association
-
-### Examples
-- `examples/simple-project/__main__.py` - Provider usage (all resource types)
-- `examples/single-cluster/__main__.py` - Single Kind cluster with Lagoon
-- `examples/multi-cluster/__main__.py` - Multi-cluster production-like setup
-
-### Tests
-- `tests/unit/` - 513 unit tests across 16 files
-- `tests/integration/test_resources.py` - Integration tests (require live Lagoon)
-
-### Documentation
-- `README.md` - Main project documentation
-- `CLAUDE.md` - Project-specific Claude instructions
-- `RELEASE_NOTES.md` - Version changelog
-- `docs/notifications.md` - Notification resource documentation
-- `memory-bank/architecture.md` - Architecture documentation
-- `memory-bank/implementation-status.md` - This file
-
-## Git Status
-
-**Current Branch**: main
-
-**Changes Made** (not yet committed):
-- Updated `pulumi_lagoon/client.py` - Added environment and variable operations
-- Implemented `pulumi_lagoon/project.py` - Complete resource
-- Implemented `pulumi_lagoon/environment.py` - Complete resource
-- Implemented `pulumi_lagoon/variable.py` - Complete resource
-- Updated `pulumi_lagoon/__init__.py` - Added exports
-- Updated `examples/simple-project/__main__.py` - Working example
-- Updated `examples/simple-project/README.md` - Comprehensive guide
-
-**Suggested Commit Message**:
-```
-Implement Phase 1: Core resource providers
-
-- Add complete GraphQL client with project, environment, and variable operations
-- Implement LagoonProject dynamic resource provider with full CRUD support
-- Implement LagoonEnvironment dynamic resource provider
-- Implement LagoonVariable dynamic resource provider
-- Update package exports to include all resources
-- Add comprehensive working example with documentation
-- All core Phase 1 functionality complete and ready for testing
-```
-
-## Success Criteria Met
-
-✅ Can create/update/delete Lagoon projects via Pulumi
-✅ Can manage environments and variables
-✅ Working example demonstrating all resources
-✅ Documentation sufficient for early adopters
-✅ Proper dependency handling (project → environment → variable)
-✅ Drift detection support via read() methods
-✅ Clean API with dataclass arguments
-✅ Automated setup via `make setup-all` (~5 minutes)
-✅ Token expiration handled automatically
-✅ Full end-to-end testing passed (2026-01-13)
-
-## Recent Fixes
-
-### Issue #6: Keycloak Migration Job Wait Fix (2026-01-20)
-**Problem**: The `lagoon-core-api-migratedb` job pod would fail on initial deploy because the database wasn't ready yet. The `kubectl wait --for=condition=ready` commands would then block for the full timeout (300s/5 minutes) because Job pods don't become "ready" - they either complete or fail.
-
-**Solution**: Updated the wait logic in both `Makefile` and `scripts/setup-complete.sh` to:
-1. First wait for the migration job to complete by name (`lagoon-core-api-migratedb`), checking for Complete or Failed conditions
-2. If the job fails, delete it to allow Helm to retry on next deployment
-3. Then wait for deployment pods using `--field-selector=status.phase=Running` to exclude completed/failed job pods from the wait
-
-**Files Modified**:
-- `Makefile` - `wait-for-lagoon` target
-- `scripts/setup-complete.sh` - `wait_for_lagoon()` function
-
-## Known Limitations
-
-1. ~~**No unit tests yet**~~ ✅ 513 tests passing (2026-02-06)
-2. ~~**Not tested against real Lagoon**~~ ✅ Tested and working
-3. ~~**No import functionality**~~ ✅ Import support complete (2026-01-26)
-4. ~~**Limited validation**~~ ✅ Comprehensive validation in validators.py (470 lines)
-5. **Token-based auth only** - SSH key authentication not supported
-
-## Questions Answered
-
-1. ~~Does the GraphQL schema match real Lagoon API?~~ ✅ Yes, tested and working
-2. ~~Are there rate limits that need handling?~~ Not observed in testing
-3. ~~Should we implement retry logic?~~ Not needed for current use cases
-4. ~~How should we handle concurrent modifications?~~ Pulumi state handles this
-5. ~~Do we need import functionality for Phase 1?~~ No, deferred to Phase 2
+### Native Go Provider (on `native-go-provider` branch)
+- Binary entry point: `provider/cmd/pulumi-resource-lagoon/main.go`
+- Provider assembly: `provider/pkg/provider/provider.go`
+- Config: `provider/pkg/config/config.go`
+- Client: `provider/pkg/client/` (9 source files)
+- Resources: `provider/pkg/resources/` (12 source files)
+- Tests: 11 test files across client/, config/, resources/
+- CI: `.github/workflows/test-go.yml`
+- Go module: `provider/go.mod` (Go 1.24)
