@@ -52,9 +52,12 @@ pip install -e .
 ```
 pulumi-lagoon-provider/
 ├── pulumi_lagoon/           # Main provider package
-│   ├── __init__.py         # Package exports
+│   ├── __init__.py         # Package exports and __version__
 │   ├── client.py           # Lagoon GraphQL API client
 │   ├── config.py           # Provider configuration
+│   ├── exceptions.py       # Centralized exception hierarchy
+│   ├── validators.py       # Input validation (~470 lines)
+│   ├── import_utils.py     # Import ID parsing for pulumi import
 │   ├── project.py          # LagoonProject resource
 │   ├── environment.py      # LagoonEnvironment resource
 │   ├── variable.py         # LagoonVariable resource
@@ -66,6 +69,26 @@ pulumi-lagoon-provider/
 │   ├── notification_email.py   # LagoonNotificationEmail resource
 │   ├── notification_microsoftteams.py  # LagoonNotificationMicrosoftTeams resource
 │   └── project_notification.py # LagoonProjectNotification resource
+│
+├── tests/
+│   ├── unit/               # 513 unit tests across 16 files
+│   │   ├── test_client.py
+│   │   ├── test_config.py
+│   │   ├── test_project.py
+│   │   ├── test_environment.py
+│   │   ├── test_variable.py
+│   │   ├── test_deploytarget.py
+│   │   ├── test_deploytarget_config.py
+│   │   ├── test_task.py
+│   │   ├── test_validators.py
+│   │   ├── test_import_utils.py
+│   │   ├── test_notification_slack.py
+│   │   ├── test_notification_rocketchat.py
+│   │   ├── test_notification_email.py
+│   │   ├── test_notification_microsoftteams.py
+│   │   └── test_project_notification.py
+│   └── integration/        # Integration tests (require live Lagoon)
+│       └── test_resources.py
 │
 ├── scripts/                 # SHARED operational scripts
 │   ├── common.sh           # Common functions and configuration
@@ -95,10 +118,13 @@ pulumi-lagoon-provider/
 │       ├── lagoon/         # Core and remote installation
 │       └── registry/       # Harbor installation
 │
-├── tests/                  # Unit and integration tests
+├── docs/                   # Additional documentation
+│   └── notifications.md    # Notification resource documentation
 ├── memory-bank/            # Documentation and planning
-├── setup.py               # Python package configuration
+├── pyproject.toml         # Modern Python build configuration (primary)
+├── setup.py               # Legacy package configuration
 ├── requirements.txt       # Python dependencies
+├── RELEASE_NOTES.md       # Version changelog
 ├── Makefile               # Development workflow automation
 └── README.md             # Project documentation
 ```

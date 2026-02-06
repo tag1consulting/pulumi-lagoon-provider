@@ -1,6 +1,6 @@
 # Pulumi Lagoon Provider - Implementation Status
 
-**Last Updated**: 2026-02-03
+**Last Updated**: 2026-02-06
 **Status**: v0.1.2 Released on PyPI - Phase 3 In Progress
 
 ---
@@ -206,16 +206,25 @@ Token Handling:
    - Would require changes to `pulumi_lagoon/config.py` and `client.py`
 
 ### Testing
-**Status**: ✅ COMPLETE (2026-01-26)
+**Status**: ✅ COMPLETE (2026-02-06)
 
-All unit tests implemented and passing (240 tests):
-- `tests/unit/test_client.py` - GraphQL client tests (386 lines)
-- `tests/unit/test_config.py` - Configuration tests (146 lines)
-- `tests/unit/test_project.py` - Project resource tests (366 lines)
-- `tests/unit/test_environment.py` - Environment resource tests (389 lines)
-- `tests/unit/test_variable.py` - Variable resource tests (521 lines)
-- `tests/unit/test_deploytarget.py` - Deploy target tests (411 lines)
-- `tests/unit/test_validators.py` - Validator tests (788 lines)
+All unit tests implemented and passing (513 test functions across 16 files):
+- `tests/unit/test_client.py` - GraphQL client tests (96 tests)
+- `tests/unit/test_config.py` - Configuration tests (15 tests)
+- `tests/unit/test_project.py` - Project resource tests (21 tests)
+- `tests/unit/test_environment.py` - Environment resource tests (24 tests)
+- `tests/unit/test_variable.py` - Variable resource tests (26 tests)
+- `tests/unit/test_deploytarget.py` - Deploy target tests (29 tests)
+- `tests/unit/test_deploytarget_config.py` - Deploy target config tests (15 tests)
+- `tests/unit/test_task.py` - Task resource tests (37 tests)
+- `tests/unit/test_validators.py` - Validator tests (135 tests)
+- `tests/unit/test_import_utils.py` - Import utility tests (43 tests)
+- `tests/unit/test_notification_slack.py` - Slack notification tests (13 tests)
+- `tests/unit/test_notification_rocketchat.py` - RocketChat notification tests (9 tests)
+- `tests/unit/test_notification_email.py` - Email notification tests (12 tests)
+- `tests/unit/test_notification_microsoftteams.py` - MS Teams notification tests (10 tests)
+- `tests/unit/test_project_notification.py` - Project notification tests (22 tests)
+- `tests/integration/test_resources.py` - Integration tests (6 tests, require live Lagoon)
 
 Run tests with: `pytest tests/unit/ -v`
 
@@ -314,25 +323,40 @@ pulumi config set lagoon:token YOUR_TOKEN --secret
 ## File Locations
 
 ### Core Implementation
-- `pulumi_lagoon/__init__.py` - Package exports
+- `pulumi_lagoon/__init__.py` - Package exports and __version__
 - `pulumi_lagoon/config.py` - Configuration
-- `pulumi_lagoon/client.py` - GraphQL client
+- `pulumi_lagoon/client.py` - GraphQL client (multi-version API support)
+- `pulumi_lagoon/exceptions.py` - Centralized exception hierarchy
+- `pulumi_lagoon/validators.py` - Input validation (~470 lines)
+- `pulumi_lagoon/import_utils.py` - Import ID parsing for pulumi import
+
+### Resource Providers (11 resources)
 - `pulumi_lagoon/project.py` - Project resource
 - `pulumi_lagoon/environment.py` - Environment resource
 - `pulumi_lagoon/variable.py` - Variable resource
+- `pulumi_lagoon/deploytarget.py` - Deploy target resource
+- `pulumi_lagoon/deploytarget_config.py` - Deploy target config resource
+- `pulumi_lagoon/task.py` - Task resource
+- `pulumi_lagoon/notification_slack.py` - Slack notification resource
+- `pulumi_lagoon/notification_rocketchat.py` - RocketChat notification resource
+- `pulumi_lagoon/notification_email.py` - Email notification resource
+- `pulumi_lagoon/notification_microsoftteams.py` - MS Teams notification resource
+- `pulumi_lagoon/project_notification.py` - Project-notification association
 
 ### Examples
-- `examples/simple-project/__main__.py` - Working example
-- `examples/simple-project/README.md` - Example documentation
+- `examples/simple-project/__main__.py` - Provider usage (all resource types)
+- `examples/single-cluster/__main__.py` - Single Kind cluster with Lagoon
+- `examples/multi-cluster/__main__.py` - Multi-cluster production-like setup
 
-### Tests (Templates Only)
-- `tests/test_client.py`
-- `tests/test_config.py`
+### Tests
+- `tests/unit/` - 513 unit tests across 16 files
+- `tests/integration/test_resources.py` - Integration tests (require live Lagoon)
 
 ### Documentation
 - `README.md` - Main project documentation
 - `CLAUDE.md` - Project-specific Claude instructions
-- `memory-bank/planning.md` - Original planning document
+- `RELEASE_NOTES.md` - Version changelog
+- `docs/notifications.md` - Notification resource documentation
 - `memory-bank/architecture.md` - Architecture documentation
 - `memory-bank/implementation-status.md` - This file
 
@@ -391,7 +415,7 @@ Implement Phase 1: Core resource providers
 
 ## Known Limitations
 
-1. ~~**No unit tests yet**~~ ✅ 240+ tests passing (2026-01-26)
+1. ~~**No unit tests yet**~~ ✅ 513 tests passing (2026-02-06)
 2. ~~**Not tested against real Lagoon**~~ ✅ Tested and working
 3. ~~**No import functionality**~~ ✅ Import support complete (2026-01-26)
 4. ~~**Limited validation**~~ ✅ Comprehensive validation in validators.py (470 lines)
