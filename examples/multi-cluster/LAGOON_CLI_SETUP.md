@@ -1,15 +1,15 @@
-# Lagoon CLI Setup for Test Cluster
+# Lagoon CLI Setup for Multi-Cluster Example
 
-This guide explains how to configure the [lagoon CLI](https://github.com/uselagoon/lagoon-cli) to work with the local test cluster.
+This guide explains how to configure the [lagoon CLI](https://github.com/uselagoon/lagoon-cli) to work with the local multi-cluster Lagoon deployment.
 
 ## Prerequisites
 
-1. **Test cluster running** - Deploy the cluster with `pulumi up` or `make setup-all` from the repository root
+1. **Clusters running** - Deploy with `make deploy` from this directory or `make multi-cluster-deploy` from the repository root
 2. **lagoon CLI installed** - See [Installation](#installation) below
 
 ## Quick Setup
 
-From the `test-cluster` directory, run:
+From the `examples/multi-cluster` directory, run:
 
 ```bash
 ./scripts/setup-lagoon-cli.sh
@@ -161,14 +161,14 @@ Install the CLI following the [Installation](#installation) section above.
 
 ### "Cluster 'lagoon-test' not found"
 
-The test cluster isn't running. Deploy it:
+The clusters aren't running. Deploy them:
 
 ```bash
-cd test-cluster
-pulumi up
+cd examples/multi-cluster
+make deploy
 
 # Or from repository root:
-make setup-all
+make multi-cluster-deploy
 ```
 
 ### "Failed to get token from Keycloak"
@@ -249,5 +249,4 @@ lagoon get environment --project myproject --environment main
 ## See Also
 
 - [Lagoon CLI Documentation](https://docs.lagoon.sh/lagoon-cli/)
-- [Test Cluster README](./README.md)
-- [Getting Credentials](./scripts/get-credentials.sh)
+- [Multi-Cluster README](./README.md)
