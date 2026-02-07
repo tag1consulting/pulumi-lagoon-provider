@@ -1,7 +1,8 @@
 """Unit tests for LagoonProject provider."""
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from pulumi_lagoon.exceptions import LagoonValidationError
 
@@ -112,6 +113,11 @@ class TestLagoonProjectProviderUpdate:
 
         mock_client.update_project.assert_called_once()
         assert result.outs["branches"] == "^(main|develop|staging)$"
+
+        # Verify correct calling convention: project_id as positional arg, not in kwargs
+        call_args, call_kwargs = mock_client.update_project.call_args
+        assert call_args == (1,), "Project ID should be first positional argument"
+        assert "id" not in call_kwargs, "ID should not be in kwargs"
 
     @patch("pulumi_lagoon.project.LagoonConfig")
     def test_update_project_no_changes(self, mock_config_class):
@@ -364,3 +370,187 @@ class TestLagoonProjectProviderValidation:
         with pytest.raises(LagoonValidationError) as exc:
             provider.update("1", old_inputs, new_inputs)
         assert "git_url" in str(exc.value)
+
+
+class TestLagoonProjectResourceInit:
+    """Tests for LagoonProject resource initialization."""
+
+    def test_resource_init_constructs_inputs_correctly(self):
+        """Test that LagoonProject.__init__ constructs inputs dict from args."""
+        from pulumi_lagoon.project import LagoonProject, LagoonProjectArgs
+
+        # Mock the parent class __init__ to capture inputs
+        with patch("pulumi.dynamic.Resource.__init__") as mock_init:
+            mock_init.return_value = None
+
+            args = LagoonProjectArgs(
+                name="test-project",
+                git_url="git@github.com:test/repo.git",
+                deploytarget_id=1,
+                production_environment="main",
+                branches="^(main|develop)$",
+                pullrequests=".*",
+                openshift_project_pattern="${project}-${env}",
+                auto_idle=1,
+                storage_calc=1,
+                api_url="https://api.lagoon.example.com/graphql",
+                api_token="test-token",
+                jwt_secret=None,
+            )
+
+            LagoonProject("test-resource", args)
+
+            # Verify parent __init__ was called
+            mock_init.assert_called_once()
+            call_args = mock_init.call_args
+
+            # Check the inputs dict (second positional arg after provider)
+            inputs = call_args[0][2]  # provider, name, inputs, opts
+
+            assert inputs["name"] == "test-project"
+            assert inputs["git_url"] == "git@github.com:test/repo.git"
+            assert inputs["deploytarget_id"] == 1
+            assert inputs["production_environment"] == "main"
+            assert inputs["branches"] == "^(main|develop)$"
+            assert inputs["pullrequests"] == ".*"
+            assert inputs["openshift_project_pattern"] == "${project}-${env}"
+            assert inputs["auto_idle"] == 1
+            assert inputs["storage_calc"] == 1
+            assert inputs["api_url"] == "https://api.lagoon.example.com/graphql"
+            assert inputs["api_token"] == "test-token"
+            assert inputs["jwt_secret"] is None
+            assert inputs["id"] is None  # Output placeholder
+            assert inputs["created"] is None  # Output placeholder
+
+    def test_resource_init_with_minimal_args(self):
+        """Test that LagoonProject.__init__ works with minimal required args."""
+        from pulumi_lagoon.project import LagoonProject, LagoonProjectArgs
+
+        with patch("pulumi.dynamic.Resource.__init__") as mock_init:
+            mock_init.return_value = None
+
+            args = LagoonProjectArgs(
+                name="minimal-project",
+                git_url="git@github.com:test/minimal.git",
+                deploytarget_id=1,
+            )
+
+            LagoonProject("minimal-resource", args)
+
+            mock_init.assert_called_once()
+            call_args = mock_init.call_args
+            inputs = call_args[0][2]
+
+            assert inputs["name"] == "minimal-project"
+            assert inputs["git_url"] == "git@github.com:test/minimal.git"
+            assert inputs["deploytarget_id"] == 1
+            # Optional fields should be None
+            assert inputs["production_environment"] is None
+            assert inputs["branches"] is None
+            assert inputs["pullrequests"] is None
+
+    def test_resource_init_passes_opts(self):
+        """Test that LagoonProject.__init__ passes ResourceOptions correctly."""
+        import pulumi
+
+        from pulumi_lagoon.project import LagoonProject, LagoonProjectArgs
+
+        with patch("pulumi.dynamic.Resource.__init__") as mock_init:
+            mock_init.return_value = None
+
+            args = LagoonProjectArgs(
+                name="test-project",
+                git_url="git@github.com:test/repo.git",
+                deploytarget_id=1,
+            )
+
+            opts = pulumi.ResourceOptions(protect=True, retain_on_delete=True)
+            LagoonProject("test-resource", args, opts=opts)
+
+            mock_init.assert_called_once()
+            call_args = mock_init.call_args
+
+            # opts is the 4th positional argument
+            passed_opts = call_args[0][3]
+            assert passed_opts is opts
+
+
+class TestLagoonProjectProviderClientConfig:
+    """Tests for LagoonProjectProvider client configuration."""
+
+    def test_get_client_with_api_token(self, sample_project):
+        """Test creating client with explicit api_url and api_token."""
+        from pulumi_lagoon.project import LagoonProjectProvider
+
+        with patch("pulumi_lagoon.client.LagoonClient") as mock_client_class:
+            mock_client = Mock()
+            mock_client.create_project.return_value = sample_project
+            mock_client_class.return_value = mock_client
+
+            provider = LagoonProjectProvider()
+
+            inputs = {
+                "name": "test-project",
+                "git_url": "git@github.com:test/repo.git",
+                "deploytarget_id": 1,
+                "api_url": "https://api.lagoon.example.com/graphql",
+                "api_token": "test-bearer-token",
+            }
+
+            provider.create(inputs)
+
+            # Verify LagoonClient was created with correct args
+            mock_client_class.assert_called_once_with(
+                "https://api.lagoon.example.com/graphql",
+                "test-bearer-token",
+            )
+
+    def test_get_client_with_jwt_secret(self, sample_project):
+        """Test creating client with jwt_secret for token generation."""
+        from pulumi_lagoon.project import LagoonProjectProvider
+
+        with patch("pulumi_lagoon.client.LagoonClient") as mock_client_class:
+            mock_client = Mock()
+            mock_client.create_project.return_value = sample_project
+            mock_client_class.return_value = mock_client
+
+            provider = LagoonProjectProvider()
+
+            inputs = {
+                "name": "test-project",
+                "git_url": "git@github.com:test/repo.git",
+                "deploytarget_id": 1,
+                "api_url": "https://api.lagoon.example.com/graphql",
+                "jwt_secret": "test-jwt-secret-key",
+            }
+
+            provider.create(inputs)
+
+            # Verify LagoonClient was called with generated token
+            mock_client_class.assert_called_once()
+            call_args = mock_client_class.call_args
+            assert call_args[0][0] == "https://api.lagoon.example.com/graphql"
+            # Token should be a JWT string
+            assert isinstance(call_args[0][1], str)
+
+
+class TestLagoonProjectProviderJWTGeneration:
+    """Tests for JWT token generation in LagoonProjectProvider."""
+
+    def test_generate_admin_token_valid(self):
+        """Test that _generate_admin_token produces a valid JWT."""
+        import jwt as pyjwt
+
+        from pulumi_lagoon.project import LagoonProjectProvider
+
+        provider = LagoonProjectProvider()
+        secret = "test-secret-key"
+
+        token = provider._generate_admin_token(secret)
+
+        # Verify it's a valid JWT that can be decoded
+        decoded = pyjwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
+
+        assert decoded["role"] == "admin"
+        assert decoded["iss"] == "lagoon-api"
+        assert decoded["sub"] == "lagoonadmin"

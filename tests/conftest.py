@@ -1,9 +1,9 @@
 """Shared test fixtures for pulumi-lagoon tests."""
 
-import pytest
-from unittest.mock import Mock, patch
 import os
+from unittest.mock import Mock, patch
 
+import pytest
 
 # Sample data for tests
 SAMPLE_PROJECT = {
@@ -39,6 +39,67 @@ SAMPLE_VARIABLE = {
     "scope": "RUNTIME",
     "project": {"id": 1, "name": "test-project"},
     "environment": None,
+}
+
+SAMPLE_DEPLOY_TARGET = {
+    "id": 1,
+    "name": "prod-cluster",
+    "consoleUrl": "https://kubernetes.example.com:6443",
+    "cloudProvider": "aws",
+    "cloudRegion": "us-east-1",
+    "sshHost": "ssh.lagoon.example.com",
+    "sshPort": "22",
+    "buildImage": None,
+    "disabled": False,
+    "routerPattern": None,
+    "sharedBastionSecret": None,
+    "created": "2024-01-01T00:00:00Z",
+}
+
+# Notification sample data
+SAMPLE_NOTIFICATION_SLACK = {
+    "id": 1,
+    "name": "deploy-alerts",
+    "webhook": "https://hooks.slack.com/services/xxx/yyy/zzz",
+    "channel": "#deployments",
+}
+
+SAMPLE_NOTIFICATION_ROCKETCHAT = {
+    "id": 2,
+    "name": "team-chat",
+    "webhook": "https://rocketchat.example.com/hooks/xxx/yyy",
+    "channel": "#alerts",
+}
+
+SAMPLE_NOTIFICATION_EMAIL = {
+    "id": 3,
+    "name": "ops-team",
+    "emailAddress": "ops@example.com",
+}
+
+SAMPLE_NOTIFICATION_MICROSOFTTEAMS = {
+    "id": 4,
+    "name": "teams-alerts",
+    "webhook": "https://outlook.office.com/webhook/xxx/yyy/zzz",
+}
+
+SAMPLE_TASK = {
+    "id": 1,
+    "name": "run-yarn-audit",
+    "description": "Run yarn audit to check for vulnerabilities",
+    "type": "COMMAND",
+    "service": "node",
+    "command": "yarn audit",
+    "image": None,
+    "permission": "DEVELOPER",
+    "confirmationText": None,
+    "advancedTaskDefinitionArguments": None,
+    "project": {"id": 1, "name": "test-project"},
+    "projectId": 1,
+    "environment": None,
+    "environmentId": None,
+    "groupName": None,
+    "created": "2024-01-01T00:00:00Z",
 }
 
 
@@ -89,9 +150,7 @@ def lagoon_client(mock_response):
         mock_session.headers.update = Mock()
         mock_session_class.return_value = mock_session
 
-        client = LagoonClient(
-            api_url="https://api.test.lagoon.sh/graphql", token="test-jwt-token"
-        )
+        client = LagoonClient(api_url="https://api.test.lagoon.sh/graphql", token="test-jwt-token")
 
         # Replace the session with our mock
         client.session = mock_session
@@ -115,6 +174,42 @@ def sample_environment():
 def sample_variable():
     """Return sample variable data."""
     return SAMPLE_VARIABLE.copy()
+
+
+@pytest.fixture
+def sample_deploy_target():
+    """Return sample deploy target data."""
+    return SAMPLE_DEPLOY_TARGET.copy()
+
+
+@pytest.fixture
+def sample_notification_slack():
+    """Return sample Slack notification data."""
+    return SAMPLE_NOTIFICATION_SLACK.copy()
+
+
+@pytest.fixture
+def sample_notification_rocketchat():
+    """Return sample RocketChat notification data."""
+    return SAMPLE_NOTIFICATION_ROCKETCHAT.copy()
+
+
+@pytest.fixture
+def sample_notification_email():
+    """Return sample Email notification data."""
+    return SAMPLE_NOTIFICATION_EMAIL.copy()
+
+
+@pytest.fixture
+def sample_notification_microsoftteams():
+    """Return sample Microsoft Teams notification data."""
+    return SAMPLE_NOTIFICATION_MICROSOFTTEAMS.copy()
+
+
+@pytest.fixture
+def sample_task():
+    """Return sample task data."""
+    return SAMPLE_TASK.copy()
 
 
 @pytest.fixture

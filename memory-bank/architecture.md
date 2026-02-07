@@ -1,5 +1,7 @@
 # Pulumi Lagoon Provider - Architecture
 
+**Last Updated**: 2026-02-06
+
 ## System Architecture
 
 ### High-Level Overview
@@ -12,14 +14,22 @@
          │
          │ Uses
          ▼
-┌─────────────────────────┐
-│  pulumi_lagoon Package  │
-│  ┌──────────────────┐   │
-│  │ LagoonProject    │   │
-│  │ LagoonEnvironment│   │
-│  │ LagoonVariable   │   │
-│  └──────────────────┘   │
-└────────┬────────────────┘
+┌──────────────────────────────────┐
+│  pulumi_lagoon Package           │
+│  ┌────────────────────────────┐  │
+│  │ LagoonProject              │  │
+│  │ LagoonEnvironment          │  │
+│  │ LagoonVariable             │  │
+│  │ LagoonDeployTarget         │  │
+│  │ LagoonDeployTargetConfig   │  │
+│  │ LagoonTask                 │  │
+│  │ LagoonNotificationSlack    │  │
+│  │ LagoonNotificationRocketChat│ │
+│  │ LagoonNotificationEmail    │  │
+│  │ LagoonNotificationMSTeams  │  │
+│  │ LagoonProjectNotification  │  │
+│  └────────────────────────────┘  │
+└────────┬─────────────────────────┘
          │
          │ Calls
          ▼
@@ -51,7 +61,7 @@
 
 ### 1. Resource Layer
 
-Each resource type (Project, Environment, Variable) implements the Pulumi Dynamic Provider interface:
+Each resource type (Project, Environment, Variable, DeployTarget, DeployTargetConfig, Task, Notifications, ProjectNotification) implements the Pulumi Dynamic Provider interface:
 
 ```python
 # Resource Definition
@@ -270,14 +280,22 @@ except requests.HTTPError as e:
 ```
 LagoonProject
     ├── LagoonEnvironment (many)
-    │   ├── LagoonVariable (many)
-    │   └── LagoonRoute (many)
-    └── LagoonVariable (many, project-scoped)
+    │   ├── LagoonVariable (many, environment-scoped)
+    │   └── LagoonTask (many, environment-scoped)
+    ├── LagoonVariable (many, project-scoped)
+    ├── LagoonDeployTargetConfig (many)
+    ├── LagoonProjectNotification (many)
+    │   └── references: LagoonNotificationSlack
+    │                    LagoonNotificationRocketChat
+    │                    LagoonNotificationEmail
+    │                    LagoonNotificationMicrosoftTeams
+    └── LagoonTask (many, project-scoped)
 
 LagoonDeployTarget
-    └── LagoonProject (many)
+    └── LagoonProject (many, via deploytarget_id)
+        └── LagoonDeployTargetConfig (many)
 
-LagoonGroup
+LagoonGroup (not yet implemented)
     └── LagoonProject (many-to-many)
 ```
 
@@ -379,17 +397,26 @@ def read(self, id, props):
 ### Error Classes
 
 ```python
-class LagoonError(Exception):
+# In exceptions.py:
+class LagoonProviderError(Exception):
     """Base exception for all Lagoon provider errors."""
 
-class LagoonConfigError(LagoonError):
-    """Configuration error."""
+class LagoonValidationError(LagoonProviderError):
+    """Raised when input validation fails."""
 
-class LagoonAPIError(LagoonError):
+class LagoonResourceNotFoundError(LagoonProviderError):
+    """Raised when a referenced resource does not exist."""
+
+# In client.py (note: do NOT inherit from LagoonProviderError):
+class LagoonAPIError(Exception):
     """API request failed."""
 
-class LagoonResourceError(LagoonError):
-    """Resource operation failed."""
+class LagoonConnectionError(Exception):
+    """Network connection error."""
+
+# Note: LagoonAPIError and LagoonConnectionError are re-exported
+# from exceptions.py for convenience but do not share a base class
+# with LagoonProviderError. See issue #XX for tracking.
 ```
 
 ## Testing Strategy

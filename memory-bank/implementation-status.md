@@ -1,7 +1,71 @@
 # Pulumi Lagoon Provider - Implementation Status
 
-**Last Updated**: 2026-01-20
-**Status**: Phase 1 Complete - Full End-to-End Testing Passed
+**Last Updated**: 2026-02-06
+**Status**: v0.1.2 Released on PyPI - Phase 3 In Progress
+
+---
+
+## Current Work (2026-01-21)
+
+### LagoonDeployTarget Resource
+**Status**: ✅ COMPLETE (code) | ⏳ TESTING
+
+New resource for managing Kubernetes deploy targets:
+- `pulumi_lagoon/deploytarget.py` - Full CRUD implementation
+- `pulumi_lagoon/validators.py` - Deploy target validators added
+- `pulumi_lagoon/client.py` - Kubernetes GraphQL operations added
+- `tests/unit/test_deploytarget.py` - Unit tests
+- `tests/unit/test_validators.py` - Validator tests
+
+GraphQL Operations:
+- `add_kubernetes()` - Create deploy target
+- `get_all_kubernetes()` - List all deploy targets
+- `get_kubernetes_by_id()` - Query by ID
+- `get_kubernetes_by_name()` - Query by name
+- `update_kubernetes()` - Update deploy target
+- `delete_kubernetes()` - Delete deploy target
+
+### Multi-Cluster Example
+**Status**: ✅ COMPLETE (2026-01-28)
+
+Location: `examples/multi-cluster/`
+
+Architecture:
+- Production cluster (`lagoon-prod`): Lagoon core, Harbor, prod remote controller
+- Non-production cluster (`lagoon-nonprod`): Nonprod remote controller
+
+Components:
+- `clusters/` - Kind cluster creation
+- `infrastructure/` - ingress-nginx, cert-manager, CoreDNS
+- `registry/` - Harbor container registry
+- `lagoon/` - Lagoon core and remote (build-deploy)
+
+Issues Fixed (2026-01-28):
+- Keycloak config job secret name: Changed `prod-core-keycloak` to `prod-core-lagoon-core-keycloak`
+
+Issues Fixed (2026-01-20):
+- RabbitMQ CrashLoopBackOff: Cleared corrupted Mnesia data by deleting PVCs
+- Service selector bug in `lagoon/core.py`: Changed selector to match actual pod labels
+- Cross-cluster RabbitMQ IP: Added dynamic IP refresh using container ID triggers
+- Keycloak Direct Access Grants: Added `lagoon/keycloak.py` for automatic configuration
+
+New Features:
+- `lagoon/keycloak.py`: Kubernetes Job that configures Keycloak for CLI auth
+  - Enables Direct Access Grants for lagoon-ui client (OAuth password grant)
+  - Creates lagoonadmin user with platform-owner role
+- Dynamic IP refresh: Cluster IPs now automatically refresh when Kind clusters change
+- Port-forwarding make targets: `make port-forwards-all`, `make test-ui`
+
+Completed:
+- All code fixes applied via `pulumi up`
+- Port-forwarding access to Lagoon UI tested and working
+- CLI authentication via OAuth password grant tested and working
+- Browser authentication setup documented (requires hosts file entry)
+
+**Branch**: `deploytarget-multi-cluster`
+**PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/10 (Draft)
+
+---
 
 ## Completed Work
 
@@ -111,25 +175,70 @@ Token Handling:
 
 ## Remaining Work
 
-### Testing (Optional for Phase 1)
-**Status**: ⏸️ NOT STARTED
+### Code Cleanup
+**Status**: ⏸️ LOW PRIORITY
 
-Pending test files:
-1. `tests/test_client.py` - GraphQL client tests
-2. `tests/test_config.py` - Configuration tests
-3. `tests/test_project.py` - Project resource tests (new file)
-4. `tests/test_environment.py` - Environment resource tests (new file)
-5. `tests/test_variable.py` - Variable resource tests (new file)
+1. **Clarify lagoon imports in single-cluster example** (2026-01-26)
+   - `examples/single-cluster/__main__.py` has confusing imports:
+     - `from lagoon import ...` - local infrastructure deployment functions
+     - `import pulumi_lagoon as lagoon` - Lagoon API provider
+   - Both end up using `lagoon.` prefix which is confusing
+   - Suggested fix: Rename `import pulumi_lagoon as lagoon` to just `import pulumi_lagoon`
+   - Then use `pulumi_lagoon.LagoonDeployTarget(...)` instead of `lagoon.LagoonDeployTarget(...)`
+   - **Note**: This is a minor code style issue that doesn't affect functionality. Deferred to future cleanup.
 
-Current test files contain only template code and TODOs.
+### Provider Features
+**Status**: ✅ PARTIAL
+
+1. **Import functionality** (Phase 2) - ✅ COMPLETE
+   - All resources support `pulumi import` with composite ID formats
+   - LagoonProject: `{numeric_id}`
+   - LagoonDeployTarget: `{numeric_id}`
+   - LagoonEnvironment: `{project_id}:{env_name}`
+   - LagoonVariable: `{project_id}:{env_id}:{var_name}` or `{project_id}::{var_name}`
+   - LagoonDeployTargetConfig: `{project_id}:{config_id}`
+   - Import utilities in `pulumi_lagoon/import_utils.py`
+   - Full unit test coverage in `tests/unit/test_import_utils.py`
+
+2. **Add SSH key authentication** (Phase 2+)
+   - Currently only JWT token authentication is supported
+   - SSH key auth would enable service account workflows
+   - Would require changes to `pulumi_lagoon/config.py` and `client.py`
+
+### Testing
+**Status**: ✅ COMPLETE (2026-02-06)
+
+All unit tests implemented and passing (513 test functions across 16 files):
+- `tests/unit/test_client.py` - GraphQL client tests (96 tests)
+- `tests/unit/test_config.py` - Configuration tests (15 tests)
+- `tests/unit/test_project.py` - Project resource tests (21 tests)
+- `tests/unit/test_environment.py` - Environment resource tests (24 tests)
+- `tests/unit/test_variable.py` - Variable resource tests (26 tests)
+- `tests/unit/test_deploytarget.py` - Deploy target tests (29 tests)
+- `tests/unit/test_deploytarget_config.py` - Deploy target config tests (15 tests)
+- `tests/unit/test_task.py` - Task resource tests (37 tests)
+- `tests/unit/test_validators.py` - Validator tests (135 tests)
+- `tests/unit/test_import_utils.py` - Import utility tests (43 tests)
+- `tests/unit/test_notification_slack.py` - Slack notification tests (13 tests)
+- `tests/unit/test_notification_rocketchat.py` - RocketChat notification tests (9 tests)
+- `tests/unit/test_notification_email.py` - Email notification tests (12 tests)
+- `tests/unit/test_notification_microsoftteams.py` - MS Teams notification tests (10 tests)
+- `tests/unit/test_project_notification.py` - Project notification tests (22 tests)
+- `tests/integration/test_resources.py` - Integration tests (6 tests, require live Lagoon)
+
+Run tests with: `pytest tests/unit/ -v`
 
 ### Documentation Updates
-**Status**: ⏸️ PENDING
+**Status**: ✅ COMPLETE (2026-01-26)
 
-Still needed:
-- Update main README.md with complete usage examples
-- Add testing instructions
-- Document discovered API quirks (if any after real-world testing)
+README.md includes:
+- Complete usage examples (LagoonProject, LagoonEnvironment, LagoonVariable)
+- Testing instructions (`pytest tests/`)
+- Make targets documentation
+- Project structure overview
+- Examples directory descriptions
+
+No significant API quirks discovered during testing.
 
 ## How to Use Right Now
 
@@ -199,11 +308,13 @@ pulumi config set lagoon:token YOUR_TOKEN --secret
    - API quirks discovered during testing
    - Advanced usage examples
 
-### Phase 2 (Future)
-- Additional resources (DeployTarget, Group, Notification)
-- Integration tests against test Lagoon instance
-- CI/CD pipeline
-- PyPI publication
+### Phase 2 (Complete)
+- ✅ LagoonDeployTarget resource implemented
+- ✅ LagoonDeployTargetConfig resource implemented
+- ✅ Multi-cluster example complete and working
+- ✅ CI/CD pipeline (GitHub Actions)
+- ✅ PyPI publication (v0.1.0 released 2026-01-30)
+- ⏳ Additional resources (Group, Notification) - deferred to Phase 3
 
 ### Phase 3 (Long-term)
 - Native Go provider
@@ -212,25 +323,40 @@ pulumi config set lagoon:token YOUR_TOKEN --secret
 ## File Locations
 
 ### Core Implementation
-- `pulumi_lagoon/__init__.py` - Package exports
+- `pulumi_lagoon/__init__.py` - Package exports and __version__
 - `pulumi_lagoon/config.py` - Configuration
-- `pulumi_lagoon/client.py` - GraphQL client
+- `pulumi_lagoon/client.py` - GraphQL client (multi-version API support)
+- `pulumi_lagoon/exceptions.py` - Centralized exception hierarchy
+- `pulumi_lagoon/validators.py` - Input validation (~470 lines)
+- `pulumi_lagoon/import_utils.py` - Import ID parsing for pulumi import
+
+### Resource Providers (11 resources)
 - `pulumi_lagoon/project.py` - Project resource
 - `pulumi_lagoon/environment.py` - Environment resource
 - `pulumi_lagoon/variable.py` - Variable resource
+- `pulumi_lagoon/deploytarget.py` - Deploy target resource
+- `pulumi_lagoon/deploytarget_config.py` - Deploy target config resource
+- `pulumi_lagoon/task.py` - Task resource
+- `pulumi_lagoon/notification_slack.py` - Slack notification resource
+- `pulumi_lagoon/notification_rocketchat.py` - RocketChat notification resource
+- `pulumi_lagoon/notification_email.py` - Email notification resource
+- `pulumi_lagoon/notification_microsoftteams.py` - MS Teams notification resource
+- `pulumi_lagoon/project_notification.py` - Project-notification association
 
 ### Examples
-- `examples/simple-project/__main__.py` - Working example
-- `examples/simple-project/README.md` - Example documentation
+- `examples/simple-project/__main__.py` - Provider usage (all resource types)
+- `examples/single-cluster/__main__.py` - Single Kind cluster with Lagoon
+- `examples/multi-cluster/__main__.py` - Multi-cluster production-like setup
 
-### Tests (Templates Only)
-- `tests/test_client.py`
-- `tests/test_config.py`
+### Tests
+- `tests/unit/` - 513 unit tests across 16 files
+- `tests/integration/test_resources.py` - Integration tests (require live Lagoon)
 
 ### Documentation
 - `README.md` - Main project documentation
 - `CLAUDE.md` - Project-specific Claude instructions
-- `memory-bank/planning.md` - Original planning document
+- `RELEASE_NOTES.md` - Version changelog
+- `docs/notifications.md` - Notification resource documentation
 - `memory-bank/architecture.md` - Architecture documentation
 - `memory-bank/implementation-status.md` - This file
 
@@ -289,10 +415,10 @@ Implement Phase 1: Core resource providers
 
 ## Known Limitations
 
-1. **No unit tests yet** - Provider is untested against mocked API
+1. ~~**No unit tests yet**~~ ✅ 513 tests passing (2026-02-06)
 2. ~~**Not tested against real Lagoon**~~ ✅ Tested and working
-3. **No import functionality** - Cannot import existing Lagoon resources yet
-4. **Limited validation** - Input validation is minimal
+3. ~~**No import functionality**~~ ✅ Import support complete (2026-01-26)
+4. ~~**Limited validation**~~ ✅ Comprehensive validation in validators.py (470 lines)
 5. **Token-based auth only** - SSH key authentication not supported
 
 ## Questions Answered

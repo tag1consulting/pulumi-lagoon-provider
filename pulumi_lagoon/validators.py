@@ -5,7 +5,6 @@ from typing import Any, Optional, Set
 
 from .exceptions import LagoonValidationError
 
-
 # Valid enum values for Lagoon API
 VALID_DEPLOY_TYPES: Set[str] = {"branch", "pullrequest"}
 VALID_ENVIRONMENT_TYPES: Set[str] = {"production", "development", "standby"}
@@ -313,3 +312,443 @@ def validate_environment_name(name: str) -> None:
             value=name,
             suggestion="Environment name must start and end with alphanumeric characters",
         )
+
+
+# Valid cloud providers for deploy targets
+VALID_CLOUD_PROVIDERS: Set[str] = {
+    "kind",
+    "aws",
+    "gcp",
+    "azure",
+    "openstack",
+    "digitalocean",
+    "linode",
+    "vsphere",
+    "bare_metal",
+    "other",
+}
+
+
+def validate_deploy_target_name(name: str) -> None:
+    """Validate deploy target name.
+
+    Rules:
+    - Must start with a lowercase letter or number
+    - Can only contain lowercase letters, numbers, and hyphens
+    - Cannot end with a hyphen
+    - Maximum 63 characters (Kubernetes limitation)
+
+    Args:
+        name: Deploy target name to validate
+
+    Raises:
+        LagoonValidationError: If name is invalid
+    """
+    validate_required(name, "name")
+
+    # Pattern: starts with lowercase letter or number, contains only lowercase letters,
+    # numbers, and hyphens, ends with lowercase letter or number
+    pattern = r"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+
+    if len(name) > 63:
+        raise LagoonValidationError(
+            "Deploy target name exceeds maximum length of 63 characters",
+            field="name",
+            value=name,
+            suggestion="Use a shorter deploy target name (max 63 characters)",
+        )
+
+    if not re.match(pattern, name):
+        raise LagoonValidationError(
+            "Invalid deploy target name format",
+            field="name",
+            value=name,
+            suggestion="Deploy target name must start with a lowercase letter or number, "
+            "contain only lowercase letters, numbers, and hyphens, and not end with a hyphen",
+        )
+
+
+def validate_console_url(url: str) -> None:
+    """Validate Kubernetes console/API URL.
+
+    Accepts:
+    - HTTPS URLs: https://kubernetes.example.com
+    - HTTP URLs (for development): http://localhost:8080
+
+    Args:
+        url: Kubernetes API URL to validate
+
+    Raises:
+        LagoonValidationError: If URL format is invalid
+    """
+    validate_required(url, "console_url")
+
+    # HTTPS/HTTP URL pattern
+    pattern = r"^https?://[\w.-]+(?::\d+)?(?:/[\w./-]*)?$"
+
+    if not re.match(pattern, url):
+        raise LagoonValidationError(
+            "Invalid Kubernetes console URL format",
+            field="console_url",
+            value=url,
+            suggestion="Use HTTPS format (https://kubernetes.example.com) or "
+            "HTTP format for development (http://localhost:8080)",
+        )
+
+
+def validate_cloud_provider(provider: str) -> str:
+    """Validate cloud provider value.
+
+    Args:
+        provider: The cloud provider to validate
+
+    Returns:
+        The normalized (lowercase) cloud provider
+
+    Raises:
+        LagoonValidationError: If provider is invalid
+    """
+    return validate_enum(provider, "cloud_provider", VALID_CLOUD_PROVIDERS)
+
+
+def validate_ssh_port(port: Any) -> int:
+    """Validate SSH port number.
+
+    Args:
+        port: The port number to validate (can be int or string)
+
+    Returns:
+        The validated port number
+
+    Raises:
+        LagoonValidationError: If port is invalid
+    """
+    try:
+        port_int = int(port)
+    except (ValueError, TypeError):
+        raise LagoonValidationError(
+            "SSH port must be an integer",
+            field="ssh_port",
+            value=port,
+            suggestion="Provide a valid port number (e.g., 22)",
+        )
+
+    if port_int < 1 or port_int > 65535:
+        raise LagoonValidationError(
+            "SSH port must be between 1 and 65535",
+            field="ssh_port",
+            value=port,
+            suggestion="Provide a valid port number (1-65535, typically 22)",
+        )
+
+    return port_int
+
+
+# Valid notification types
+VALID_NOTIFICATION_TYPES: Set[str] = {"slack", "rocketchat", "email", "microsoftteams"}
+
+
+def validate_notification_name(name: str) -> None:
+    """Validate notification name.
+
+    Rules:
+    - Must start with a letter
+    - Can only contain letters, numbers, hyphens, and underscores
+    - Maximum 100 characters
+
+    Args:
+        name: Notification name to validate
+
+    Raises:
+        LagoonValidationError: If name is invalid
+    """
+    validate_required(name, "name")
+
+    # Pattern: starts with letter, contains only letters, numbers, hyphens, underscores
+    pattern = r"^[a-zA-Z][a-zA-Z0-9_-]*$"
+
+    if len(name) > 100:
+        raise LagoonValidationError(
+            "Notification name exceeds maximum length of 100 characters",
+            field="name",
+            value=name,
+            suggestion="Use a shorter notification name (max 100 characters)",
+        )
+
+    if not re.match(pattern, name):
+        raise LagoonValidationError(
+            "Invalid notification name format",
+            field="name",
+            value=name,
+            suggestion="Notification name must start with a letter and contain only "
+            "letters, numbers, hyphens, and underscores",
+        )
+
+
+def validate_webhook_url(url: str) -> None:
+    """Validate webhook URL.
+
+    Accepts:
+    - HTTPS URLs only for security
+
+    Args:
+        url: Webhook URL to validate
+
+    Raises:
+        LagoonValidationError: If URL format is invalid
+    """
+    validate_required(url, "webhook")
+
+    # HTTPS URL pattern (webhooks should always be HTTPS)
+    pattern = r"^https://[\w.-]+(?::\d+)?(?:/[\w./?%&=_-]*)?$"
+
+    if not re.match(pattern, url):
+        raise LagoonValidationError(
+            "Invalid webhook URL format",
+            field="webhook",
+            value=url,
+            suggestion="Webhook URL must use HTTPS (e.g., https://hooks.slack.com/services/xxx)",
+        )
+
+
+def validate_email_address(email: str) -> None:
+    """Validate email address format.
+
+    Args:
+        email: Email address to validate
+
+    Raises:
+        LagoonValidationError: If email format is invalid
+    """
+    validate_required(email, "email_address")
+
+    # Basic email pattern (RFC 5322 simplified)
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+
+    if not re.match(pattern, email):
+        raise LagoonValidationError(
+            "Invalid email address format",
+            field="email_address",
+            value=email,
+            suggestion="Provide a valid email address (e.g., ops@example.com)",
+        )
+
+
+def validate_notification_type(notification_type: str) -> str:
+    """Validate notification type enum.
+
+    Args:
+        notification_type: The notification type to validate
+
+    Returns:
+        The normalized (lowercase) notification type
+
+    Raises:
+        LagoonValidationError: If notification_type is invalid
+    """
+    return validate_enum(notification_type, "notification_type", VALID_NOTIFICATION_TYPES)
+
+
+def validate_channel_name(channel: str) -> None:
+    """Validate notification channel name.
+
+    Args:
+        channel: Channel name to validate (e.g., #channel or channel)
+
+    Raises:
+        LagoonValidationError: If channel name is invalid
+    """
+    validate_required(channel, "channel")
+
+    if len(channel) > 100:
+        raise LagoonValidationError(
+            "Channel name exceeds maximum length of 100 characters",
+            field="channel",
+            value=channel,
+            suggestion="Use a shorter channel name (max 100 characters)",
+        )
+
+
+def validate_ssh_host(host: Optional[str]) -> None:
+    """Validate SSH host for builds.
+
+    Args:
+        host: SSH hostname to validate (None is allowed for optional field)
+
+    Raises:
+        LagoonValidationError: If host format is invalid
+    """
+    if host is None:
+        return  # Optional field
+
+    # Hostname pattern: alphanumeric with hyphens and dots, or IP address
+    hostname_pattern = r"^[\w.-]+$"
+    ip_pattern = r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"
+
+    if not (re.match(hostname_pattern, host) or re.match(ip_pattern, host)):
+        raise LagoonValidationError(
+            "Invalid SSH host format",
+            field="ssh_host",
+            value=host,
+            suggestion="Provide a valid hostname (e.g., ssh.lagoon.example.com) or IP address",
+        )
+
+
+# Valid task types for advanced task definitions
+VALID_TASK_TYPES: Set[str] = {"command", "image"}
+
+# Valid permissions for task definitions
+VALID_TASK_PERMISSIONS: Set[str] = {"guest", "developer", "maintainer"}
+
+# Valid argument types for task definition arguments
+VALID_TASK_ARGUMENT_TYPES: Set[str] = {
+    "string",
+    "environment_source_name",
+    "environment_source_name_exclude_self",
+}
+
+
+def validate_task_type(task_type: str) -> str:
+    """Validate task type enum.
+
+    Args:
+        task_type: The task type to validate ("command" or "image")
+
+    Returns:
+        The normalized (lowercase) task type
+
+    Raises:
+        LagoonValidationError: If task_type is invalid
+    """
+    return validate_enum(task_type, "type", VALID_TASK_TYPES)
+
+
+def validate_task_permission(permission: Optional[str]) -> Optional[str]:
+    """Validate task permission enum.
+
+    Args:
+        permission: The permission to validate (None allowed for optional)
+
+    Returns:
+        The normalized (lowercase) permission, or None if not provided
+
+    Raises:
+        LagoonValidationError: If permission is invalid
+    """
+    if permission is None:
+        return None
+    return validate_enum(permission, "permission", VALID_TASK_PERMISSIONS)
+
+
+def validate_task_argument_type(arg_type: str) -> str:
+    """Validate task argument type enum.
+
+    Args:
+        arg_type: The argument type to validate
+
+    Returns:
+        The normalized argument type
+
+    Raises:
+        LagoonValidationError: If arg_type is invalid
+    """
+    return validate_enum(arg_type, "argument type", VALID_TASK_ARGUMENT_TYPES)
+
+
+def validate_task_scope(
+    project_id: Optional[int],
+    environment_id: Optional[int],
+    group_name: Optional[str],
+    system_wide: Optional[bool],
+) -> None:
+    """Validate that exactly one task scope is specified.
+
+    Task definitions must have exactly one scope: project_id, environment_id,
+    group_name, or system_wide=True.
+
+    Args:
+        project_id: Project ID (for project-scoped tasks)
+        environment_id: Environment ID (for environment-scoped tasks)
+        group_name: Group name (for group-scoped tasks)
+        system_wide: If True, task is system-wide
+
+    Raises:
+        LagoonValidationError: If zero or more than one scope is specified
+    """
+    scopes_provided = sum(
+        [
+            project_id is not None,
+            environment_id is not None,
+            group_name is not None,
+            system_wide is True,
+        ]
+    )
+
+    if scopes_provided == 0:
+        raise LagoonValidationError(
+            "Task scope is required",
+            field="scope",
+            value=None,
+            suggestion="Specify exactly one of: project_id, environment_id, group_name, or system_wide=True",
+        )
+
+    if scopes_provided > 1:
+        raise LagoonValidationError(
+            "Multiple task scopes specified",
+            field="scope",
+            value=f"project_id={project_id}, environment_id={environment_id}, "
+            f"group_name={group_name}, system_wide={system_wide}",
+            suggestion="Specify exactly one of: project_id, environment_id, group_name, or system_wide=True",
+        )
+
+
+def validate_task_command_or_image(
+    task_type: str,
+    command: Optional[str],
+    image: Optional[str],
+) -> None:
+    """Validate that command/image is provided based on task type.
+
+    - If type is "command", command must be provided and image must be None
+    - If type is "image", image must be provided and command must be None
+
+    Args:
+        task_type: The task type ("command" or "image")
+        command: The command to execute (for command-type tasks)
+        image: The container image (for image-type tasks)
+
+    Raises:
+        LagoonValidationError: If command/image doesn't match task type
+    """
+    task_type_lower = task_type.lower()
+
+    if task_type_lower == "command":
+        if not command:
+            raise LagoonValidationError(
+                "Command is required for command-type tasks",
+                field="command",
+                value=command,
+                suggestion="Provide a command to execute (e.g., 'yarn audit')",
+            )
+        if image:
+            raise LagoonValidationError(
+                "Image should not be provided for command-type tasks",
+                field="image",
+                value=image,
+                suggestion="Remove image for command-type tasks, or change type to 'image'",
+            )
+    elif task_type_lower == "image":
+        if not image:
+            raise LagoonValidationError(
+                "Image is required for image-type tasks",
+                field="image",
+                value=image,
+                suggestion="Provide a container image (e.g., 'library/alpine:latest')",
+            )
+        if command:
+            raise LagoonValidationError(
+                "Command should not be provided for image-type tasks",
+                field="command",
+                value=command,
+                suggestion="Remove command for image-type tasks, or change type to 'command'",
+            )

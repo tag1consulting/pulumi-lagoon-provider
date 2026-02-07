@@ -9,11 +9,11 @@ Environment variables required:
 - LAGOON_DEPLOY_TARGET_ID: ID of a deploy target to use for tests
 """
 
-import pytest
 import os
 
-from pulumi_lagoon.client import LagoonClient
+import pytest
 
+from pulumi_lagoon.client import LagoonClient
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
@@ -205,9 +205,7 @@ class TestVariableLifecycle:
 
         try:
             # Read
-            fetched = client.get_env_variable_by_name(
-                name="TEST_VAR", project=project_id
-            )
+            fetched = client.get_env_variable_by_name(name="TEST_VAR", project=project_id)
             assert fetched is not None
             assert fetched["value"] == "test-value"
 
@@ -216,9 +214,7 @@ class TestVariableLifecycle:
             client.delete_env_variable(name="TEST_VAR", project=project_id)
 
             # Verify deletion
-            deleted = client.get_env_variable_by_name(
-                name="TEST_VAR", project=project_id
-            )
+            deleted = client.get_env_variable_by_name(name="TEST_VAR", project=project_id)
             assert deleted is None
 
     def test_variable_scopes(self, client, project_with_cleanup):
