@@ -79,7 +79,7 @@ error() {
 
 # Check if cluster exists
 if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
-    error "Cluster '${CLUSTER_NAME}' not found. Run 'pulumi up' in test-cluster/ first."
+    error "Cluster '${CLUSTER_NAME}' not found. Run 'make deploy' in examples/multi-cluster/ first."
 fi
 
 # Fetch password from Kubernetes secret if not provided
