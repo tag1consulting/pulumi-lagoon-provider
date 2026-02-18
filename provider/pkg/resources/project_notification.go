@@ -39,53 +39,59 @@ func (s *ProjectNotificationState) Annotate(a infer.Annotator) {
 	a.Describe(&s.ProjectID, "The Lagoon project ID.")
 }
 
-func (r *ProjectNotification) Create(ctx context.Context, name string, inputs ProjectNotificationArgs, preview bool) (string, ProjectNotificationState, error) {
+func (r *ProjectNotification) Create(ctx context.Context, req infer.CreateRequest[ProjectNotificationArgs]) (infer.CreateResponse[ProjectNotificationState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	notifType := strings.ToUpper(inputs.NotificationType)
-	id := fmt.Sprintf("%s:%s:%s", inputs.ProjectName, inputs.NotificationType, inputs.NotificationName)
+	notifType := strings.ToUpper(req.Inputs.NotificationType)
+	id := fmt.Sprintf("%s:%s:%s", req.Inputs.ProjectName, req.Inputs.NotificationType, req.Inputs.NotificationName)
 
-	if preview {
-		return id, ProjectNotificationState{ProjectNotificationArgs: inputs}, nil
+	if req.DryRun {
+		return infer.CreateResponse[ProjectNotificationState]{
+			ID:     id,
+			Output: ProjectNotificationState{ProjectNotificationArgs: req.Inputs},
+		}, nil
 	}
 
-	if err := client.AddNotificationToProject(ctx, inputs.ProjectName, notifType, inputs.NotificationName); err != nil {
-		return "", ProjectNotificationState{}, fmt.Errorf("failed to add notification to project: %w", err)
+	if err := client.AddNotificationToProject(ctx, req.Inputs.ProjectName, notifType, req.Inputs.NotificationName); err != nil {
+		return infer.CreateResponse[ProjectNotificationState]{}, fmt.Errorf("failed to add notification to project: %w", err)
 	}
 
 	// Look up project ID
-	info, err := client.CheckProjectNotificationExists(ctx, inputs.ProjectName, inputs.NotificationType, inputs.NotificationName)
+	info, err := client.CheckProjectNotificationExists(ctx, req.Inputs.ProjectName, req.Inputs.NotificationType, req.Inputs.NotificationName)
 	projectID := 0
 	if err == nil && info != nil {
 		projectID = info.ProjectID
 	}
 
-	return id, ProjectNotificationState{
-		ProjectNotificationArgs: inputs,
-		ProjectID:               projectID,
+	return infer.CreateResponse[ProjectNotificationState]{
+		ID: id,
+		Output: ProjectNotificationState{
+			ProjectNotificationArgs: req.Inputs,
+			ProjectID:               projectID,
+		},
 	}, nil
 }
 
 // No Update — all fields are forceNew, so any change triggers replace.
 
-func (r *ProjectNotification) Delete(ctx context.Context, id string, props ProjectNotificationState) error {
+func (r *ProjectNotification) Delete(ctx context.Context, req infer.DeleteRequest[ProjectNotificationState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	notifType := strings.ToUpper(props.NotificationType)
-	if err := client.RemoveNotificationFromProject(ctx, props.ProjectName, notifType, props.NotificationName); err != nil {
-		return fmt.Errorf("failed to remove notification from project: %w", err)
+	notifType := strings.ToUpper(req.State.NotificationType)
+	if err := client.RemoveNotificationFromProject(ctx, req.State.ProjectName, notifType, req.State.NotificationName); err != nil {
+		return infer.DeleteResponse{}, fmt.Errorf("failed to remove notification from project: %w", err)
 	}
-	return nil
+	return infer.DeleteResponse{}, nil
 }
 
-func (r *ProjectNotification) Read(ctx context.Context, id string, inputs ProjectNotificationArgs, state ProjectNotificationState) (string, ProjectNotificationArgs, ProjectNotificationState, error) {
+func (r *ProjectNotification) Read(ctx context.Context, req infer.ReadRequest[ProjectNotificationArgs, ProjectNotificationState]) (infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	// Import ID: {project_name}:{notification_type}:{notification_name}
-	parts := strings.SplitN(id, ":", 3)
+	parts := strings.SplitN(req.ID, ":", 3)
 	var projectName, notificationType, notificationName string
 
 	if len(parts) == 3 {
@@ -93,18 +99,18 @@ func (r *ProjectNotification) Read(ctx context.Context, id string, inputs Projec
 		notificationType = parts[1]
 		notificationName = parts[2]
 	} else {
-		projectName = state.ProjectName
-		notificationType = state.NotificationType
-		notificationName = state.NotificationName
+		projectName = req.State.ProjectName
+		notificationType = req.State.NotificationType
+		notificationName = req.State.NotificationName
 	}
 
 	info, err := client.CheckProjectNotificationExists(ctx, projectName, notificationType, notificationName)
 	if err != nil {
-		return "", ProjectNotificationArgs{}, ProjectNotificationState{}, fmt.Errorf("failed to read project notification: %w", err)
+		return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{}, fmt.Errorf("failed to read project notification: %w", err)
 	}
 
 	if !info.Exists {
-		return "", ProjectNotificationArgs{}, ProjectNotificationState{},
+		return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{},
 			fmt.Errorf("notification '%s' (type=%s) not found on project '%s'", notificationName, notificationType, projectName)
 	}
 
@@ -118,20 +124,24 @@ func (r *ProjectNotification) Read(ctx context.Context, id string, inputs Projec
 		ProjectID:               info.ProjectID,
 	}
 
-	return id, args, st, nil
+	return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{
+		ID:     req.ID,
+		Inputs: args,
+		State:  st,
+	}, nil
 }
 
-func (r *ProjectNotification) Diff(ctx context.Context, id string, olds ProjectNotificationState, news ProjectNotificationArgs) (p.DiffResponse, error) {
+func (r *ProjectNotification) Diff(ctx context.Context, req infer.DiffRequest[ProjectNotificationArgs, ProjectNotificationState]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
 
 	// All fields are forceNew for project notifications
-	if news.ProjectName != olds.ProjectName {
+	if req.Inputs.ProjectName != req.State.ProjectName {
 		diff["projectName"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if !strings.EqualFold(news.NotificationType, olds.NotificationType) {
+	if !strings.EqualFold(req.Inputs.NotificationType, req.State.NotificationType) {
 		diff["notificationType"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if news.NotificationName != olds.NotificationName {
+	if req.Inputs.NotificationName != req.State.NotificationName {
 		diff["notificationName"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
 

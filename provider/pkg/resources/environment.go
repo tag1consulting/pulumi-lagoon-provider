@@ -60,96 +60,106 @@ func (s *EnvironmentState) Annotate(a infer.Annotator) {
 	a.Describe(&s.Created, "The creation timestamp.")
 }
 
-func (r *Environment) Create(ctx context.Context, name string, inputs EnvironmentArgs, preview bool) (string, EnvironmentState, error) {
+func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[EnvironmentArgs]) (infer.CreateResponse[EnvironmentState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	input := map[string]any{
-		"name":            inputs.Name,
-		"project":         inputs.ProjectID,
-		"deployType":      strings.ToUpper(inputs.DeployType),
-		"environmentType": strings.ToUpper(inputs.EnvironmentType),
+		"name":            req.Inputs.Name,
+		"project":         req.Inputs.ProjectID,
+		"deployType":      strings.ToUpper(req.Inputs.DeployType),
+		"environmentType": strings.ToUpper(req.Inputs.EnvironmentType),
 	}
-	setOptional(input, "deployBaseRef", inputs.DeployBaseRef)
-	setOptional(input, "deployHeadRef", inputs.DeployHeadRef)
-	setOptional(input, "deployTitle", inputs.DeployTitle)
-	setOptional(input, "openshiftProjectName", inputs.OpenshiftProjectName)
-	setOptionalInt(input, "autoIdle", inputs.AutoIdle)
+	setOptional(input, "deployBaseRef", req.Inputs.DeployBaseRef)
+	setOptional(input, "deployHeadRef", req.Inputs.DeployHeadRef)
+	setOptional(input, "deployTitle", req.Inputs.DeployTitle)
+	setOptional(input, "openshiftProjectName", req.Inputs.OpenshiftProjectName)
+	setOptionalInt(input, "autoIdle", req.Inputs.AutoIdle)
 
-	if preview {
-		return "preview-id", EnvironmentState{EnvironmentArgs: inputs}, nil
-	}
-
-	env, err := client.AddOrUpdateEnvironment(ctx, input)
-	if err != nil {
-		return "", EnvironmentState{}, fmt.Errorf("failed to create environment: %w", err)
-	}
-
-	return strconv.Itoa(env.ID), EnvironmentState{
-		EnvironmentArgs: inputs,
-		LagoonID:        env.ID,
-		Route:           env.Route,
-		Routes:          env.Routes,
-		Created:         env.Created,
-	}, nil
-}
-
-func (r *Environment) Update(ctx context.Context, id string, olds EnvironmentState, news EnvironmentArgs, preview bool) (EnvironmentState, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
-
-	input := map[string]any{
-		"name":            news.Name,
-		"project":         news.ProjectID,
-		"deployType":      strings.ToUpper(news.DeployType),
-		"environmentType": strings.ToUpper(news.EnvironmentType),
-	}
-	setOptional(input, "deployBaseRef", news.DeployBaseRef)
-	setOptional(input, "deployHeadRef", news.DeployHeadRef)
-	setOptional(input, "deployTitle", news.DeployTitle)
-	setOptional(input, "openshiftProjectName", news.OpenshiftProjectName)
-	setOptionalInt(input, "autoIdle", news.AutoIdle)
-
-	if preview {
-		return EnvironmentState{
-			EnvironmentArgs: news,
-			LagoonID:        olds.LagoonID,
-			Route:           olds.Route,
-			Routes:          olds.Routes,
-			Created:         olds.Created,
+	if req.DryRun {
+		return infer.CreateResponse[EnvironmentState]{
+			ID:     "preview-id",
+			Output: EnvironmentState{EnvironmentArgs: req.Inputs},
 		}, nil
 	}
 
 	env, err := client.AddOrUpdateEnvironment(ctx, input)
 	if err != nil {
-		return EnvironmentState{}, fmt.Errorf("failed to update environment: %w", err)
+		return infer.CreateResponse[EnvironmentState]{}, fmt.Errorf("failed to create environment: %w", err)
 	}
 
-	return EnvironmentState{
-		EnvironmentArgs: news,
-		LagoonID:        env.ID,
-		Route:           env.Route,
-		Routes:          env.Routes,
-		Created:         env.Created,
+	return infer.CreateResponse[EnvironmentState]{
+		ID: strconv.Itoa(env.ID),
+		Output: EnvironmentState{
+			EnvironmentArgs: req.Inputs,
+			LagoonID:        env.ID,
+			Route:           env.Route,
+			Routes:          env.Routes,
+			Created:         env.Created,
+		},
 	}, nil
 }
 
-func (r *Environment) Delete(ctx context.Context, id string, props EnvironmentState) error {
+func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[EnvironmentArgs, EnvironmentState]) (infer.UpdateResponse[EnvironmentState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	if err := client.DeleteEnvironment(ctx, props.Name, props.ProjectID); err != nil {
-		return fmt.Errorf("failed to delete environment: %w", err)
+	input := map[string]any{
+		"name":            req.Inputs.Name,
+		"project":         req.Inputs.ProjectID,
+		"deployType":      strings.ToUpper(req.Inputs.DeployType),
+		"environmentType": strings.ToUpper(req.Inputs.EnvironmentType),
 	}
-	return nil
+	setOptional(input, "deployBaseRef", req.Inputs.DeployBaseRef)
+	setOptional(input, "deployHeadRef", req.Inputs.DeployHeadRef)
+	setOptional(input, "deployTitle", req.Inputs.DeployTitle)
+	setOptional(input, "openshiftProjectName", req.Inputs.OpenshiftProjectName)
+	setOptionalInt(input, "autoIdle", req.Inputs.AutoIdle)
+
+	if req.DryRun {
+		return infer.UpdateResponse[EnvironmentState]{
+			Output: EnvironmentState{
+				EnvironmentArgs: req.Inputs,
+				LagoonID:        req.State.LagoonID,
+				Route:           req.State.Route,
+				Routes:          req.State.Routes,
+				Created:         req.State.Created,
+			},
+		}, nil
+	}
+
+	env, err := client.AddOrUpdateEnvironment(ctx, input)
+	if err != nil {
+		return infer.UpdateResponse[EnvironmentState]{}, fmt.Errorf("failed to update environment: %w", err)
+	}
+
+	return infer.UpdateResponse[EnvironmentState]{
+		Output: EnvironmentState{
+			EnvironmentArgs: req.Inputs,
+			LagoonID:        env.ID,
+			Route:           env.Route,
+			Routes:          env.Routes,
+			Created:         env.Created,
+		},
+	}, nil
 }
 
-func (r *Environment) Read(ctx context.Context, id string, inputs EnvironmentArgs, state EnvironmentState) (string, EnvironmentArgs, EnvironmentState, error) {
+func (r *Environment) Delete(ctx context.Context, req infer.DeleteRequest[EnvironmentState]) (infer.DeleteResponse, error) {
+	cfg := infer.GetConfig[config.LagoonConfig](ctx)
+	client := cfg.NewClient()
+
+	if err := client.DeleteEnvironment(ctx, req.State.Name, req.State.ProjectID); err != nil {
+		return infer.DeleteResponse{}, fmt.Errorf("failed to delete environment: %w", err)
+	}
+	return infer.DeleteResponse{}, nil
+}
+
+func (r *Environment) Read(ctx context.Context, req infer.ReadRequest[EnvironmentArgs, EnvironmentState]) (infer.ReadResponse[EnvironmentArgs, EnvironmentState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	// Parse composite ID: {project_id}:{env_name}
-	parts := strings.SplitN(id, ":", 2)
+	parts := strings.SplitN(req.ID, ":", 2)
 	var projectID int
 	var envName string
 
@@ -157,19 +167,19 @@ func (r *Environment) Read(ctx context.Context, id string, inputs EnvironmentArg
 		// Import scenario
 		pid, err := strconv.Atoi(parts[0])
 		if err != nil {
-			return "", EnvironmentArgs{}, EnvironmentState{}, fmt.Errorf("invalid environment import ID '%s': project_id must be numeric", id)
+			return infer.ReadResponse[EnvironmentArgs, EnvironmentState]{}, fmt.Errorf("invalid environment import ID '%s': project_id must be numeric", req.ID)
 		}
 		projectID = pid
 		envName = parts[1]
 	} else {
 		// Refresh scenario — use state
-		projectID = state.ProjectID
-		envName = state.Name
+		projectID = req.State.ProjectID
+		envName = req.State.Name
 	}
 
 	env, err := client.GetEnvironmentByName(ctx, envName, projectID)
 	if err != nil {
-		return "", EnvironmentArgs{}, EnvironmentState{}, fmt.Errorf("failed to read environment: %w", err)
+		return infer.ReadResponse[EnvironmentArgs, EnvironmentState]{}, fmt.Errorf("failed to read environment: %w", err)
 	}
 
 	args := EnvironmentArgs{
@@ -187,40 +197,44 @@ func (r *Environment) Read(ctx context.Context, id string, inputs EnvironmentArg
 		Created:         env.Created,
 	}
 
-	return strconv.Itoa(env.ID), args, st, nil
+	return infer.ReadResponse[EnvironmentArgs, EnvironmentState]{
+		ID:     strconv.Itoa(env.ID),
+		Inputs: args,
+		State:  st,
+	}, nil
 }
 
-func (r *Environment) Diff(ctx context.Context, id string, olds EnvironmentState, news EnvironmentArgs) (p.DiffResponse, error) {
+func (r *Environment) Diff(ctx context.Context, req infer.DiffRequest[EnvironmentArgs, EnvironmentState]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
 
 	// forceNew fields
-	if news.Name != olds.Name {
+	if req.Inputs.Name != req.State.Name {
 		diff["name"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if news.ProjectID != olds.ProjectID {
+	if req.Inputs.ProjectID != req.State.ProjectID {
 		diff["projectId"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
 
 	// Updatable fields
-	if !strings.EqualFold(news.DeployType, olds.DeployType) {
+	if !strings.EqualFold(req.Inputs.DeployType, req.State.DeployType) {
 		diff["deployType"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if !strings.EqualFold(news.EnvironmentType, olds.EnvironmentType) {
+	if !strings.EqualFold(req.Inputs.EnvironmentType, req.State.EnvironmentType) {
 		diff["environmentType"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.DeployBaseRef, olds.DeployBaseRef) {
+	if ptrDiffers(req.Inputs.DeployBaseRef, req.State.DeployBaseRef) {
 		diff["deployBaseRef"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.DeployHeadRef, olds.DeployHeadRef) {
+	if ptrDiffers(req.Inputs.DeployHeadRef, req.State.DeployHeadRef) {
 		diff["deployHeadRef"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.DeployTitle, olds.DeployTitle) {
+	if ptrDiffers(req.Inputs.DeployTitle, req.State.DeployTitle) {
 		diff["deployTitle"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.OpenshiftProjectName, olds.OpenshiftProjectName) {
+	if ptrDiffers(req.Inputs.OpenshiftProjectName, req.State.OpenshiftProjectName) {
 		diff["openshiftProjectName"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrIntDiffers(news.AutoIdle, olds.AutoIdle) {
+	if ptrIntDiffers(req.Inputs.AutoIdle, req.State.AutoIdle) {
 		diff["autoIdle"] = p.PropertyDiff{Kind: p.Update}
 	}
 

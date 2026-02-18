@@ -32,78 +32,92 @@ func (a *NotificationEmailArgs) Annotate(an infer.Annotator) {
 	an.Describe(&a.EmailAddress, "The email address to send notifications to.")
 }
 
-func (r *NotificationEmail) Create(ctx context.Context, name string, inputs NotificationEmailArgs, preview bool) (string, NotificationEmailState, error) {
+func (r *NotificationEmail) Create(ctx context.Context, req infer.CreateRequest[NotificationEmailArgs]) (infer.CreateResponse[NotificationEmailState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	if preview {
-		return "preview-id", NotificationEmailState{NotificationEmailArgs: inputs}, nil
+	if req.DryRun {
+		return infer.CreateResponse[NotificationEmailState]{
+			ID:     "preview-id",
+			Output: NotificationEmailState{NotificationEmailArgs: req.Inputs},
+		}, nil
 	}
 
-	n, err := client.CreateNotificationEmail(ctx, inputs.Name, inputs.EmailAddress)
+	n, err := client.CreateNotificationEmail(ctx, req.Inputs.Name, req.Inputs.EmailAddress)
 	if err != nil {
-		return "", NotificationEmailState{}, fmt.Errorf("failed to create Email notification: %w", err)
+		return infer.CreateResponse[NotificationEmailState]{}, fmt.Errorf("failed to create Email notification: %w", err)
 	}
 
-	return strconv.Itoa(n.ID), NotificationEmailState{NotificationEmailArgs: inputs, LagoonID: n.ID}, nil
+	return infer.CreateResponse[NotificationEmailState]{
+		ID:     strconv.Itoa(n.ID),
+		Output: NotificationEmailState{NotificationEmailArgs: req.Inputs, LagoonID: n.ID},
+	}, nil
 }
 
-func (r *NotificationEmail) Update(ctx context.Context, id string, olds NotificationEmailState, news NotificationEmailArgs, preview bool) (NotificationEmailState, error) {
+func (r *NotificationEmail) Update(ctx context.Context, req infer.UpdateRequest[NotificationEmailArgs, NotificationEmailState]) (infer.UpdateResponse[NotificationEmailState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	patch := map[string]any{}
-	if news.EmailAddress != olds.EmailAddress {
-		patch["emailAddress"] = news.EmailAddress
+	if req.Inputs.EmailAddress != req.State.EmailAddress {
+		patch["emailAddress"] = req.Inputs.EmailAddress
 	}
 
-	if preview || len(patch) == 0 {
-		return NotificationEmailState{NotificationEmailArgs: news, LagoonID: olds.LagoonID}, nil
+	if req.DryRun || len(patch) == 0 {
+		return infer.UpdateResponse[NotificationEmailState]{
+			Output: NotificationEmailState{NotificationEmailArgs: req.Inputs, LagoonID: req.State.LagoonID},
+		}, nil
 	}
 
-	_, err := client.UpdateNotificationEmail(ctx, olds.Name, patch)
+	_, err := client.UpdateNotificationEmail(ctx, req.State.Name, patch)
 	if err != nil {
-		return NotificationEmailState{}, fmt.Errorf("failed to update Email notification: %w", err)
+		return infer.UpdateResponse[NotificationEmailState]{}, fmt.Errorf("failed to update Email notification: %w", err)
 	}
 
-	return NotificationEmailState{NotificationEmailArgs: news, LagoonID: olds.LagoonID}, nil
+	return infer.UpdateResponse[NotificationEmailState]{
+		Output: NotificationEmailState{NotificationEmailArgs: req.Inputs, LagoonID: req.State.LagoonID},
+	}, nil
 }
 
-func (r *NotificationEmail) Delete(ctx context.Context, id string, props NotificationEmailState) error {
+func (r *NotificationEmail) Delete(ctx context.Context, req infer.DeleteRequest[NotificationEmailState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
-	if err := client.DeleteNotificationEmail(ctx, props.Name); err != nil {
-		return fmt.Errorf("failed to delete Email notification: %w", err)
+	if err := client.DeleteNotificationEmail(ctx, req.State.Name); err != nil {
+		return infer.DeleteResponse{}, fmt.Errorf("failed to delete Email notification: %w", err)
 	}
-	return nil
+	return infer.DeleteResponse{}, nil
 }
 
-func (r *NotificationEmail) Read(ctx context.Context, id string, inputs NotificationEmailArgs, state NotificationEmailState) (string, NotificationEmailArgs, NotificationEmailState, error) {
+func (r *NotificationEmail) Read(ctx context.Context, req infer.ReadRequest[NotificationEmailArgs, NotificationEmailState]) (infer.ReadResponse[NotificationEmailArgs, NotificationEmailState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	name := id
-	if state.Name != "" {
-		name = state.Name
+	name := req.ID
+	if req.State.Name != "" {
+		name = req.State.Name
 	}
 
 	n, err := client.GetNotificationEmailByName(ctx, name)
 	if err != nil {
-		return "", NotificationEmailArgs{}, NotificationEmailState{}, fmt.Errorf("failed to read Email notification: %w", err)
+		return infer.ReadResponse[NotificationEmailArgs, NotificationEmailState]{}, fmt.Errorf("failed to read Email notification: %w", err)
 	}
 
 	args := NotificationEmailArgs{Name: n.Name, EmailAddress: n.EmailAddress}
 	st := NotificationEmailState{NotificationEmailArgs: args, LagoonID: n.ID}
 
-	return name, args, st, nil
+	return infer.ReadResponse[NotificationEmailArgs, NotificationEmailState]{
+		ID:     name,
+		Inputs: args,
+		State:  st,
+	}, nil
 }
 
-func (r *NotificationEmail) Diff(ctx context.Context, id string, olds NotificationEmailState, news NotificationEmailArgs) (p.DiffResponse, error) {
+func (r *NotificationEmail) Diff(ctx context.Context, req infer.DiffRequest[NotificationEmailArgs, NotificationEmailState]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
-	if news.Name != olds.Name {
+	if req.Inputs.Name != req.State.Name {
 		diff["name"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if news.EmailAddress != olds.EmailAddress {
+	if req.Inputs.EmailAddress != req.State.EmailAddress {
 		diff["emailAddress"] = p.PropertyDiff{Kind: p.Update}
 	}
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil

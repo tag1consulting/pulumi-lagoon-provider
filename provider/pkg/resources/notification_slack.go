@@ -35,84 +35,98 @@ func (a *NotificationSlackArgs) Annotate(an infer.Annotator) {
 	an.Describe(&a.Channel, "The Slack channel (e.g., '#deployments').")
 }
 
-func (r *NotificationSlack) Create(ctx context.Context, name string, inputs NotificationSlackArgs, preview bool) (string, NotificationSlackState, error) {
+func (r *NotificationSlack) Create(ctx context.Context, req infer.CreateRequest[NotificationSlackArgs]) (infer.CreateResponse[NotificationSlackState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	if preview {
-		return "preview-id", NotificationSlackState{NotificationSlackArgs: inputs}, nil
+	if req.DryRun {
+		return infer.CreateResponse[NotificationSlackState]{
+			ID:     "preview-id",
+			Output: NotificationSlackState{NotificationSlackArgs: req.Inputs},
+		}, nil
 	}
 
-	n, err := client.CreateNotificationSlack(ctx, inputs.Name, inputs.Webhook, inputs.Channel)
+	n, err := client.CreateNotificationSlack(ctx, req.Inputs.Name, req.Inputs.Webhook, req.Inputs.Channel)
 	if err != nil {
-		return "", NotificationSlackState{}, fmt.Errorf("failed to create Slack notification: %w", err)
+		return infer.CreateResponse[NotificationSlackState]{}, fmt.Errorf("failed to create Slack notification: %w", err)
 	}
 
-	return strconv.Itoa(n.ID), NotificationSlackState{NotificationSlackArgs: inputs, LagoonID: n.ID}, nil
+	return infer.CreateResponse[NotificationSlackState]{
+		ID:     strconv.Itoa(n.ID),
+		Output: NotificationSlackState{NotificationSlackArgs: req.Inputs, LagoonID: n.ID},
+	}, nil
 }
 
-func (r *NotificationSlack) Update(ctx context.Context, id string, olds NotificationSlackState, news NotificationSlackArgs, preview bool) (NotificationSlackState, error) {
+func (r *NotificationSlack) Update(ctx context.Context, req infer.UpdateRequest[NotificationSlackArgs, NotificationSlackState]) (infer.UpdateResponse[NotificationSlackState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	patch := map[string]any{}
-	if news.Webhook != olds.Webhook {
-		patch["webhook"] = news.Webhook
+	if req.Inputs.Webhook != req.State.Webhook {
+		patch["webhook"] = req.Inputs.Webhook
 	}
-	if news.Channel != olds.Channel {
-		patch["channel"] = news.Channel
-	}
-
-	if preview || len(patch) == 0 {
-		return NotificationSlackState{NotificationSlackArgs: news, LagoonID: olds.LagoonID}, nil
+	if req.Inputs.Channel != req.State.Channel {
+		patch["channel"] = req.Inputs.Channel
 	}
 
-	_, err := client.UpdateNotificationSlack(ctx, olds.Name, patch)
+	if req.DryRun || len(patch) == 0 {
+		return infer.UpdateResponse[NotificationSlackState]{
+			Output: NotificationSlackState{NotificationSlackArgs: req.Inputs, LagoonID: req.State.LagoonID},
+		}, nil
+	}
+
+	_, err := client.UpdateNotificationSlack(ctx, req.State.Name, patch)
 	if err != nil {
-		return NotificationSlackState{}, fmt.Errorf("failed to update Slack notification: %w", err)
+		return infer.UpdateResponse[NotificationSlackState]{}, fmt.Errorf("failed to update Slack notification: %w", err)
 	}
 
-	return NotificationSlackState{NotificationSlackArgs: news, LagoonID: olds.LagoonID}, nil
+	return infer.UpdateResponse[NotificationSlackState]{
+		Output: NotificationSlackState{NotificationSlackArgs: req.Inputs, LagoonID: req.State.LagoonID},
+	}, nil
 }
 
-func (r *NotificationSlack) Delete(ctx context.Context, id string, props NotificationSlackState) error {
+func (r *NotificationSlack) Delete(ctx context.Context, req infer.DeleteRequest[NotificationSlackState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
-	if err := client.DeleteNotificationSlack(ctx, props.Name); err != nil {
-		return fmt.Errorf("failed to delete Slack notification: %w", err)
+	if err := client.DeleteNotificationSlack(ctx, req.State.Name); err != nil {
+		return infer.DeleteResponse{}, fmt.Errorf("failed to delete Slack notification: %w", err)
 	}
-	return nil
+	return infer.DeleteResponse{}, nil
 }
 
-func (r *NotificationSlack) Read(ctx context.Context, id string, inputs NotificationSlackArgs, state NotificationSlackState) (string, NotificationSlackArgs, NotificationSlackState, error) {
+func (r *NotificationSlack) Read(ctx context.Context, req infer.ReadRequest[NotificationSlackArgs, NotificationSlackState]) (infer.ReadResponse[NotificationSlackArgs, NotificationSlackState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	name := id
-	if state.Name != "" {
-		name = state.Name
+	name := req.ID
+	if req.State.Name != "" {
+		name = req.State.Name
 	}
 
 	n, err := client.GetNotificationSlackByName(ctx, name)
 	if err != nil {
-		return "", NotificationSlackArgs{}, NotificationSlackState{}, fmt.Errorf("failed to read Slack notification: %w", err)
+		return infer.ReadResponse[NotificationSlackArgs, NotificationSlackState]{}, fmt.Errorf("failed to read Slack notification: %w", err)
 	}
 
 	args := NotificationSlackArgs{Name: n.Name, Webhook: n.Webhook, Channel: n.Channel}
 	st := NotificationSlackState{NotificationSlackArgs: args, LagoonID: n.ID}
 
-	return name, args, st, nil
+	return infer.ReadResponse[NotificationSlackArgs, NotificationSlackState]{
+		ID:     name,
+		Inputs: args,
+		State:  st,
+	}, nil
 }
 
-func (r *NotificationSlack) Diff(ctx context.Context, id string, olds NotificationSlackState, news NotificationSlackArgs) (p.DiffResponse, error) {
+func (r *NotificationSlack) Diff(ctx context.Context, req infer.DiffRequest[NotificationSlackArgs, NotificationSlackState]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
-	if news.Name != olds.Name {
+	if req.Inputs.Name != req.State.Name {
 		diff["name"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if news.Webhook != olds.Webhook {
+	if req.Inputs.Webhook != req.State.Webhook {
 		diff["webhook"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if news.Channel != olds.Channel {
+	if req.Inputs.Channel != req.State.Channel {
 		diff["channel"] = p.PropertyDiff{Kind: p.Update}
 	}
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil

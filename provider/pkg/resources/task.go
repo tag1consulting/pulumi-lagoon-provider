@@ -64,32 +64,32 @@ func (a *TaskArgs) Annotate(an infer.Annotator) {
 	an.Describe(&a.Arguments, "List of argument definitions for the task.")
 }
 
-func (r *Task) Create(ctx context.Context, name string, inputs TaskArgs, preview bool) (string, TaskState, error) {
+func (r *Task) Create(ctx context.Context, req infer.CreateRequest[TaskArgs]) (infer.CreateResponse[TaskState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	input := map[string]any{
-		"name":    inputs.Name,
-		"type":    strings.ToUpper(inputs.Type),
-		"service": inputs.Service,
+		"name":    req.Inputs.Name,
+		"type":    strings.ToUpper(req.Inputs.Type),
+		"service": req.Inputs.Service,
 	}
-	setOptional(input, "command", inputs.Command)
-	setOptional(input, "image", inputs.Image)
-	setOptionalInt(input, "project", inputs.ProjectID)
-	setOptionalInt(input, "environment", inputs.EnvironmentID)
-	setOptional(input, "groupName", inputs.GroupName)
-	if inputs.SystemWide != nil && *inputs.SystemWide {
+	setOptional(input, "command", req.Inputs.Command)
+	setOptional(input, "image", req.Inputs.Image)
+	setOptionalInt(input, "project", req.Inputs.ProjectID)
+	setOptionalInt(input, "environment", req.Inputs.EnvironmentID)
+	setOptional(input, "groupName", req.Inputs.GroupName)
+	if req.Inputs.SystemWide != nil && *req.Inputs.SystemWide {
 		input["systemWide"] = true
 	}
-	setOptional(input, "description", inputs.Description)
-	if inputs.Permission != nil {
-		input["permission"] = strings.ToUpper(*inputs.Permission)
+	setOptional(input, "description", req.Inputs.Description)
+	if req.Inputs.Permission != nil {
+		input["permission"] = strings.ToUpper(*req.Inputs.Permission)
 	}
-	setOptional(input, "confirmationText", inputs.ConfirmationText)
+	setOptional(input, "confirmationText", req.Inputs.ConfirmationText)
 
-	if inputs.Arguments != nil {
-		args := make([]map[string]any, len(*inputs.Arguments))
-		for i, arg := range *inputs.Arguments {
+	if req.Inputs.Arguments != nil {
+		args := make([]map[string]any, len(*req.Inputs.Arguments))
+		for i, arg := range *req.Inputs.Arguments {
 			args[i] = map[string]any{
 				"name":        arg.Name,
 				"displayName": arg.DisplayName,
@@ -99,46 +99,52 @@ func (r *Task) Create(ctx context.Context, name string, inputs TaskArgs, preview
 		input["advancedTaskDefinitionArguments"] = args
 	}
 
-	if preview {
-		return "preview-id", TaskState{TaskArgs: inputs}, nil
+	if req.DryRun {
+		return infer.CreateResponse[TaskState]{
+			ID:     "preview-id",
+			Output: TaskState{TaskArgs: req.Inputs},
+		}, nil
 	}
 
 	td, err := client.CreateTaskDefinition(ctx, input)
 	if err != nil {
-		return "", TaskState{}, fmt.Errorf("failed to create task: %w", err)
+		return infer.CreateResponse[TaskState]{}, fmt.Errorf("failed to create task: %w", err)
 	}
 
-	return strconv.Itoa(td.ID), TaskState{
-		TaskArgs: inputs,
-		LagoonID: td.ID,
-		Created:  td.Created,
+	return infer.CreateResponse[TaskState]{
+		ID: strconv.Itoa(td.ID),
+		Output: TaskState{
+			TaskArgs: req.Inputs,
+			LagoonID: td.ID,
+			Created:  td.Created,
+		},
 	}, nil
 }
 
 // No Update — task definitions are replaced on any change since Lagoon API doesn't support update.
 
-func (r *Task) Delete(ctx context.Context, id string, props TaskState) error {
+func (r *Task) Delete(ctx context.Context, req infer.DeleteRequest[TaskState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	if err := client.DeleteTaskDefinition(ctx, props.LagoonID); err != nil {
-		return fmt.Errorf("failed to delete task: %w", err)
+	if err := client.DeleteTaskDefinition(ctx, req.State.LagoonID); err != nil {
+		return infer.DeleteResponse{}, fmt.Errorf("failed to delete task: %w", err)
 	}
-	return nil
+	return infer.DeleteResponse{}, nil
 }
 
-func (r *Task) Read(ctx context.Context, id string, inputs TaskArgs, state TaskState) (string, TaskArgs, TaskState, error) {
+func (r *Task) Read(ctx context.Context, req infer.ReadRequest[TaskArgs, TaskState]) (infer.ReadResponse[TaskArgs, TaskState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	tdID, err := strconv.Atoi(id)
+	tdID, err := strconv.Atoi(req.ID)
 	if err != nil {
-		return "", TaskArgs{}, TaskState{}, fmt.Errorf("invalid task ID '%s': must be numeric", id)
+		return infer.ReadResponse[TaskArgs, TaskState]{}, fmt.Errorf("invalid task ID '%s': must be numeric", req.ID)
 	}
 
 	td, err := client.GetTaskDefinitionByID(ctx, tdID)
 	if err != nil {
-		return "", TaskArgs{}, TaskState{}, fmt.Errorf("failed to read task: %w", err)
+		return infer.ReadResponse[TaskArgs, TaskState]{}, fmt.Errorf("failed to read task: %w", err)
 	}
 
 	args := TaskArgs{
@@ -185,49 +191,53 @@ func (r *Task) Read(ctx context.Context, id string, inputs TaskArgs, state TaskS
 		Created:  td.Created,
 	}
 
-	return id, args, st, nil
+	return infer.ReadResponse[TaskArgs, TaskState]{
+		ID:     req.ID,
+		Inputs: args,
+		State:  st,
+	}, nil
 }
 
-func (r *Task) Diff(ctx context.Context, id string, olds TaskState, news TaskArgs) (p.DiffResponse, error) {
+func (r *Task) Diff(ctx context.Context, req infer.DiffRequest[TaskArgs, TaskState]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
 
 	// forceNew fields
-	if !strings.EqualFold(news.Type, olds.Type) {
+	if !strings.EqualFold(req.Inputs.Type, req.State.Type) {
 		diff["type"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrIntDiffers(news.ProjectID, olds.ProjectID) {
+	if ptrIntDiffers(req.Inputs.ProjectID, req.State.ProjectID) {
 		diff["projectId"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrIntDiffers(news.EnvironmentID, olds.EnvironmentID) {
+	if ptrIntDiffers(req.Inputs.EnvironmentID, req.State.EnvironmentID) {
 		diff["environmentId"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrDiffers(news.GroupName, olds.GroupName) {
+	if ptrDiffers(req.Inputs.GroupName, req.State.GroupName) {
 		diff["groupName"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrBoolDiffers(news.SystemWide, olds.SystemWide) {
+	if ptrBoolDiffers(req.Inputs.SystemWide, req.State.SystemWide) {
 		diff["systemWide"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
 
 	// Since Lagoon doesn't support updating task definitions, all other changes also trigger replace
-	if news.Name != olds.Name {
+	if req.Inputs.Name != req.State.Name {
 		diff["name"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if news.Service != olds.Service {
+	if req.Inputs.Service != req.State.Service {
 		diff["service"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrDiffers(news.Command, olds.Command) {
+	if ptrDiffers(req.Inputs.Command, req.State.Command) {
 		diff["command"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrDiffers(news.Image, olds.Image) {
+	if ptrDiffers(req.Inputs.Image, req.State.Image) {
 		diff["image"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrDiffers(news.Description, olds.Description) {
+	if ptrDiffers(req.Inputs.Description, req.State.Description) {
 		diff["description"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrDiffers(news.Permission, olds.Permission) {
+	if ptrDiffers(req.Inputs.Permission, req.State.Permission) {
 		diff["permission"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrDiffers(news.ConfirmationText, olds.ConfirmationText) {
+	if ptrDiffers(req.Inputs.ConfirmationText, req.State.ConfirmationText) {
 		diff["confirmationText"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
 

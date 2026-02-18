@@ -8,21 +8,45 @@ import (
 )
 
 // NewProvider constructs the Lagoon provider with all resources wired.
-func NewProvider(version string) p.Provider {
-	return infer.Provider(infer.Options{
-		Config: infer.Config[config.LagoonConfig](),
-		Resources: []infer.InferredResource{
-			infer.Resource[*resources.Project, resources.ProjectArgs, resources.ProjectState](),
-			infer.Resource[*resources.Environment, resources.EnvironmentArgs, resources.EnvironmentState](),
-			infer.Resource[*resources.Variable, resources.VariableArgs, resources.VariableState](),
-			infer.Resource[*resources.DeployTarget, resources.DeployTargetArgs, resources.DeployTargetState](),
-			infer.Resource[*resources.DeployTargetConfig, resources.DeployTargetConfigArgs, resources.DeployTargetConfigState](),
-			infer.Resource[*resources.Task, resources.TaskArgs, resources.TaskState](),
-			infer.Resource[*resources.NotificationSlack, resources.NotificationSlackArgs, resources.NotificationSlackState](),
-			infer.Resource[*resources.NotificationRocketChat, resources.NotificationRocketChatArgs, resources.NotificationRocketChatState](),
-			infer.Resource[*resources.NotificationEmail, resources.NotificationEmailArgs, resources.NotificationEmailState](),
-			infer.Resource[*resources.NotificationMicrosoftTeams, resources.NotificationMicrosoftTeamsArgs, resources.NotificationMicrosoftTeamsState](),
-			infer.Resource[*resources.ProjectNotification, resources.ProjectNotificationArgs, resources.ProjectNotificationState](),
-		},
-	})
+func NewProvider(version string) (p.Provider, error) {
+	return infer.NewProviderBuilder().
+		WithDisplayName("Lagoon").
+		WithDescription("Manage Lagoon hosting platform resources as infrastructure-as-code.").
+		WithPublisher("Tag1 Consulting").
+		WithRepository("https://github.com/tag1consulting/pulumi-lagoon-provider").
+		WithHomepage("https://github.com/tag1consulting/pulumi-lagoon-provider").
+		WithLicense("Apache-2.0").
+		WithKeywords("lagoon", "hosting", "kubernetes", "pulumi").
+		WithPluginDownloadURL("https://github.com/tag1consulting/pulumi-lagoon-provider/releases/download/v${VERSION}").
+		WithLanguageMap(map[string]any{
+			"go": map[string]any{
+				"importBasePath":                "github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon",
+				"generateExtraInputTypes":       true,
+				"generateResourceContainerTypes": true,
+			},
+			"nodejs": map[string]any{
+				"packageName":          "@tag1consulting/pulumi-lagoon",
+				"respectSchemaVersion": true,
+			},
+			"python": map[string]any{
+				"packageName":          "pulumi_lagoon",
+				"pyproject":            map[string]any{"enabled": true},
+				"respectSchemaVersion": true,
+			},
+		}).
+		WithConfig(infer.Config(&config.LagoonConfig{})).
+		WithResources(
+			infer.Resource(&resources.Project{}),
+			infer.Resource(&resources.Environment{}),
+			infer.Resource(&resources.Variable{}),
+			infer.Resource(&resources.DeployTarget{}),
+			infer.Resource(&resources.DeployTargetConfig{}),
+			infer.Resource(&resources.Task{}),
+			infer.Resource(&resources.NotificationSlack{}),
+			infer.Resource(&resources.NotificationRocketChat{}),
+			infer.Resource(&resources.NotificationEmail{}),
+			infer.Resource(&resources.NotificationMicrosoftTeams{}),
+			infer.Resource(&resources.ProjectNotification{}),
+		).
+		Build()
 }

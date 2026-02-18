@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	p "github.com/pulumi/pulumi-go-provider"
+	"github.com/pulumi/pulumi-go-provider/infer"
 )
 
 // --- Project Diff Tests ---
@@ -14,7 +15,7 @@ func TestProjectDiff_NoChanges(t *testing.T) {
 	olds := ProjectState{ProjectArgs: ProjectArgs{Name: "proj", GitURL: "git@example.com:repo.git", DeploytargetID: 1}}
 	news := ProjectArgs{Name: "proj", GitURL: "git@example.com:repo.git", DeploytargetID: 1}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectArgs, ProjectState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -28,7 +29,7 @@ func TestProjectDiff_NameForceNew(t *testing.T) {
 	olds := ProjectState{ProjectArgs: ProjectArgs{Name: "old-name", GitURL: "git@example.com:repo.git", DeploytargetID: 1}}
 	news := ProjectArgs{Name: "new-name", GitURL: "git@example.com:repo.git", DeploytargetID: 1}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectArgs, ProjectState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -45,7 +46,7 @@ func TestProjectDiff_GitURLUpdate(t *testing.T) {
 	olds := ProjectState{ProjectArgs: ProjectArgs{Name: "proj", GitURL: "git@old.com:repo.git", DeploytargetID: 1}}
 	news := ProjectArgs{Name: "proj", GitURL: "git@new.com:repo.git", DeploytargetID: 1}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectArgs, ProjectState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -63,7 +64,7 @@ func TestProjectDiff_OptionalFields(t *testing.T) {
 	olds := ProjectState{ProjectArgs: ProjectArgs{Name: "proj", GitURL: "git@example.com:repo.git", DeploytargetID: 1}}
 	news := ProjectArgs{Name: "proj", GitURL: "git@example.com:repo.git", DeploytargetID: 1, Branches: &branch}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectArgs, ProjectState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -80,7 +81,7 @@ func TestProjectDiff_DeleteBeforeReplace(t *testing.T) {
 	olds := ProjectState{ProjectArgs: ProjectArgs{Name: "proj", GitURL: "git@example.com:repo.git", DeploytargetID: 1}}
 	news := ProjectArgs{Name: "new-proj", GitURL: "git@example.com:repo.git", DeploytargetID: 1}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectArgs, ProjectState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -96,7 +97,7 @@ func TestEnvironmentDiff_NoChanges(t *testing.T) {
 	olds := EnvironmentState{EnvironmentArgs: EnvironmentArgs{Name: "main", ProjectID: 1, DeployType: "branch", EnvironmentType: "production"}}
 	news := EnvironmentArgs{Name: "main", ProjectID: 1, DeployType: "branch", EnvironmentType: "production"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[EnvironmentArgs, EnvironmentState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -110,7 +111,7 @@ func TestEnvironmentDiff_NameForceNew(t *testing.T) {
 	olds := EnvironmentState{EnvironmentArgs: EnvironmentArgs{Name: "old", ProjectID: 1, DeployType: "branch", EnvironmentType: "production"}}
 	news := EnvironmentArgs{Name: "new", ProjectID: 1, DeployType: "branch", EnvironmentType: "production"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[EnvironmentArgs, EnvironmentState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -124,7 +125,7 @@ func TestEnvironmentDiff_ProjectIDForceNew(t *testing.T) {
 	olds := EnvironmentState{EnvironmentArgs: EnvironmentArgs{Name: "main", ProjectID: 1, DeployType: "branch", EnvironmentType: "production"}}
 	news := EnvironmentArgs{Name: "main", ProjectID: 2, DeployType: "branch", EnvironmentType: "production"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[EnvironmentArgs, EnvironmentState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -138,7 +139,7 @@ func TestEnvironmentDiff_DeployTypeUpdate(t *testing.T) {
 	olds := EnvironmentState{EnvironmentArgs: EnvironmentArgs{Name: "main", ProjectID: 1, DeployType: "branch", EnvironmentType: "production"}}
 	news := EnvironmentArgs{Name: "main", ProjectID: 1, DeployType: "pullrequest", EnvironmentType: "production"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[EnvironmentArgs, EnvironmentState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -152,7 +153,7 @@ func TestEnvironmentDiff_CaseInsensitiveDeployType(t *testing.T) {
 	olds := EnvironmentState{EnvironmentArgs: EnvironmentArgs{Name: "main", ProjectID: 1, DeployType: "BRANCH", EnvironmentType: "production"}}
 	news := EnvironmentArgs{Name: "main", ProjectID: 1, DeployType: "branch", EnvironmentType: "production"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[EnvironmentArgs, EnvironmentState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -168,7 +169,7 @@ func TestVariableDiff_NoChanges(t *testing.T) {
 	olds := VariableState{VariableArgs: VariableArgs{Name: "VAR", Value: "val", ProjectID: 1, Scope: "build"}}
 	news := VariableArgs{Name: "VAR", Value: "val", ProjectID: 1, Scope: "build"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[VariableArgs, VariableState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -182,7 +183,7 @@ func TestVariableDiff_NameForceNew(t *testing.T) {
 	olds := VariableState{VariableArgs: VariableArgs{Name: "OLD_VAR", Value: "val", ProjectID: 1, Scope: "build"}}
 	news := VariableArgs{Name: "NEW_VAR", Value: "val", ProjectID: 1, Scope: "build"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[VariableArgs, VariableState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -196,7 +197,7 @@ func TestVariableDiff_ValueUpdate(t *testing.T) {
 	olds := VariableState{VariableArgs: VariableArgs{Name: "VAR", Value: "old", ProjectID: 1, Scope: "build"}}
 	news := VariableArgs{Name: "VAR", Value: "new", ProjectID: 1, Scope: "build"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[VariableArgs, VariableState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -211,7 +212,7 @@ func TestVariableDiff_EnvironmentIDForceNew(t *testing.T) {
 	olds := VariableState{VariableArgs: VariableArgs{Name: "VAR", Value: "val", ProjectID: 1, Scope: "build"}}
 	news := VariableArgs{Name: "VAR", Value: "val", ProjectID: 1, Scope: "build", EnvironmentID: &envID}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[VariableArgs, VariableState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -225,7 +226,7 @@ func TestVariableDiff_ScopeCaseInsensitive(t *testing.T) {
 	olds := VariableState{VariableArgs: VariableArgs{Name: "VAR", Value: "val", ProjectID: 1, Scope: "BUILD"}}
 	news := VariableArgs{Name: "VAR", Value: "val", ProjectID: 1, Scope: "build"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[VariableArgs, VariableState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -241,7 +242,7 @@ func TestDeployTargetDiff_NoChanges(t *testing.T) {
 	olds := DeployTargetState{DeployTargetArgs: DeployTargetArgs{Name: "target", ConsoleURL: "https://k8s.example.com"}}
 	news := DeployTargetArgs{Name: "target", ConsoleURL: "https://k8s.example.com"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[DeployTargetArgs, DeployTargetState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -255,7 +256,7 @@ func TestDeployTargetDiff_NameForceNew(t *testing.T) {
 	olds := DeployTargetState{DeployTargetArgs: DeployTargetArgs{Name: "old", ConsoleURL: "https://k8s.example.com"}}
 	news := DeployTargetArgs{Name: "new", ConsoleURL: "https://k8s.example.com"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[DeployTargetArgs, DeployTargetState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -269,7 +270,7 @@ func TestDeployTargetDiff_ConsoleURLUpdate(t *testing.T) {
 	olds := DeployTargetState{DeployTargetArgs: DeployTargetArgs{Name: "target", ConsoleURL: "https://old.example.com"}}
 	news := DeployTargetArgs{Name: "target", ConsoleURL: "https://new.example.com"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[DeployTargetArgs, DeployTargetState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -285,7 +286,7 @@ func TestDeployTargetConfigDiff_NoChanges(t *testing.T) {
 	olds := DeployTargetConfigState{DeployTargetConfigArgs: DeployTargetConfigArgs{ProjectID: 1, DeployTargetID: 2}}
 	news := DeployTargetConfigArgs{ProjectID: 1, DeployTargetID: 2}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[DeployTargetConfigArgs, DeployTargetConfigState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -299,7 +300,7 @@ func TestDeployTargetConfigDiff_ProjectIDForceNew(t *testing.T) {
 	olds := DeployTargetConfigState{DeployTargetConfigArgs: DeployTargetConfigArgs{ProjectID: 1, DeployTargetID: 2}}
 	news := DeployTargetConfigArgs{ProjectID: 3, DeployTargetID: 2}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[DeployTargetConfigArgs, DeployTargetConfigState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -314,7 +315,7 @@ func TestDeployTargetConfigDiff_BranchesUpdate(t *testing.T) {
 	olds := DeployTargetConfigState{DeployTargetConfigArgs: DeployTargetConfigArgs{ProjectID: 1, DeployTargetID: 2}}
 	news := DeployTargetConfigArgs{ProjectID: 1, DeployTargetID: 2, Branches: &b}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[DeployTargetConfigArgs, DeployTargetConfigState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -330,7 +331,7 @@ func TestNotificationSlackDiff_NoChanges(t *testing.T) {
 	olds := NotificationSlackState{NotificationSlackArgs: NotificationSlackArgs{Name: "test", Webhook: "https://hooks.slack.com/x", Channel: "#test"}}
 	news := NotificationSlackArgs{Name: "test", Webhook: "https://hooks.slack.com/x", Channel: "#test"}
 
-	resp, err := r.Diff(context.Background(), "test", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[NotificationSlackArgs, NotificationSlackState]{ID: "test", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -344,7 +345,7 @@ func TestNotificationSlackDiff_NameForceNew(t *testing.T) {
 	olds := NotificationSlackState{NotificationSlackArgs: NotificationSlackArgs{Name: "old", Webhook: "https://hooks.slack.com/x", Channel: "#test"}}
 	news := NotificationSlackArgs{Name: "new", Webhook: "https://hooks.slack.com/x", Channel: "#test"}
 
-	resp, err := r.Diff(context.Background(), "old", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[NotificationSlackArgs, NotificationSlackState]{ID: "old", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -358,7 +359,7 @@ func TestNotificationSlackDiff_WebhookUpdate(t *testing.T) {
 	olds := NotificationSlackState{NotificationSlackArgs: NotificationSlackArgs{Name: "test", Webhook: "https://old.com", Channel: "#test"}}
 	news := NotificationSlackArgs{Name: "test", Webhook: "https://new.com", Channel: "#test"}
 
-	resp, err := r.Diff(context.Background(), "test", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[NotificationSlackArgs, NotificationSlackState]{ID: "test", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -372,7 +373,7 @@ func TestNotificationSlackDiff_ChannelUpdate(t *testing.T) {
 	olds := NotificationSlackState{NotificationSlackArgs: NotificationSlackArgs{Name: "test", Webhook: "https://hook.com", Channel: "#old"}}
 	news := NotificationSlackArgs{Name: "test", Webhook: "https://hook.com", Channel: "#new"}
 
-	resp, err := r.Diff(context.Background(), "test", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[NotificationSlackArgs, NotificationSlackState]{ID: "test", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -388,7 +389,7 @@ func TestNotificationRocketChatDiff_NameForceNew(t *testing.T) {
 	olds := NotificationRocketChatState{NotificationRocketChatArgs: NotificationRocketChatArgs{Name: "old", Webhook: "https://rc.com/hook", Channel: "#test"}}
 	news := NotificationRocketChatArgs{Name: "new", Webhook: "https://rc.com/hook", Channel: "#test"}
 
-	resp, err := r.Diff(context.Background(), "old", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[NotificationRocketChatArgs, NotificationRocketChatState]{ID: "old", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -404,7 +405,7 @@ func TestNotificationEmailDiff_NoChanges(t *testing.T) {
 	olds := NotificationEmailState{NotificationEmailArgs: NotificationEmailArgs{Name: "test", EmailAddress: "test@example.com"}}
 	news := NotificationEmailArgs{Name: "test", EmailAddress: "test@example.com"}
 
-	resp, err := r.Diff(context.Background(), "test", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[NotificationEmailArgs, NotificationEmailState]{ID: "test", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -418,7 +419,7 @@ func TestNotificationEmailDiff_EmailUpdate(t *testing.T) {
 	olds := NotificationEmailState{NotificationEmailArgs: NotificationEmailArgs{Name: "test", EmailAddress: "old@example.com"}}
 	news := NotificationEmailArgs{Name: "test", EmailAddress: "new@example.com"}
 
-	resp, err := r.Diff(context.Background(), "test", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[NotificationEmailArgs, NotificationEmailState]{ID: "test", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -434,7 +435,7 @@ func TestNotificationMicrosoftTeamsDiff_NameForceNew(t *testing.T) {
 	olds := NotificationMicrosoftTeamsState{NotificationMicrosoftTeamsArgs: NotificationMicrosoftTeamsArgs{Name: "old", Webhook: "https://teams.com/hook"}}
 	news := NotificationMicrosoftTeamsArgs{Name: "new", Webhook: "https://teams.com/hook"}
 
-	resp, err := r.Diff(context.Background(), "old", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]{ID: "old", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -448,7 +449,7 @@ func TestNotificationMicrosoftTeamsDiff_WebhookUpdate(t *testing.T) {
 	olds := NotificationMicrosoftTeamsState{NotificationMicrosoftTeamsArgs: NotificationMicrosoftTeamsArgs{Name: "test", Webhook: "https://old.com"}}
 	news := NotificationMicrosoftTeamsArgs{Name: "test", Webhook: "https://new.com"}
 
-	resp, err := r.Diff(context.Background(), "test", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]{ID: "test", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -464,7 +465,7 @@ func TestProjectNotificationDiff_NoChanges(t *testing.T) {
 	olds := ProjectNotificationState{ProjectNotificationArgs: ProjectNotificationArgs{ProjectName: "proj", NotificationType: "slack", NotificationName: "test"}}
 	news := ProjectNotificationArgs{ProjectName: "proj", NotificationType: "slack", NotificationName: "test"}
 
-	resp, err := r.Diff(context.Background(), "proj:slack:test", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectNotificationArgs, ProjectNotificationState]{ID: "proj:slack:test", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -489,7 +490,7 @@ func TestProjectNotificationDiff_AllFieldsForceNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := r.Diff(context.Background(), "proj:slack:test", olds, tt.news)
+			resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectNotificationArgs, ProjectNotificationState]{ID: "proj:slack:test", State: olds, Inputs: tt.news})
 			if err != nil {
 				t.Fatalf("Diff failed: %v", err)
 			}
@@ -505,7 +506,7 @@ func TestProjectNotificationDiff_CaseInsensitiveType(t *testing.T) {
 	olds := ProjectNotificationState{ProjectNotificationArgs: ProjectNotificationArgs{ProjectName: "proj", NotificationType: "SLACK", NotificationName: "test"}}
 	news := ProjectNotificationArgs{ProjectName: "proj", NotificationType: "slack", NotificationName: "test"}
 
-	resp, err := r.Diff(context.Background(), "proj:slack:test", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectNotificationArgs, ProjectNotificationState]{ID: "proj:slack:test", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -521,7 +522,7 @@ func TestTaskDiff_NoChanges(t *testing.T) {
 	olds := TaskState{TaskArgs: TaskArgs{Name: "task", Type: "command", Service: "cli"}}
 	news := TaskArgs{Name: "task", Type: "command", Service: "cli"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[TaskArgs, TaskState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -535,7 +536,7 @@ func TestTaskDiff_TypeForceNew(t *testing.T) {
 	olds := TaskState{TaskArgs: TaskArgs{Name: "task", Type: "command", Service: "cli"}}
 	news := TaskArgs{Name: "task", Type: "image", Service: "cli"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[TaskArgs, TaskState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -549,7 +550,7 @@ func TestTaskDiff_TypeCaseInsensitive(t *testing.T) {
 	olds := TaskState{TaskArgs: TaskArgs{Name: "task", Type: "COMMAND", Service: "cli"}}
 	news := TaskArgs{Name: "task", Type: "command", Service: "cli"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[TaskArgs, TaskState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -564,7 +565,7 @@ func TestTaskDiff_AllReplace(t *testing.T) {
 	olds := TaskState{TaskArgs: TaskArgs{Name: "old", Type: "command", Service: "cli"}}
 	news := TaskArgs{Name: "new", Type: "command", Service: "cli"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[TaskArgs, TaskState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}
@@ -581,7 +582,7 @@ func TestTaskDiff_ServiceReplace(t *testing.T) {
 	olds := TaskState{TaskArgs: TaskArgs{Name: "task", Type: "command", Service: "cli"}}
 	news := TaskArgs{Name: "task", Type: "command", Service: "node"}
 
-	resp, err := r.Diff(context.Background(), "1", olds, news)
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[TaskArgs, TaskState]{ID: "1", State: olds, Inputs: news})
 	if err != nil {
 		t.Fatalf("Diff failed: %v", err)
 	}

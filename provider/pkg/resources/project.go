@@ -57,98 +57,108 @@ func (s *ProjectState) Annotate(a infer.Annotator) {
 }
 
 // Create creates a new Lagoon project.
-func (r *Project) Create(ctx context.Context, name string, inputs ProjectArgs, preview bool) (string, ProjectState, error) {
+func (r *Project) Create(ctx context.Context, req infer.CreateRequest[ProjectArgs]) (infer.CreateResponse[ProjectState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	input := map[string]any{
-		"name":      inputs.Name,
-		"gitUrl":    inputs.GitURL,
-		"openshift": inputs.DeploytargetID,
+		"name":      req.Inputs.Name,
+		"gitUrl":    req.Inputs.GitURL,
+		"openshift": req.Inputs.DeploytargetID,
 	}
-	setOptional(input, "productionEnvironment", inputs.ProductionEnvironment)
-	setOptional(input, "branches", inputs.Branches)
-	setOptional(input, "pullrequests", inputs.Pullrequests)
-	setOptional(input, "openshiftProjectPattern", inputs.OpenshiftProjectPattern)
-	setOptionalInt(input, "autoIdle", inputs.AutoIdle)
-	setOptionalInt(input, "storageCalc", inputs.StorageCalc)
+	setOptional(input, "productionEnvironment", req.Inputs.ProductionEnvironment)
+	setOptional(input, "branches", req.Inputs.Branches)
+	setOptional(input, "pullrequests", req.Inputs.Pullrequests)
+	setOptional(input, "openshiftProjectPattern", req.Inputs.OpenshiftProjectPattern)
+	setOptionalInt(input, "autoIdle", req.Inputs.AutoIdle)
+	setOptionalInt(input, "storageCalc", req.Inputs.StorageCalc)
 
-	if preview {
-		return "preview-id", ProjectState{ProjectArgs: inputs}, nil
+	if req.DryRun {
+		return infer.CreateResponse[ProjectState]{
+			ID:     "preview-id",
+			Output: ProjectState{ProjectArgs: req.Inputs},
+		}, nil
 	}
 
 	project, err := client.CreateProject(ctx, input)
 	if err != nil {
-		return "", ProjectState{}, fmt.Errorf("failed to create project: %w", err)
+		return infer.CreateResponse[ProjectState]{}, fmt.Errorf("failed to create project: %w", err)
 	}
 
-	return strconv.Itoa(project.ID), ProjectState{
-		ProjectArgs: inputs,
-		LagoonID:    project.ID,
-		Created:     project.Created,
+	return infer.CreateResponse[ProjectState]{
+		ID: strconv.Itoa(project.ID),
+		Output: ProjectState{
+			ProjectArgs: req.Inputs,
+			LagoonID:    project.ID,
+			Created:     project.Created,
+		},
 	}, nil
 }
 
 // Update updates an existing Lagoon project.
-func (r *Project) Update(ctx context.Context, id string, olds ProjectState, news ProjectArgs, preview bool) (ProjectState, error) {
+func (r *Project) Update(ctx context.Context, req infer.UpdateRequest[ProjectArgs, ProjectState]) (infer.UpdateResponse[ProjectState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	input := map[string]any{
-		"gitUrl":    news.GitURL,
-		"openshift": news.DeploytargetID,
+		"gitUrl":    req.Inputs.GitURL,
+		"openshift": req.Inputs.DeploytargetID,
 	}
-	setOptional(input, "productionEnvironment", news.ProductionEnvironment)
-	setOptional(input, "branches", news.Branches)
-	setOptional(input, "pullrequests", news.Pullrequests)
-	setOptional(input, "openshiftProjectPattern", news.OpenshiftProjectPattern)
-	setOptionalInt(input, "autoIdle", news.AutoIdle)
-	setOptionalInt(input, "storageCalc", news.StorageCalc)
+	setOptional(input, "productionEnvironment", req.Inputs.ProductionEnvironment)
+	setOptional(input, "branches", req.Inputs.Branches)
+	setOptional(input, "pullrequests", req.Inputs.Pullrequests)
+	setOptional(input, "openshiftProjectPattern", req.Inputs.OpenshiftProjectPattern)
+	setOptionalInt(input, "autoIdle", req.Inputs.AutoIdle)
+	setOptionalInt(input, "storageCalc", req.Inputs.StorageCalc)
 
-	if preview {
-		return ProjectState{
-			ProjectArgs: news,
-			LagoonID:    olds.LagoonID,
-			Created:     olds.Created,
+	if req.DryRun {
+		return infer.UpdateResponse[ProjectState]{
+			Output: ProjectState{
+				ProjectArgs: req.Inputs,
+				LagoonID:    req.State.LagoonID,
+				Created:     req.State.Created,
+			},
 		}, nil
 	}
 
-	_, err := client.UpdateProject(ctx, olds.LagoonID, input)
+	_, err := client.UpdateProject(ctx, req.State.LagoonID, input)
 	if err != nil {
-		return ProjectState{}, fmt.Errorf("failed to update project: %w", err)
+		return infer.UpdateResponse[ProjectState]{}, fmt.Errorf("failed to update project: %w", err)
 	}
 
-	return ProjectState{
-		ProjectArgs: news,
-		LagoonID:    olds.LagoonID,
-		Created:     olds.Created,
+	return infer.UpdateResponse[ProjectState]{
+		Output: ProjectState{
+			ProjectArgs: req.Inputs,
+			LagoonID:    req.State.LagoonID,
+			Created:     req.State.Created,
+		},
 	}, nil
 }
 
 // Delete deletes a Lagoon project.
-func (r *Project) Delete(ctx context.Context, id string, props ProjectState) error {
+func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	if err := client.DeleteProject(ctx, props.Name); err != nil {
-		return fmt.Errorf("failed to delete project: %w", err)
+	if err := client.DeleteProject(ctx, req.State.Name); err != nil {
+		return infer.DeleteResponse{}, fmt.Errorf("failed to delete project: %w", err)
 	}
-	return nil
+	return infer.DeleteResponse{}, nil
 }
 
 // Read reads a Lagoon project for import/refresh.
-func (r *Project) Read(ctx context.Context, id string, inputs ProjectArgs, state ProjectState) (string, ProjectArgs, ProjectState, error) {
+func (r *Project) Read(ctx context.Context, req infer.ReadRequest[ProjectArgs, ProjectState]) (infer.ReadResponse[ProjectArgs, ProjectState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	lagoonID, err := strconv.Atoi(id)
+	lagoonID, err := strconv.Atoi(req.ID)
 	if err != nil {
-		return "", ProjectArgs{}, ProjectState{}, fmt.Errorf("invalid project ID '%s': must be numeric", id)
+		return infer.ReadResponse[ProjectArgs, ProjectState]{}, fmt.Errorf("invalid project ID '%s': must be numeric", req.ID)
 	}
 
 	project, err := client.GetProjectByID(ctx, lagoonID)
 	if err != nil {
-		return "", ProjectArgs{}, ProjectState{}, fmt.Errorf("failed to read project: %w", err)
+		return infer.ReadResponse[ProjectArgs, ProjectState]{}, fmt.Errorf("failed to read project: %w", err)
 	}
 
 	args := ProjectArgs{
@@ -172,41 +182,45 @@ func (r *Project) Read(ctx context.Context, id string, inputs ProjectArgs, state
 		Created:     project.Created,
 	}
 
-	return id, args, st, nil
+	return infer.ReadResponse[ProjectArgs, ProjectState]{
+		ID:     req.ID,
+		Inputs: args,
+		State:  st,
+	}, nil
 }
 
 // Diff computes the diff between old and new project state.
-func (r *Project) Diff(ctx context.Context, id string, olds ProjectState, news ProjectArgs) (p.DiffResponse, error) {
+func (r *Project) Diff(ctx context.Context, req infer.DiffRequest[ProjectArgs, ProjectState]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
 
 	// name is forceNew
-	if news.Name != olds.Name {
+	if req.Inputs.Name != req.State.Name {
 		diff["name"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
 
 	// These can be updated in place
-	if news.GitURL != olds.GitURL {
+	if req.Inputs.GitURL != req.State.GitURL {
 		diff["gitUrl"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if news.DeploytargetID != olds.DeploytargetID {
+	if req.Inputs.DeploytargetID != req.State.DeploytargetID {
 		diff["deploytargetId"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.ProductionEnvironment, olds.ProductionEnvironment) {
+	if ptrDiffers(req.Inputs.ProductionEnvironment, req.State.ProductionEnvironment) {
 		diff["productionEnvironment"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.Branches, olds.Branches) {
+	if ptrDiffers(req.Inputs.Branches, req.State.Branches) {
 		diff["branches"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.Pullrequests, olds.Pullrequests) {
+	if ptrDiffers(req.Inputs.Pullrequests, req.State.Pullrequests) {
 		diff["pullrequests"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.OpenshiftProjectPattern, olds.OpenshiftProjectPattern) {
+	if ptrDiffers(req.Inputs.OpenshiftProjectPattern, req.State.OpenshiftProjectPattern) {
 		diff["openshiftProjectPattern"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrIntDiffers(news.AutoIdle, olds.AutoIdle) {
+	if ptrIntDiffers(req.Inputs.AutoIdle, req.State.AutoIdle) {
 		diff["autoIdle"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrIntDiffers(news.StorageCalc, olds.StorageCalc) {
+	if ptrIntDiffers(req.Inputs.StorageCalc, req.State.StorageCalc) {
 		diff["storageCalc"] = p.PropertyDiff{Kind: p.Update}
 	}
 

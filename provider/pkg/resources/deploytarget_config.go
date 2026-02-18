@@ -42,99 +42,109 @@ func (a *DeployTargetConfigArgs) Annotate(an infer.Annotator) {
 	an.Describe(&a.DeployTargetProjectPattern, "Optional namespace pattern.")
 }
 
-func (r *DeployTargetConfig) Create(ctx context.Context, name string, inputs DeployTargetConfigArgs, preview bool) (string, DeployTargetConfigState, error) {
+func (r *DeployTargetConfig) Create(ctx context.Context, req infer.CreateRequest[DeployTargetConfigArgs]) (infer.CreateResponse[DeployTargetConfigState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	input := map[string]any{
-		"project":      inputs.ProjectID,
-		"deployTarget": inputs.DeployTargetID,
+		"project":      req.Inputs.ProjectID,
+		"deployTarget": req.Inputs.DeployTargetID,
 	}
-	setOptional(input, "branches", inputs.Branches)
-	setOptional(input, "pullrequests", inputs.Pullrequests)
-	setOptionalInt(input, "weight", inputs.Weight)
-	setOptional(input, "deployTargetProjectPattern", inputs.DeployTargetProjectPattern)
+	setOptional(input, "branches", req.Inputs.Branches)
+	setOptional(input, "pullrequests", req.Inputs.Pullrequests)
+	setOptionalInt(input, "weight", req.Inputs.Weight)
+	setOptional(input, "deployTargetProjectPattern", req.Inputs.DeployTargetProjectPattern)
 
-	if preview {
-		return "preview-id", DeployTargetConfigState{DeployTargetConfigArgs: inputs}, nil
+	if req.DryRun {
+		return infer.CreateResponse[DeployTargetConfigState]{
+			ID:     "preview-id",
+			Output: DeployTargetConfigState{DeployTargetConfigArgs: req.Inputs},
+		}, nil
 	}
 
 	dtc, err := client.CreateDeployTargetConfig(ctx, input)
 	if err != nil {
-		return "", DeployTargetConfigState{}, fmt.Errorf("failed to create deploy target config: %w", err)
+		return infer.CreateResponse[DeployTargetConfigState]{}, fmt.Errorf("failed to create deploy target config: %w", err)
 	}
 
-	return strconv.Itoa(dtc.ID), DeployTargetConfigState{
-		DeployTargetConfigArgs: inputs,
-		LagoonID:               dtc.ID,
+	return infer.CreateResponse[DeployTargetConfigState]{
+		ID: strconv.Itoa(dtc.ID),
+		Output: DeployTargetConfigState{
+			DeployTargetConfigArgs: req.Inputs,
+			LagoonID:               dtc.ID,
+		},
 	}, nil
 }
 
-func (r *DeployTargetConfig) Update(ctx context.Context, id string, olds DeployTargetConfigState, news DeployTargetConfigArgs, preview bool) (DeployTargetConfigState, error) {
+func (r *DeployTargetConfig) Update(ctx context.Context, req infer.UpdateRequest[DeployTargetConfigArgs, DeployTargetConfigState]) (infer.UpdateResponse[DeployTargetConfigState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	input := map[string]any{}
-	setOptional(input, "branches", news.Branches)
-	setOptional(input, "pullrequests", news.Pullrequests)
-	setOptionalInt(input, "weight", news.Weight)
-	setOptional(input, "deployTargetProjectPattern", news.DeployTargetProjectPattern)
+	setOptional(input, "branches", req.Inputs.Branches)
+	setOptional(input, "pullrequests", req.Inputs.Pullrequests)
+	setOptionalInt(input, "weight", req.Inputs.Weight)
+	setOptional(input, "deployTargetProjectPattern", req.Inputs.DeployTargetProjectPattern)
 
-	if preview {
-		return DeployTargetConfigState{
-			DeployTargetConfigArgs: news,
-			LagoonID:               olds.LagoonID,
+	if req.DryRun {
+		return infer.UpdateResponse[DeployTargetConfigState]{
+			Output: DeployTargetConfigState{
+				DeployTargetConfigArgs: req.Inputs,
+				LagoonID:               req.State.LagoonID,
+			},
 		}, nil
 	}
 
-	_, err := client.UpdateDeployTargetConfig(ctx, olds.LagoonID, input)
+	_, err := client.UpdateDeployTargetConfig(ctx, req.State.LagoonID, input)
 	if err != nil {
-		return DeployTargetConfigState{}, fmt.Errorf("failed to update deploy target config: %w", err)
+		return infer.UpdateResponse[DeployTargetConfigState]{}, fmt.Errorf("failed to update deploy target config: %w", err)
 	}
 
-	return DeployTargetConfigState{
-		DeployTargetConfigArgs: news,
-		LagoonID:               olds.LagoonID,
+	return infer.UpdateResponse[DeployTargetConfigState]{
+		Output: DeployTargetConfigState{
+			DeployTargetConfigArgs: req.Inputs,
+			LagoonID:               req.State.LagoonID,
+		},
 	}, nil
 }
 
-func (r *DeployTargetConfig) Delete(ctx context.Context, id string, props DeployTargetConfigState) error {
+func (r *DeployTargetConfig) Delete(ctx context.Context, req infer.DeleteRequest[DeployTargetConfigState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	if err := client.DeleteDeployTargetConfig(ctx, props.LagoonID, props.ProjectID); err != nil {
-		return fmt.Errorf("failed to delete deploy target config: %w", err)
+	if err := client.DeleteDeployTargetConfig(ctx, req.State.LagoonID, req.State.ProjectID); err != nil {
+		return infer.DeleteResponse{}, fmt.Errorf("failed to delete deploy target config: %w", err)
 	}
-	return nil
+	return infer.DeleteResponse{}, nil
 }
 
-func (r *DeployTargetConfig) Read(ctx context.Context, id string, inputs DeployTargetConfigArgs, state DeployTargetConfigState) (string, DeployTargetConfigArgs, DeployTargetConfigState, error) {
+func (r *DeployTargetConfig) Read(ctx context.Context, req infer.ReadRequest[DeployTargetConfigArgs, DeployTargetConfigState]) (infer.ReadResponse[DeployTargetConfigArgs, DeployTargetConfigState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	// Import ID format: {project_id}:{config_id}
-	parts := strings.SplitN(id, ":", 2)
+	parts := strings.SplitN(req.ID, ":", 2)
 	var projectID, configID int
 
 	if len(parts) == 2 {
 		pid, err := strconv.Atoi(parts[0])
 		if err != nil {
-			return "", DeployTargetConfigArgs{}, DeployTargetConfigState{}, fmt.Errorf("invalid import ID: %w", err)
+			return infer.ReadResponse[DeployTargetConfigArgs, DeployTargetConfigState]{}, fmt.Errorf("invalid import ID: %w", err)
 		}
 		cid, err := strconv.Atoi(parts[1])
 		if err != nil {
-			return "", DeployTargetConfigArgs{}, DeployTargetConfigState{}, fmt.Errorf("invalid import ID: %w", err)
+			return infer.ReadResponse[DeployTargetConfigArgs, DeployTargetConfigState]{}, fmt.Errorf("invalid import ID: %w", err)
 		}
 		projectID = pid
 		configID = cid
 	} else {
-		projectID = state.ProjectID
-		configID = state.LagoonID
+		projectID = req.State.ProjectID
+		configID = req.State.LagoonID
 	}
 
 	dtc, err := client.GetDeployTargetConfigByID(ctx, configID, projectID)
 	if err != nil {
-		return "", DeployTargetConfigArgs{}, DeployTargetConfigState{}, fmt.Errorf("failed to read deploy target config: %w", err)
+		return infer.ReadResponse[DeployTargetConfigArgs, DeployTargetConfigState]{}, fmt.Errorf("failed to read deploy target config: %w", err)
 	}
 
 	args := DeployTargetConfigArgs{
@@ -159,28 +169,32 @@ func (r *DeployTargetConfig) Read(ctx context.Context, id string, inputs DeployT
 		LagoonID:               dtc.ID,
 	}
 
-	return strconv.Itoa(dtc.ID), args, st, nil
+	return infer.ReadResponse[DeployTargetConfigArgs, DeployTargetConfigState]{
+		ID:     strconv.Itoa(dtc.ID),
+		Inputs: args,
+		State:  st,
+	}, nil
 }
 
-func (r *DeployTargetConfig) Diff(ctx context.Context, id string, olds DeployTargetConfigState, news DeployTargetConfigArgs) (p.DiffResponse, error) {
+func (r *DeployTargetConfig) Diff(ctx context.Context, req infer.DiffRequest[DeployTargetConfigArgs, DeployTargetConfigState]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
 
-	if news.ProjectID != olds.ProjectID {
+	if req.Inputs.ProjectID != req.State.ProjectID {
 		diff["projectId"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if news.DeployTargetID != olds.DeployTargetID {
+	if req.Inputs.DeployTargetID != req.State.DeployTargetID {
 		diff["deployTargetId"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrDiffers(news.Branches, olds.Branches) {
+	if ptrDiffers(req.Inputs.Branches, req.State.Branches) {
 		diff["branches"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.Pullrequests, olds.Pullrequests) {
+	if ptrDiffers(req.Inputs.Pullrequests, req.State.Pullrequests) {
 		diff["pullrequests"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrIntDiffers(news.Weight, olds.Weight) {
+	if ptrIntDiffers(req.Inputs.Weight, req.State.Weight) {
 		diff["weight"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.DeployTargetProjectPattern, olds.DeployTargetProjectPattern) {
+	if ptrDiffers(req.Inputs.DeployTargetProjectPattern, req.State.DeployTargetProjectPattern) {
 		diff["deployTargetProjectPattern"] = p.PropertyDiff{Kind: p.Update}
 	}
 

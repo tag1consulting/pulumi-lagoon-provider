@@ -34,84 +34,98 @@ func (a *NotificationRocketChatArgs) Annotate(an infer.Annotator) {
 	an.Describe(&a.Channel, "The RocketChat channel.")
 }
 
-func (r *NotificationRocketChat) Create(ctx context.Context, name string, inputs NotificationRocketChatArgs, preview bool) (string, NotificationRocketChatState, error) {
+func (r *NotificationRocketChat) Create(ctx context.Context, req infer.CreateRequest[NotificationRocketChatArgs]) (infer.CreateResponse[NotificationRocketChatState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	if preview {
-		return "preview-id", NotificationRocketChatState{NotificationRocketChatArgs: inputs}, nil
+	if req.DryRun {
+		return infer.CreateResponse[NotificationRocketChatState]{
+			ID:     "preview-id",
+			Output: NotificationRocketChatState{NotificationRocketChatArgs: req.Inputs},
+		}, nil
 	}
 
-	n, err := client.CreateNotificationRocketChat(ctx, inputs.Name, inputs.Webhook, inputs.Channel)
+	n, err := client.CreateNotificationRocketChat(ctx, req.Inputs.Name, req.Inputs.Webhook, req.Inputs.Channel)
 	if err != nil {
-		return "", NotificationRocketChatState{}, fmt.Errorf("failed to create RocketChat notification: %w", err)
+		return infer.CreateResponse[NotificationRocketChatState]{}, fmt.Errorf("failed to create RocketChat notification: %w", err)
 	}
 
-	return strconv.Itoa(n.ID), NotificationRocketChatState{NotificationRocketChatArgs: inputs, LagoonID: n.ID}, nil
+	return infer.CreateResponse[NotificationRocketChatState]{
+		ID:     strconv.Itoa(n.ID),
+		Output: NotificationRocketChatState{NotificationRocketChatArgs: req.Inputs, LagoonID: n.ID},
+	}, nil
 }
 
-func (r *NotificationRocketChat) Update(ctx context.Context, id string, olds NotificationRocketChatState, news NotificationRocketChatArgs, preview bool) (NotificationRocketChatState, error) {
+func (r *NotificationRocketChat) Update(ctx context.Context, req infer.UpdateRequest[NotificationRocketChatArgs, NotificationRocketChatState]) (infer.UpdateResponse[NotificationRocketChatState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	patch := map[string]any{}
-	if news.Webhook != olds.Webhook {
-		patch["webhook"] = news.Webhook
+	if req.Inputs.Webhook != req.State.Webhook {
+		patch["webhook"] = req.Inputs.Webhook
 	}
-	if news.Channel != olds.Channel {
-		patch["channel"] = news.Channel
-	}
-
-	if preview || len(patch) == 0 {
-		return NotificationRocketChatState{NotificationRocketChatArgs: news, LagoonID: olds.LagoonID}, nil
+	if req.Inputs.Channel != req.State.Channel {
+		patch["channel"] = req.Inputs.Channel
 	}
 
-	_, err := client.UpdateNotificationRocketChat(ctx, olds.Name, patch)
+	if req.DryRun || len(patch) == 0 {
+		return infer.UpdateResponse[NotificationRocketChatState]{
+			Output: NotificationRocketChatState{NotificationRocketChatArgs: req.Inputs, LagoonID: req.State.LagoonID},
+		}, nil
+	}
+
+	_, err := client.UpdateNotificationRocketChat(ctx, req.State.Name, patch)
 	if err != nil {
-		return NotificationRocketChatState{}, fmt.Errorf("failed to update RocketChat notification: %w", err)
+		return infer.UpdateResponse[NotificationRocketChatState]{}, fmt.Errorf("failed to update RocketChat notification: %w", err)
 	}
 
-	return NotificationRocketChatState{NotificationRocketChatArgs: news, LagoonID: olds.LagoonID}, nil
+	return infer.UpdateResponse[NotificationRocketChatState]{
+		Output: NotificationRocketChatState{NotificationRocketChatArgs: req.Inputs, LagoonID: req.State.LagoonID},
+	}, nil
 }
 
-func (r *NotificationRocketChat) Delete(ctx context.Context, id string, props NotificationRocketChatState) error {
+func (r *NotificationRocketChat) Delete(ctx context.Context, req infer.DeleteRequest[NotificationRocketChatState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
-	if err := client.DeleteNotificationRocketChat(ctx, props.Name); err != nil {
-		return fmt.Errorf("failed to delete RocketChat notification: %w", err)
+	if err := client.DeleteNotificationRocketChat(ctx, req.State.Name); err != nil {
+		return infer.DeleteResponse{}, fmt.Errorf("failed to delete RocketChat notification: %w", err)
 	}
-	return nil
+	return infer.DeleteResponse{}, nil
 }
 
-func (r *NotificationRocketChat) Read(ctx context.Context, id string, inputs NotificationRocketChatArgs, state NotificationRocketChatState) (string, NotificationRocketChatArgs, NotificationRocketChatState, error) {
+func (r *NotificationRocketChat) Read(ctx context.Context, req infer.ReadRequest[NotificationRocketChatArgs, NotificationRocketChatState]) (infer.ReadResponse[NotificationRocketChatArgs, NotificationRocketChatState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	name := id
-	if state.Name != "" {
-		name = state.Name
+	name := req.ID
+	if req.State.Name != "" {
+		name = req.State.Name
 	}
 
 	n, err := client.GetNotificationRocketChatByName(ctx, name)
 	if err != nil {
-		return "", NotificationRocketChatArgs{}, NotificationRocketChatState{}, fmt.Errorf("failed to read RocketChat notification: %w", err)
+		return infer.ReadResponse[NotificationRocketChatArgs, NotificationRocketChatState]{}, fmt.Errorf("failed to read RocketChat notification: %w", err)
 	}
 
 	args := NotificationRocketChatArgs{Name: n.Name, Webhook: n.Webhook, Channel: n.Channel}
 	st := NotificationRocketChatState{NotificationRocketChatArgs: args, LagoonID: n.ID}
 
-	return name, args, st, nil
+	return infer.ReadResponse[NotificationRocketChatArgs, NotificationRocketChatState]{
+		ID:     name,
+		Inputs: args,
+		State:  st,
+	}, nil
 }
 
-func (r *NotificationRocketChat) Diff(ctx context.Context, id string, olds NotificationRocketChatState, news NotificationRocketChatArgs) (p.DiffResponse, error) {
+func (r *NotificationRocketChat) Diff(ctx context.Context, req infer.DiffRequest[NotificationRocketChatArgs, NotificationRocketChatState]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
-	if news.Name != olds.Name {
+	if req.Inputs.Name != req.State.Name {
 		diff["name"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if news.Webhook != olds.Webhook {
+	if req.Inputs.Webhook != req.State.Webhook {
 		diff["webhook"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if news.Channel != olds.Channel {
+	if req.Inputs.Channel != req.State.Channel {
 		diff["channel"] = p.PropertyDiff{Kind: p.Update}
 	}
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil

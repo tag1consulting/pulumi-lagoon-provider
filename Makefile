@@ -24,7 +24,8 @@
         multi-cluster-up multi-cluster-down multi-cluster-preview multi-cluster-status multi-cluster-clusters \
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
-        clean clean-all venv
+        clean clean-all venv \
+        go-build go-test go-vet go-schema go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-all go-install
 
 # Variables
 VENV_DIR := venv
@@ -395,3 +396,37 @@ clean-all: clean
 	@rm -rf $(VENV_DIR) 2>/dev/null || true
 	@rm -rf $(SINGLE_CLUSTER_DIR)/venv 2>/dev/null || true
 	@echo "Full cleanup complete."
+
+#==============================================================================
+# Go Provider (Native)
+#==============================================================================
+
+PROVIDER_VERSION ?= 0.2.0-dev
+PROVIDER_BIN     := provider/bin/pulumi-resource-lagoon
+
+go-build:
+	cd provider && CGO_ENABLED=0 go build -ldflags "-X main.Version=$(PROVIDER_VERSION)" \
+		-o bin/pulumi-resource-lagoon ./cmd/pulumi-resource-lagoon
+
+go-test:
+	cd provider && CGO_ENABLED=0 go test ./... -v -count=1
+
+go-vet:
+	cd provider && go vet ./...
+
+go-schema: go-build
+	pulumi package get-schema ./$(PROVIDER_BIN) > provider/schema.json
+
+go-sdk-python: go-build
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language python -o sdk/python
+
+go-sdk-nodejs: go-build
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language nodejs -o sdk/nodejs
+
+go-sdk-go: go-build
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language go -o sdk/go
+
+go-sdk-all: go-sdk-python go-sdk-nodejs go-sdk-go
+
+go-install: go-build
+	cp $(PROVIDER_BIN) $(GOPATH)/bin/ 2>/dev/null || cp $(PROVIDER_BIN) $(HOME)/go/bin/

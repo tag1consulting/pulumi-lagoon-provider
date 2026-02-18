@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
-	p "github.com/pulumi/pulumi-go-provider"
 	lagoon "github.com/tag1consulting/pulumi-lagoon/provider/pkg/provider"
 )
 
@@ -12,8 +12,12 @@ import (
 var Version = "0.2.0-dev"
 
 func main() {
-	provider := lagoon.NewProvider(Version)
-	if err := p.RunProvider("lagoon", Version, provider); err != nil {
+	provider, err := lagoon.NewProvider(Version)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	if err := provider.Run(context.Background(), "lagoon", Version); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

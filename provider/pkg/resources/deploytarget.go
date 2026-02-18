@@ -49,103 +49,113 @@ func (a *DeployTargetArgs) Annotate(an infer.Annotator) {
 	an.Describe(&a.RouterPattern, "Router pattern for the deploy target.")
 }
 
-func (r *DeployTarget) Create(ctx context.Context, name string, inputs DeployTargetArgs, preview bool) (string, DeployTargetState, error) {
+func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[DeployTargetArgs]) (infer.CreateResponse[DeployTargetState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	input := map[string]any{
-		"name":       inputs.Name,
-		"consoleUrl": inputs.ConsoleURL,
+		"name":       req.Inputs.Name,
+		"consoleUrl": req.Inputs.ConsoleURL,
 	}
-	if inputs.CloudProvider != nil {
-		input["cloudProvider"] = *inputs.CloudProvider
+	if req.Inputs.CloudProvider != nil {
+		input["cloudProvider"] = *req.Inputs.CloudProvider
 	} else {
 		input["cloudProvider"] = "kind"
 	}
-	if inputs.CloudRegion != nil {
-		input["cloudRegion"] = *inputs.CloudRegion
+	if req.Inputs.CloudRegion != nil {
+		input["cloudRegion"] = *req.Inputs.CloudRegion
 	} else {
 		input["cloudRegion"] = "local"
 	}
-	setOptional(input, "sshHost", inputs.SSHHost)
-	setOptional(input, "sshPort", inputs.SSHPort)
-	setOptional(input, "buildImage", inputs.BuildImage)
-	setOptionalBool(input, "disabled", inputs.Disabled)
-	setOptional(input, "routerPattern", inputs.RouterPattern)
+	setOptional(input, "sshHost", req.Inputs.SSHHost)
+	setOptional(input, "sshPort", req.Inputs.SSHPort)
+	setOptional(input, "buildImage", req.Inputs.BuildImage)
+	setOptionalBool(input, "disabled", req.Inputs.Disabled)
+	setOptional(input, "routerPattern", req.Inputs.RouterPattern)
 
-	if preview {
-		return "preview-id", DeployTargetState{DeployTargetArgs: inputs}, nil
+	if req.DryRun {
+		return infer.CreateResponse[DeployTargetState]{
+			ID:     "preview-id",
+			Output: DeployTargetState{DeployTargetArgs: req.Inputs},
+		}, nil
 	}
 
 	dt, err := client.CreateDeployTarget(ctx, input)
 	if err != nil {
-		return "", DeployTargetState{}, fmt.Errorf("failed to create deploy target: %w", err)
+		return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("failed to create deploy target: %w", err)
 	}
 
-	return strconv.Itoa(dt.ID), DeployTargetState{
-		DeployTargetArgs: inputs,
-		LagoonID:         dt.ID,
-		Created:          dt.Created,
+	return infer.CreateResponse[DeployTargetState]{
+		ID: strconv.Itoa(dt.ID),
+		Output: DeployTargetState{
+			DeployTargetArgs: req.Inputs,
+			LagoonID:         dt.ID,
+			Created:          dt.Created,
+		},
 	}, nil
 }
 
-func (r *DeployTarget) Update(ctx context.Context, id string, olds DeployTargetState, news DeployTargetArgs, preview bool) (DeployTargetState, error) {
+func (r *DeployTarget) Update(ctx context.Context, req infer.UpdateRequest[DeployTargetArgs, DeployTargetState]) (infer.UpdateResponse[DeployTargetState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
 	input := map[string]any{
-		"consoleUrl": news.ConsoleURL,
+		"consoleUrl": req.Inputs.ConsoleURL,
 	}
-	setOptional(input, "cloudProvider", news.CloudProvider)
-	setOptional(input, "cloudRegion", news.CloudRegion)
-	setOptional(input, "sshHost", news.SSHHost)
-	setOptional(input, "sshPort", news.SSHPort)
-	setOptional(input, "buildImage", news.BuildImage)
-	setOptionalBool(input, "disabled", news.Disabled)
-	setOptional(input, "routerPattern", news.RouterPattern)
+	setOptional(input, "cloudProvider", req.Inputs.CloudProvider)
+	setOptional(input, "cloudRegion", req.Inputs.CloudRegion)
+	setOptional(input, "sshHost", req.Inputs.SSHHost)
+	setOptional(input, "sshPort", req.Inputs.SSHPort)
+	setOptional(input, "buildImage", req.Inputs.BuildImage)
+	setOptionalBool(input, "disabled", req.Inputs.Disabled)
+	setOptional(input, "routerPattern", req.Inputs.RouterPattern)
 
-	if preview {
-		return DeployTargetState{
-			DeployTargetArgs: news,
-			LagoonID:         olds.LagoonID,
-			Created:          olds.Created,
+	if req.DryRun {
+		return infer.UpdateResponse[DeployTargetState]{
+			Output: DeployTargetState{
+				DeployTargetArgs: req.Inputs,
+				LagoonID:         req.State.LagoonID,
+				Created:          req.State.Created,
+			},
 		}, nil
 	}
 
-	_, err := client.UpdateDeployTarget(ctx, olds.LagoonID, input)
+	_, err := client.UpdateDeployTarget(ctx, req.State.LagoonID, input)
 	if err != nil {
-		return DeployTargetState{}, fmt.Errorf("failed to update deploy target: %w", err)
+		return infer.UpdateResponse[DeployTargetState]{}, fmt.Errorf("failed to update deploy target: %w", err)
 	}
 
-	return DeployTargetState{
-		DeployTargetArgs: news,
-		LagoonID:         olds.LagoonID,
-		Created:          olds.Created,
+	return infer.UpdateResponse[DeployTargetState]{
+		Output: DeployTargetState{
+			DeployTargetArgs: req.Inputs,
+			LagoonID:         req.State.LagoonID,
+			Created:          req.State.Created,
+		},
 	}, nil
 }
 
-func (r *DeployTarget) Delete(ctx context.Context, id string, props DeployTargetState) error {
+func (r *DeployTarget) Delete(ctx context.Context, req infer.DeleteRequest[DeployTargetState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	if err := client.DeleteDeployTarget(ctx, props.Name); err != nil {
-		return fmt.Errorf("failed to delete deploy target: %w", err)
+	if err := client.DeleteDeployTarget(ctx, req.State.Name); err != nil {
+		return infer.DeleteResponse{}, fmt.Errorf("failed to delete deploy target: %w", err)
 	}
-	return nil
+	return infer.DeleteResponse{}, nil
 }
 
-func (r *DeployTarget) Read(ctx context.Context, id string, inputs DeployTargetArgs, state DeployTargetState) (string, DeployTargetArgs, DeployTargetState, error) {
+func (r *DeployTarget) Read(ctx context.Context, req infer.ReadRequest[DeployTargetArgs, DeployTargetState]) (infer.ReadResponse[DeployTargetArgs, DeployTargetState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	dtID, err := strconv.Atoi(id)
+	dtID, err := strconv.Atoi(req.ID)
 	if err != nil {
-		return "", DeployTargetArgs{}, DeployTargetState{}, fmt.Errorf("invalid deploy target ID: %w", err)
+		return infer.ReadResponse[DeployTargetArgs, DeployTargetState]{}, fmt.Errorf("invalid deploy target ID: %w", err)
 	}
 
 	dt, err := client.GetDeployTargetByID(ctx, dtID)
 	if err != nil {
-		return "", DeployTargetArgs{}, DeployTargetState{}, fmt.Errorf("failed to read deploy target: %w", err)
+		return infer.ReadResponse[DeployTargetArgs, DeployTargetState]{}, fmt.Errorf("failed to read deploy target: %w", err)
 	}
 
 	args := DeployTargetArgs{
@@ -177,37 +187,41 @@ func (r *DeployTarget) Read(ctx context.Context, id string, inputs DeployTargetA
 		Created:          dt.Created,
 	}
 
-	return id, args, st, nil
+	return infer.ReadResponse[DeployTargetArgs, DeployTargetState]{
+		ID:     req.ID,
+		Inputs: args,
+		State:  st,
+	}, nil
 }
 
-func (r *DeployTarget) Diff(ctx context.Context, id string, olds DeployTargetState, news DeployTargetArgs) (p.DiffResponse, error) {
+func (r *DeployTarget) Diff(ctx context.Context, req infer.DiffRequest[DeployTargetArgs, DeployTargetState]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
 
-	if news.Name != olds.Name {
+	if req.Inputs.Name != req.State.Name {
 		diff["name"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if news.ConsoleURL != olds.ConsoleURL {
+	if req.Inputs.ConsoleURL != req.State.ConsoleURL {
 		diff["consoleUrl"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.CloudProvider, olds.CloudProvider) {
+	if ptrDiffers(req.Inputs.CloudProvider, req.State.CloudProvider) {
 		diff["cloudProvider"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.CloudRegion, olds.CloudRegion) {
+	if ptrDiffers(req.Inputs.CloudRegion, req.State.CloudRegion) {
 		diff["cloudRegion"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.SSHHost, olds.SSHHost) {
+	if ptrDiffers(req.Inputs.SSHHost, req.State.SSHHost) {
 		diff["sshHost"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.SSHPort, olds.SSHPort) {
+	if ptrDiffers(req.Inputs.SSHPort, req.State.SSHPort) {
 		diff["sshPort"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.BuildImage, olds.BuildImage) {
+	if ptrDiffers(req.Inputs.BuildImage, req.State.BuildImage) {
 		diff["buildImage"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrBoolDiffers(news.Disabled, olds.Disabled) {
+	if ptrBoolDiffers(req.Inputs.Disabled, req.State.Disabled) {
 		diff["disabled"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(news.RouterPattern, olds.RouterPattern) {
+	if ptrDiffers(req.Inputs.RouterPattern, req.State.RouterPattern) {
 		diff["routerPattern"] = p.PropertyDiff{Kind: p.Update}
 	}
 
