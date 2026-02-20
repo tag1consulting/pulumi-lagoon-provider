@@ -1,0 +1,37 @@
+{
+    "compilerOptions": {
+        "outDir": "bin",
+        "target": "ES2020",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "declaration": true,
+        "sourceMap": true,
+        "stripInternal": true,
+        "experimentalDecorators": true,
+        "noFallthroughCasesInSwitch": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true
+    },
+    "files": [
+        "config/index.ts",
+        "config/vars.ts",
+        "index.ts",
+        "lagoon/deployTarget.ts",
+        "lagoon/deployTargetConfig.ts",
+        "lagoon/environment.ts",
+        "lagoon/index.ts",
+        "lagoon/notificationEmail.ts",
+        "lagoon/notificationMicrosoftTeams.ts",
+        "lagoon/notificationRocketChat.ts",
+        "lagoon/notificationSlack.ts",
+        "lagoon/project.ts",
+        "lagoon/projectNotification.ts",
+        "lagoon/task.ts",
+        "lagoon/variable.ts",
+        "provider.ts",
+        "types/index.ts",
+        "types/input.ts",
+        "types/output.ts",
+        "utilities.ts"
+    ]
+}

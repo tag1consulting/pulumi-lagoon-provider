@@ -15,5 +15,5 @@ pyyaml>=6.0.0
 # Testing
 pytest>=7.0.0
 
-# Lagoon provider (local development)
--e ../../
+# Lagoon provider (native Go SDK)
+-e ../../sdk/python/python/

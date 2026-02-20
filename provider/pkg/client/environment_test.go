@@ -114,7 +114,7 @@ func TestDeleteEnvironment(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "token")
-	err := c.DeleteEnvironment(context.Background(), "develop", 1)
+	err := c.DeleteEnvironment(context.Background(), "develop", "my-project")
 	if err != nil {
 		t.Fatalf("DeleteEnvironment failed: %v", err)
 	}

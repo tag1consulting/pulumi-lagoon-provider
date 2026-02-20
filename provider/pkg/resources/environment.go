@@ -64,22 +64,29 @@ func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[Enviro
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	input := map[string]any{
-		"name":            req.Inputs.Name,
-		"project":         req.Inputs.ProjectID,
-		"deployType":      strings.ToUpper(req.Inputs.DeployType),
-		"environmentType": strings.ToUpper(req.Inputs.EnvironmentType),
+	// Default deployBaseRef to the environment name if not provided.
+	// The Lagoon API requires this field (String!).
+	inputs := req.Inputs
+	if inputs.DeployBaseRef == nil {
+		inputs.DeployBaseRef = &inputs.Name
 	}
-	setOptional(input, "deployBaseRef", req.Inputs.DeployBaseRef)
-	setOptional(input, "deployHeadRef", req.Inputs.DeployHeadRef)
-	setOptional(input, "deployTitle", req.Inputs.DeployTitle)
-	setOptional(input, "openshiftProjectName", req.Inputs.OpenshiftProjectName)
-	setOptionalInt(input, "autoIdle", req.Inputs.AutoIdle)
+
+	input := map[string]any{
+		"name":            inputs.Name,
+		"project":         inputs.ProjectID,
+		"deployType":      strings.ToUpper(inputs.DeployType),
+		"environmentType": strings.ToUpper(inputs.EnvironmentType),
+		"deployBaseRef":   *inputs.DeployBaseRef,
+	}
+	setOptional(input, "deployHeadRef", inputs.DeployHeadRef)
+	setOptional(input, "deployTitle", inputs.DeployTitle)
+	setOptional(input, "openshiftProjectName", inputs.OpenshiftProjectName)
+	setOptionalInt(input, "autoIdle", inputs.AutoIdle)
 
 	if req.DryRun {
 		return infer.CreateResponse[EnvironmentState]{
 			ID:     "preview-id",
-			Output: EnvironmentState{EnvironmentArgs: req.Inputs},
+			Output: EnvironmentState{EnvironmentArgs: inputs},
 		}, nil
 	}
 
@@ -91,7 +98,7 @@ func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[Enviro
 	return infer.CreateResponse[EnvironmentState]{
 		ID: strconv.Itoa(env.ID),
 		Output: EnvironmentState{
-			EnvironmentArgs: req.Inputs,
+			EnvironmentArgs: inputs,
 			LagoonID:        env.ID,
 			Route:           env.Route,
 			Routes:          env.Routes,
@@ -104,22 +111,28 @@ func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[Enviro
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	input := map[string]any{
-		"name":            req.Inputs.Name,
-		"project":         req.Inputs.ProjectID,
-		"deployType":      strings.ToUpper(req.Inputs.DeployType),
-		"environmentType": strings.ToUpper(req.Inputs.EnvironmentType),
+	// Default deployBaseRef to the environment name if not provided.
+	inputs := req.Inputs
+	if inputs.DeployBaseRef == nil {
+		inputs.DeployBaseRef = &inputs.Name
 	}
-	setOptional(input, "deployBaseRef", req.Inputs.DeployBaseRef)
-	setOptional(input, "deployHeadRef", req.Inputs.DeployHeadRef)
-	setOptional(input, "deployTitle", req.Inputs.DeployTitle)
-	setOptional(input, "openshiftProjectName", req.Inputs.OpenshiftProjectName)
-	setOptionalInt(input, "autoIdle", req.Inputs.AutoIdle)
+
+	input := map[string]any{
+		"name":            inputs.Name,
+		"project":         inputs.ProjectID,
+		"deployType":      strings.ToUpper(inputs.DeployType),
+		"environmentType": strings.ToUpper(inputs.EnvironmentType),
+		"deployBaseRef":   *inputs.DeployBaseRef,
+	}
+	setOptional(input, "deployHeadRef", inputs.DeployHeadRef)
+	setOptional(input, "deployTitle", inputs.DeployTitle)
+	setOptional(input, "openshiftProjectName", inputs.OpenshiftProjectName)
+	setOptionalInt(input, "autoIdle", inputs.AutoIdle)
 
 	if req.DryRun {
 		return infer.UpdateResponse[EnvironmentState]{
 			Output: EnvironmentState{
-				EnvironmentArgs: req.Inputs,
+				EnvironmentArgs: inputs,
 				LagoonID:        req.State.LagoonID,
 				Route:           req.State.Route,
 				Routes:          req.State.Routes,
@@ -135,7 +148,7 @@ func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[Enviro
 
 	return infer.UpdateResponse[EnvironmentState]{
 		Output: EnvironmentState{
-			EnvironmentArgs: req.Inputs,
+			EnvironmentArgs: inputs,
 			LagoonID:        env.ID,
 			Route:           env.Route,
 			Routes:          env.Routes,
@@ -148,7 +161,13 @@ func (r *Environment) Delete(ctx context.Context, req infer.DeleteRequest[Enviro
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	if err := client.DeleteEnvironment(ctx, req.State.Name, req.State.ProjectID); err != nil {
+	// Lagoon's deleteEnvironment mutation requires the project name (String!), not the ID.
+	proj, err := client.GetProjectByID(ctx, req.State.ProjectID)
+	if err != nil {
+		return infer.DeleteResponse{}, fmt.Errorf("failed to look up project name for environment deletion: %w", err)
+	}
+
+	if err := client.DeleteEnvironment(ctx, req.State.Name, proj.Name); err != nil {
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete environment: %w", err)
 	}
 	return infer.DeleteResponse{}, nil
@@ -187,6 +206,18 @@ func (r *Environment) Read(ctx context.Context, req infer.ReadRequest[Environmen
 		ProjectID:       env.ProjectID,
 		DeployType:      strings.ToLower(env.DeployType),
 		EnvironmentType: strings.ToLower(env.EnvironmentType),
+	}
+	if env.DeployBaseRef != "" {
+		args.DeployBaseRef = &env.DeployBaseRef
+	}
+	if env.DeployHeadRef != "" {
+		args.DeployHeadRef = &env.DeployHeadRef
+	}
+	if env.DeployTitle != "" {
+		args.DeployTitle = &env.DeployTitle
+	}
+	if env.AutoIdle != nil {
+		args.AutoIdle = env.AutoIdle
 	}
 
 	st := EnvironmentState{

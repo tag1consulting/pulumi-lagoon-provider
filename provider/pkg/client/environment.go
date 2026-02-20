@@ -102,11 +102,12 @@ func (c *Client) GetEnvironmentByName(ctx context.Context, name string, projectI
 }
 
 // DeleteEnvironment deletes an environment.
-func (c *Client) DeleteEnvironment(ctx context.Context, name string, projectID int) error {
+// Note: Lagoon's DeleteEnvironmentInput.project is String! (project name, not ID).
+func (c *Client) DeleteEnvironment(ctx context.Context, envName string, projectName string) error {
 	_, err := c.Execute(ctx, mutationDeleteEnvironment, map[string]any{
 		"input": map[string]any{
-			"name":    name,
-			"project": projectID,
+			"name":    envName,
+			"project": projectName,
 			"execute": true,
 		},
 	})
