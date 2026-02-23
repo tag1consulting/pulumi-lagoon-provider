@@ -7,6 +7,7 @@ import (
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
@@ -59,7 +60,7 @@ func (s *ProjectState) Annotate(a infer.Annotator) {
 // Create creates a new Lagoon project.
 func (r *Project) Create(ctx context.Context, req infer.CreateRequest[ProjectArgs]) (infer.CreateResponse[ProjectState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	input := map[string]any{
 		"name":      req.Inputs.Name,
@@ -80,9 +81,23 @@ func (r *Project) Create(ctx context.Context, req infer.CreateRequest[ProjectArg
 		}, nil
 	}
 
-	project, err := client.CreateProject(ctx, input)
+	project, err := c.CreateProject(ctx, input)
 	if err != nil {
-		return infer.CreateResponse[ProjectState]{}, fmt.Errorf("failed to create project: %w", err)
+		if !client.IsDuplicateEntry(err) {
+			return infer.CreateResponse[ProjectState]{}, fmt.Errorf("failed to create project: %w", err)
+		}
+
+		// Resource already exists — adopt it by looking up by name and updating
+		existing, lookupErr := c.GetProjectByName(ctx, req.Inputs.Name)
+		if lookupErr != nil {
+			return infer.CreateResponse[ProjectState]{}, fmt.Errorf("project %q already exists but failed to look up: %w", req.Inputs.Name, lookupErr)
+		}
+
+		// Update the existing resource to match desired inputs
+		project, err = c.UpdateProject(ctx, existing.ID, input)
+		if err != nil {
+			return infer.CreateResponse[ProjectState]{}, fmt.Errorf("project %q already exists but failed to update: %w", req.Inputs.Name, err)
+		}
 	}
 
 	return infer.CreateResponse[ProjectState]{

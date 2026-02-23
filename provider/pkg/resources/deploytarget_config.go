@@ -8,6 +8,7 @@ import (
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
@@ -44,7 +45,7 @@ func (a *DeployTargetConfigArgs) Annotate(an infer.Annotator) {
 
 func (r *DeployTargetConfig) Create(ctx context.Context, req infer.CreateRequest[DeployTargetConfigArgs]) (infer.CreateResponse[DeployTargetConfigState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	input := map[string]any{
 		"project":      req.Inputs.ProjectID,
@@ -62,9 +63,34 @@ func (r *DeployTargetConfig) Create(ctx context.Context, req infer.CreateRequest
 		}, nil
 	}
 
-	dtc, err := client.CreateDeployTargetConfig(ctx, input)
+	dtc, err := c.CreateDeployTargetConfig(ctx, input)
 	if err != nil {
-		return infer.CreateResponse[DeployTargetConfigState]{}, fmt.Errorf("failed to create deploy target config: %w", err)
+		if !client.IsDuplicateEntry(err) {
+			return infer.CreateResponse[DeployTargetConfigState]{}, fmt.Errorf("failed to create deploy target config: %w", err)
+		}
+
+		// Resource already exists — adopt it by finding the matching config and updating
+		configs, lookupErr := c.GetDeployTargetConfigsByProject(ctx, req.Inputs.ProjectID)
+		if lookupErr != nil {
+			return infer.CreateResponse[DeployTargetConfigState]{}, fmt.Errorf("deploy target config already exists but failed to list configs: %w", lookupErr)
+		}
+
+		var existingID int
+		for _, cfg := range configs {
+			if cfg.DeployTargetID == req.Inputs.DeployTargetID {
+				existingID = cfg.ID
+				break
+			}
+		}
+		if existingID == 0 {
+			return infer.CreateResponse[DeployTargetConfigState]{}, fmt.Errorf("deploy target config for project %d / target %d already exists but could not be found", req.Inputs.ProjectID, req.Inputs.DeployTargetID)
+		}
+
+		// Update the existing resource to match desired inputs
+		dtc, err = c.UpdateDeployTargetConfig(ctx, existingID, input)
+		if err != nil {
+			return infer.CreateResponse[DeployTargetConfigState]{}, fmt.Errorf("deploy target config already exists but failed to update: %w", err)
+		}
 	}
 
 	return infer.CreateResponse[DeployTargetConfigState]{
