@@ -7,6 +7,7 @@ import (
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
@@ -51,7 +52,7 @@ func (a *DeployTargetArgs) Annotate(an infer.Annotator) {
 
 func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[DeployTargetArgs]) (infer.CreateResponse[DeployTargetState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	input := map[string]any{
 		"name":       req.Inputs.Name,
@@ -80,9 +81,23 @@ func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[Deplo
 		}, nil
 	}
 
-	dt, err := client.CreateDeployTarget(ctx, input)
+	dt, err := c.CreateDeployTarget(ctx, input)
 	if err != nil {
-		return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("failed to create deploy target: %w", err)
+		if !client.IsDuplicateEntry(err) {
+			return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("failed to create deploy target: %w", err)
+		}
+
+		// Resource already exists — adopt it by looking up by name and updating
+		existing, lookupErr := c.GetDeployTargetByName(ctx, req.Inputs.Name)
+		if lookupErr != nil {
+			return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("deploy target %q already exists but failed to look up: %w", req.Inputs.Name, lookupErr)
+		}
+
+		// Update the existing resource to match desired inputs
+		dt, err = c.UpdateDeployTarget(ctx, existing.ID, input)
+		if err != nil {
+			return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("deploy target %q already exists but failed to update: %w", req.Inputs.Name, err)
+		}
 	}
 
 	return infer.CreateResponse[DeployTargetState]{

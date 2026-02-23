@@ -3,6 +3,7 @@ package client
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // LagoonAPIError represents an error returned by the Lagoon GraphQL API.
@@ -62,11 +63,23 @@ func (e *LagoonValidationError) Error() string {
 
 // Sentinel errors for errors.Is() checking.
 var (
-	ErrAPI        = errors.New("lagoon api error")
-	ErrConnection = errors.New("lagoon connection error")
-	ErrNotFound   = errors.New("lagoon resource not found")
-	ErrValidation = errors.New("lagoon validation error")
+	ErrAPI            = errors.New("lagoon api error")
+	ErrConnection     = errors.New("lagoon connection error")
+	ErrNotFound       = errors.New("lagoon resource not found")
+	ErrValidation     = errors.New("lagoon validation error")
+	ErrDuplicateEntry = errors.New("lagoon duplicate entry")
 )
+
+// IsDuplicateEntry returns true if the error is a Lagoon API error caused by
+// a MySQL duplicate entry constraint violation (e.g., creating a resource with
+// a name that already exists).
+func IsDuplicateEntry(err error) bool {
+	var apiErr *LagoonAPIError
+	if errors.As(err, &apiErr) {
+		return strings.Contains(apiErr.Message, "Duplicate entry")
+	}
+	return false
+}
 
 // Is enables errors.Is() support for typed errors.
 func (e *LagoonAPIError) Is(target error) bool        { return target == ErrAPI }

@@ -104,3 +104,45 @@ func TestLagoonConnectionError_NilCause(t *testing.T) {
 		t.Error("Unwrap should return nil when cause is nil")
 	}
 }
+
+func TestIsDuplicateEntry(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "duplicate entry error",
+			err:      &LagoonAPIError{Message: "(conn:10, no: 1062, SQLState: 23000) Duplicate entry 'lagoon-prod' for key 'name'"},
+			expected: true,
+		},
+		{
+			name:     "other API error",
+			err:      &LagoonAPIError{Message: "permission denied"},
+			expected: false,
+		},
+		{
+			name:     "wrapped duplicate entry",
+			err:      fmt.Errorf("create failed: %w", &LagoonAPIError{Message: "Duplicate entry 'test' for key 'name'"}),
+			expected: true,
+		},
+		{
+			name:     "non-API error",
+			err:      fmt.Errorf("network timeout"),
+			expected: false,
+		},
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsDuplicateEntry(tt.err); got != tt.expected {
+				t.Errorf("IsDuplicateEntry() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
