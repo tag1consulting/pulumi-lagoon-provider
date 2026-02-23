@@ -204,6 +204,7 @@ class LagoonSecretsOutputs:
     rabbitmq_password: pulumi.Output[str]
     keycloak_admin_password: pulumi.Output[str]
     api_db_password: pulumi.Output[str]
+    jwt_secret: pulumi.Output[str]
 
 
 @dataclass
