@@ -1,6 +1,6 @@
 # Pulumi Lagoon Provider - Implementation Status
 
-**Last Updated**: 2026-02-23
+**Last Updated**: 2026-02-24
 **Status**: Native Go Provider - Phases 1-4 COMPLETE, Phase 5 Integration Testing IN PROGRESS, PR #37 Open
 
 ---
@@ -12,7 +12,7 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 
 **Branch**: `native-go-provider`
 **PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/37 (Draft -> `develop`)
-**Latest Commit**: `912b350`
+**Latest Commit**: `35626ae`
 
 ### Phase 1: Scaffolding + GraphQL Client - COMPLETE
 - Go module initialized (`go.mod` with Go 1.24, pulumi-go-provider v1.3.0)
@@ -31,7 +31,7 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 - All 4 notification resources (Slack, RocketChat, Email, Microsoft Teams)
 - LagoonProjectNotification
 - LagoonTask (dual API, scope validation)
-- 191 unit tests across 3 packages
+- 198 unit tests across 3 packages
 - GitHub Actions workflow (`test-go.yml`)
 
 ### Phase 4: SDK Generation - COMPLETE
@@ -44,15 +44,19 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 ### Phase 5: Integration Testing - IN PROGRESS
 - **single-cluster**: TESTED (Create, Read verified via `pulumi refresh`)
 - **simple-project**: TESTED (full CRUD — Create, Read, Update, Delete all verified)
-- **multi-cluster**: TESTED (2026-02-23)
-  - 55 resources deployed in 7m16s (2 Kind clusters + full Lagoon stack)
+- **multi-cluster**: TESTED (2026-02-24, re-tested with all fixes)
+  - 55 resources deployed (2 Kind clusters + full Lagoon stack)
   - Native provider created: 2 DeployTargets, 1 Project, 2 DeployTargetConfigs
   - Read verified via `pulumi refresh` (all resources read correctly from API)
   - API queries confirmed correct data (deploy target routing, project config)
+  - Token rotation tested: `pulumi up` succeeds despite JWT change triggering replacements
   - Fixed: Helm service name mismatch (`{release}-lagoon-core-{component}` not `{release}-{component}`)
   - Fixed: NodePort selector, broker/SSH/Keycloak internal hostnames
   - Fixed: Missing `jwt_secret` in `LagoonSecretsOutputs` dataclass
   - Fixed: Missing `PyJWT` dependency in `requirements.txt`
+  - Fixed: Update mutations need `{id, patch: {...}}` input structure (not flat)
+  - Fixed: Create-or-update semantics for DeployTarget, Project, DeployTargetConfig
+  - Fixed: Idempotent Delete and graceful Read-not-found for state cleanup
 - **TypeScript SDK**: NOT YET TESTED
 - **Go SDK**: NOT YET TESTED
 
@@ -65,10 +69,10 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 
 ## Test Coverage Summary
 
-### Go Tests (Native Provider) - 191 tests
+### Go Tests (Native Provider) - 198 tests
 | Package | Tests | Time | Description |
 |---------|-------|------|-------------|
-| `pkg/client` | 111 | ~5s | GraphQL client, all resource CRUD operations |
+| `pkg/client` | 118 | ~5s | GraphQL client, all resource CRUD operations, error helpers |
 | `pkg/config` | 13 | <1s | JWT generation, Configure() validation, client factory |
 | `pkg/resources` | 67 | <1s | Helper functions, Diff() for all 11 resources |
 
@@ -119,7 +123,15 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 
 ### 6. Provider Token Rotation Causes Replacements
 **Problem**: JWT token changes each `pulumi up` run, causing provider replacement which cascades to all native resources.
-**Known issue**: DeployTarget replacement fails with "Duplicate entry" because Lagoon API doesn't allow creating with same name. Workaround: `pulumi refresh` after token changes.
+**Solution**: Implemented create-or-update semantics (adopt existing on duplicate), idempotent deletes (ignore not-found), and graceful read-not-found (signal state cleanup). Token rotation now completes successfully.
+
+### 7. Lagoon Update Mutations Require {id, patch: {...}} Input
+**Problem**: `UpdateKubernetesInput`, `UpdateProjectInput`, `UpdateDeployTargetConfigInput` all require `{id: Int!, patch: {...fields...}}` structure, not flat fields.
+**Solution**: Fixed `UpdateDeployTarget`, `UpdateProject`, `UpdateDeployTargetConfig` client methods to wrap fields in `patch` object.
+
+### 8. Lagoon "Already Exists" Error Variants
+**Problem**: Lagoon returns different error messages for duplicates — MySQL "Duplicate entry" for deploy targets, "Project already exists" for projects.
+**Solution**: `IsDuplicateEntry()` now does case-insensitive matching for both "duplicate entry" and "already exists".
 
 ---
 

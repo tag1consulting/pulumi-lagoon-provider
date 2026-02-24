@@ -1,7 +1,7 @@
 # Next Session Quickstart - Native Go Pulumi Lagoon Provider
 
-**Date Updated**: 2026-02-23
-**Status**: Phase 5 IN PROGRESS - Multi-cluster integration tested, TypeScript/Go SDKs remain
+**Date Updated**: 2026-02-24
+**Status**: Phase 5 IN PROGRESS - Multi-cluster fully tested, TypeScript/Go SDKs remain
 
 ---
 
@@ -9,48 +9,48 @@
 
 **Branch**: `native-go-provider`
 **PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/37 (Draft, targeting `develop`)
-**Latest Commit**: `912b350` - "Fix multi-cluster Lagoon service names and missing dependencies"
+**Latest Commit**: `35626ae` - "Fix update mutations, idempotent deletes, and graceful read-not-found"
 
 ### What's Done
 - All 11 resources implemented and compiling
-- 191 unit tests passing across 3 packages (client, config, resources)
+- 198 unit tests passing across 3 packages (client: 118, config: 13, resources: 67)
 - SDK generation complete (Python, TypeScript, Go)
 - GitHub Actions workflow for Go tests (`.github/workflows/test-go.yml`)
 - Draft PR #37 open targeting `develop`
 - Integration testing:
   - single-cluster: TESTED (Create, Read)
   - simple-project: TESTED (full CRUD)
-  - multi-cluster: TESTED (Create + Read for DeployTarget, Project, DeployTargetConfig)
+  - multi-cluster: TESTED (Create, Read, token rotation replacement cycle all verified)
+- Token rotation resilience: create-or-update, idempotent deletes, graceful read-not-found
+- Lagoon update mutation input format fixed (`{id, patch: {...}}` structure)
 
 ### Multi-Cluster Environment Status
-- Two Kind clusters running: `kind-lagoon-prod` + `kind-lagoon-nonprod`
-- Full Lagoon stack deployed (55 resources)
-- Build-deploy pods connected to RabbitMQ broker on both clusters
-- Port-forwards active (Keycloak :8080, API :7080)
+- Two Kind clusters may still be running: `kind-lagoon-prod` + `kind-lagoon-nonprod`
+- Check with `kind get clusters`
 
 ### What To Do Next
 
-1. **If multi-cluster is still running, verify**:
-   ```bash
-   cd examples/multi-cluster
-   kind get clusters
-   make check
-   ```
-
-2. **Test TypeScript SDK** (not yet done):
-   - Create a TypeScript example using the generated SDK in `sdk/nodejs/`
-
-3. **Test Go SDK** (not yet done):
-   - Create a Go example using the generated SDK in `sdk/go/`
-
-4. **Known issues to address**:
-   - Provider token rotation causes cascading replacements (JWT changes each run)
-   - Lagoon overrides project `branches`/`pullrequests` fields when DeployTargetConfig is set
-
-5. **When done testing, tear down**:
+1. **If multi-cluster is still running, tear down**:
    ```bash
    cd examples/multi-cluster && make clean-all
    ```
+
+2. **Regenerate SDKs** (provider code changed significantly):
+   ```bash
+   make go-schema && make go-sdk-all
+   ```
+
+3. **Test TypeScript SDK** (not yet done):
+   - Create a TypeScript example using the generated SDK in `sdk/nodejs/`
+
+4. **Test Go SDK** (not yet done):
+   - Create a Go example using the generated SDK in `sdk/go/`
+
+5. **Known issues to address**:
+   - Lagoon overrides project `branches`/`pullrequests` fields when DeployTargetConfig is set
+   - Token rotation still causes replacements (works now, but ideally prevent cascade)
+
+6. **Commit SDK regeneration and update PR #37**
 
 ---
 
@@ -69,6 +69,12 @@ cd provider && go vet ./...
 
 # SDK generation
 make go-schema && make go-sdk-all
+```
+
+### Plugin Install (must rm first!)
+```bash
+pulumi plugin rm resource lagoon 0.2.0-dev --yes
+pulumi plugin install resource lagoon 0.2.0-dev --file provider/bin/pulumi-resource-lagoon
 ```
 
 ### Multi-Cluster Commands
@@ -112,12 +118,23 @@ func (r *Resource) Delete(ctx context.Context, req infer.DeleteRequest[TState]) 
 func (r *Resource) Diff(ctx context.Context, req infer.DiffRequest[TArgs, TState]) (infer.DiffResponse, error)
 ```
 
-### Multi-Cluster Helm Service Naming
-The lagoon-core Helm chart creates services as `{release_name}-lagoon-core-{component}`:
-- Broker: `prod-core-lagoon-core-broker`
-- SSH: `prod-core-lagoon-core-ssh`
-- Keycloak: `prod-core-lagoon-core-keycloak`
-- Pod labels: `app.kubernetes.io/component: prod-core-lagoon-core-broker`
+### Lagoon Update Mutation Input Format
+All update mutations require `{id, patch: {...fields...}}` — NOT flat fields:
+```go
+c.Execute(ctx, mutation, map[string]any{
+    "input": map[string]any{
+        "id":    id,
+        "patch": fieldsMap,
+    },
+})
+```
+
+### Create-or-Update Pattern
+DeployTarget, Project, DeployTargetConfig all implement:
+1. Attempt create → if `IsDuplicateEntry(err)` → look up existing → update
+2. Strip immutable fields (e.g., `name`) before calling update
+3. Read returns empty response on not-found (signals Pulumi to remove from state)
+4. Delete ignores not-found/API errors (idempotent)
 
 ### Provider Config Pattern
 ```go
