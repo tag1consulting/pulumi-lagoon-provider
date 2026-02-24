@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -104,7 +105,7 @@ func (r *DeployTargetConfig) Create(ctx context.Context, req infer.CreateRequest
 
 func (r *DeployTargetConfig) Update(ctx context.Context, req infer.UpdateRequest[DeployTargetConfigArgs, DeployTargetConfigState]) (infer.UpdateResponse[DeployTargetConfigState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	input := map[string]any{}
 	setOptional(input, "branches", req.Inputs.Branches)
@@ -121,7 +122,7 @@ func (r *DeployTargetConfig) Update(ctx context.Context, req infer.UpdateRequest
 		}, nil
 	}
 
-	_, err := client.UpdateDeployTargetConfig(ctx, req.State.LagoonID, input)
+	_, err := c.UpdateDeployTargetConfig(ctx, req.State.LagoonID, input)
 	if err != nil {
 		return infer.UpdateResponse[DeployTargetConfigState]{}, fmt.Errorf("failed to update deploy target config: %w", err)
 	}
@@ -136,9 +137,13 @@ func (r *DeployTargetConfig) Update(ctx context.Context, req infer.UpdateRequest
 
 func (r *DeployTargetConfig) Delete(ctx context.Context, req infer.DeleteRequest[DeployTargetConfigState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
-	if err := client.DeleteDeployTargetConfig(ctx, req.State.LagoonID, req.State.ProjectID); err != nil {
+	if err := c.DeleteDeployTargetConfig(ctx, req.State.LagoonID, req.State.ProjectID); err != nil {
+		// Treat "not found" as success — resource is already gone
+		if errors.Is(err, client.ErrNotFound) || errors.Is(err, client.ErrAPI) {
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete deploy target config: %w", err)
 	}
 	return infer.DeleteResponse{}, nil
@@ -146,7 +151,7 @@ func (r *DeployTargetConfig) Delete(ctx context.Context, req infer.DeleteRequest
 
 func (r *DeployTargetConfig) Read(ctx context.Context, req infer.ReadRequest[DeployTargetConfigArgs, DeployTargetConfigState]) (infer.ReadResponse[DeployTargetConfigArgs, DeployTargetConfigState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	// Import ID format: {project_id}:{config_id}
 	parts := strings.SplitN(req.ID, ":", 2)
@@ -168,8 +173,12 @@ func (r *DeployTargetConfig) Read(ctx context.Context, req infer.ReadRequest[Dep
 		configID = req.State.LagoonID
 	}
 
-	dtc, err := client.GetDeployTargetConfigByID(ctx, configID, projectID)
+	dtc, err := c.GetDeployTargetConfigByID(ctx, configID, projectID)
 	if err != nil {
+		// Return empty ID to signal the resource was deleted from Lagoon
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.ReadResponse[DeployTargetConfigArgs, DeployTargetConfigState]{}, nil
+		}
 		return infer.ReadResponse[DeployTargetConfigArgs, DeployTargetConfigState]{}, fmt.Errorf("failed to read deploy target config: %w", err)
 	}
 

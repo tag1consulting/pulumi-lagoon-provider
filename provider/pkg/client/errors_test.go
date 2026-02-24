@@ -136,6 +136,16 @@ func TestIsDuplicateEntry(t *testing.T) {
 			err:      nil,
 			expected: false,
 		},
+		{
+			name:     "project already exists",
+			err:      &LagoonAPIError{Message: "Error creating project 'drupal-example'. Project already exists."},
+			expected: true,
+		},
+		{
+			name:     "wrapped already exists",
+			err:      fmt.Errorf("create failed: %w", &LagoonAPIError{Message: "Resource already exists"}),
+			expected: true,
+		},
 	}
 
 	for _, tt := range tests {

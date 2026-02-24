@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -94,6 +95,8 @@ func (r *Project) Create(ctx context.Context, req infer.CreateRequest[ProjectArg
 		}
 
 		// Update the existing resource to match desired inputs
+		// Remove name — it's not updatable
+		delete(input, "name")
 		project, err = c.UpdateProject(ctx, existing.ID, input)
 		if err != nil {
 			return infer.CreateResponse[ProjectState]{}, fmt.Errorf("project %q already exists but failed to update: %w", req.Inputs.Name, err)
@@ -113,7 +116,7 @@ func (r *Project) Create(ctx context.Context, req infer.CreateRequest[ProjectArg
 // Update updates an existing Lagoon project.
 func (r *Project) Update(ctx context.Context, req infer.UpdateRequest[ProjectArgs, ProjectState]) (infer.UpdateResponse[ProjectState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	input := map[string]any{
 		"gitUrl":    req.Inputs.GitURL,
@@ -136,7 +139,7 @@ func (r *Project) Update(ctx context.Context, req infer.UpdateRequest[ProjectArg
 		}, nil
 	}
 
-	_, err := client.UpdateProject(ctx, req.State.LagoonID, input)
+	_, err := c.UpdateProject(ctx, req.State.LagoonID, input)
 	if err != nil {
 		return infer.UpdateResponse[ProjectState]{}, fmt.Errorf("failed to update project: %w", err)
 	}
@@ -153,9 +156,13 @@ func (r *Project) Update(ctx context.Context, req infer.UpdateRequest[ProjectArg
 // Delete deletes a Lagoon project.
 func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
-	if err := client.DeleteProject(ctx, req.State.Name); err != nil {
+	if err := c.DeleteProject(ctx, req.State.Name); err != nil {
+		// Treat "not found" as success — resource is already gone
+		if errors.Is(err, client.ErrNotFound) || errors.Is(err, client.ErrAPI) {
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete project: %w", err)
 	}
 	return infer.DeleteResponse{}, nil
@@ -164,15 +171,19 @@ func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectSta
 // Read reads a Lagoon project for import/refresh.
 func (r *Project) Read(ctx context.Context, req infer.ReadRequest[ProjectArgs, ProjectState]) (infer.ReadResponse[ProjectArgs, ProjectState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	lagoonID, err := strconv.Atoi(req.ID)
 	if err != nil {
 		return infer.ReadResponse[ProjectArgs, ProjectState]{}, fmt.Errorf("invalid project ID '%s': must be numeric", req.ID)
 	}
 
-	project, err := client.GetProjectByID(ctx, lagoonID)
+	project, err := c.GetProjectByID(ctx, lagoonID)
 	if err != nil {
+		// Return empty ID to signal the resource was deleted from Lagoon
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.ReadResponse[ProjectArgs, ProjectState]{}, nil
+		}
 		return infer.ReadResponse[ProjectArgs, ProjectState]{}, fmt.Errorf("failed to read project: %w", err)
 	}
 

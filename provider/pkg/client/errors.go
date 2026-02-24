@@ -70,13 +70,15 @@ var (
 	ErrDuplicateEntry = errors.New("lagoon duplicate entry")
 )
 
-// IsDuplicateEntry returns true if the error is a Lagoon API error caused by
-// a MySQL duplicate entry constraint violation (e.g., creating a resource with
-// a name that already exists).
+// IsDuplicateEntry returns true if the error is a Lagoon API error indicating
+// the resource already exists. This can be a MySQL duplicate entry constraint
+// violation or an application-level "already exists" error.
 func IsDuplicateEntry(err error) bool {
 	var apiErr *LagoonAPIError
 	if errors.As(err, &apiErr) {
-		return strings.Contains(apiErr.Message, "Duplicate entry")
+		msg := strings.ToLower(apiErr.Message)
+		return strings.Contains(msg, "duplicate entry") ||
+			strings.Contains(msg, "already exists")
 	}
 	return false
 }

@@ -88,9 +88,14 @@ func (c *Client) GetAllDeployTargets(ctx context.Context) ([]DeployTarget, error
 }
 
 // UpdateDeployTarget updates a deploy target.
+// The Lagoon UpdateKubernetesInput requires {id, patch: {...fields...}}.
 func (c *Client) UpdateDeployTarget(ctx context.Context, id int, input map[string]any) (*DeployTarget, error) {
-	input["id"] = id
-	data, err := c.Execute(ctx, mutationUpdateKubernetes, map[string]any{"input": input})
+	data, err := c.Execute(ctx, mutationUpdateKubernetes, map[string]any{
+		"input": map[string]any{
+			"id":    id,
+			"patch": input,
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -214,9 +219,14 @@ func (c *Client) GetDeployTargetConfigByID(ctx context.Context, configID, projec
 }
 
 // UpdateDeployTargetConfig updates a deploy target configuration.
+// The Lagoon UpdateDeployTargetConfigInput requires {id, patch: {...fields...}}.
 func (c *Client) UpdateDeployTargetConfig(ctx context.Context, configID int, input map[string]any) (*DeployTargetConfig, error) {
-	input["id"] = configID
-	data, err := c.Execute(ctx, mutationUpdateDeployTargetConfig, map[string]any{"input": input})
+	data, err := c.Execute(ctx, mutationUpdateDeployTargetConfig, map[string]any{
+		"input": map[string]any{
+			"id":    configID,
+			"patch": input,
+		},
+	})
 	if err != nil {
 		return nil, err
 	}

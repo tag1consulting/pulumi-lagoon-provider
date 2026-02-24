@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -94,6 +95,8 @@ func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[Deplo
 		}
 
 		// Update the existing resource to match desired inputs
+		// Remove name — it's not updatable via the UpdateKubernetes mutation
+		delete(input, "name")
 		dt, err = c.UpdateDeployTarget(ctx, existing.ID, input)
 		if err != nil {
 			return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("deploy target %q already exists but failed to update: %w", req.Inputs.Name, err)
@@ -112,7 +115,7 @@ func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[Deplo
 
 func (r *DeployTarget) Update(ctx context.Context, req infer.UpdateRequest[DeployTargetArgs, DeployTargetState]) (infer.UpdateResponse[DeployTargetState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	input := map[string]any{
 		"consoleUrl": req.Inputs.ConsoleURL,
@@ -135,7 +138,7 @@ func (r *DeployTarget) Update(ctx context.Context, req infer.UpdateRequest[Deplo
 		}, nil
 	}
 
-	_, err := client.UpdateDeployTarget(ctx, req.State.LagoonID, input)
+	_, err := c.UpdateDeployTarget(ctx, req.State.LagoonID, input)
 	if err != nil {
 		return infer.UpdateResponse[DeployTargetState]{}, fmt.Errorf("failed to update deploy target: %w", err)
 	}
@@ -151,9 +154,13 @@ func (r *DeployTarget) Update(ctx context.Context, req infer.UpdateRequest[Deplo
 
 func (r *DeployTarget) Delete(ctx context.Context, req infer.DeleteRequest[DeployTargetState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
-	if err := client.DeleteDeployTarget(ctx, req.State.Name); err != nil {
+	if err := c.DeleteDeployTarget(ctx, req.State.Name); err != nil {
+		// Treat "not found" as success — resource is already gone
+		if errors.Is(err, client.ErrNotFound) || errors.Is(err, client.ErrAPI) {
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete deploy target: %w", err)
 	}
 	return infer.DeleteResponse{}, nil
@@ -161,15 +168,19 @@ func (r *DeployTarget) Delete(ctx context.Context, req infer.DeleteRequest[Deplo
 
 func (r *DeployTarget) Read(ctx context.Context, req infer.ReadRequest[DeployTargetArgs, DeployTargetState]) (infer.ReadResponse[DeployTargetArgs, DeployTargetState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	dtID, err := strconv.Atoi(req.ID)
 	if err != nil {
 		return infer.ReadResponse[DeployTargetArgs, DeployTargetState]{}, fmt.Errorf("invalid deploy target ID: %w", err)
 	}
 
-	dt, err := client.GetDeployTargetByID(ctx, dtID)
+	dt, err := c.GetDeployTargetByID(ctx, dtID)
 	if err != nil {
+		// Return empty ID to signal the resource was deleted from Lagoon
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.ReadResponse[DeployTargetArgs, DeployTargetState]{}, nil
+		}
 		return infer.ReadResponse[DeployTargetArgs, DeployTargetState]{}, fmt.Errorf("failed to read deploy target: %w", err)
 	}
 
