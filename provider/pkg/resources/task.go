@@ -2,12 +2,14 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
@@ -125,9 +127,12 @@ func (r *Task) Create(ctx context.Context, req infer.CreateRequest[TaskArgs]) (i
 
 func (r *Task) Delete(ctx context.Context, req infer.DeleteRequest[TaskState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
-	if err := client.DeleteTaskDefinition(ctx, req.State.LagoonID); err != nil {
+	if err := c.DeleteTaskDefinition(ctx, req.State.LagoonID); err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete task: %w", err)
 	}
 	return infer.DeleteResponse{}, nil

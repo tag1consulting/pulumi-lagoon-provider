@@ -2,11 +2,13 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
@@ -81,8 +83,11 @@ func (r *NotificationMicrosoftTeams) Update(ctx context.Context, req infer.Updat
 
 func (r *NotificationMicrosoftTeams) Delete(ctx context.Context, req infer.DeleteRequest[NotificationMicrosoftTeamsState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
-	if err := client.DeleteNotificationMicrosoftTeams(ctx, req.State.Name); err != nil {
+	c := cfg.NewClient()
+	if err := c.DeleteNotificationMicrosoftTeams(ctx, req.State.Name); err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete Microsoft Teams notification: %w", err)
 	}
 	return infer.DeleteResponse{}, nil
@@ -90,15 +95,18 @@ func (r *NotificationMicrosoftTeams) Delete(ctx context.Context, req infer.Delet
 
 func (r *NotificationMicrosoftTeams) Read(ctx context.Context, req infer.ReadRequest[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]) (infer.ReadResponse[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	name := req.ID
 	if req.State.Name != "" {
 		name = req.State.Name
 	}
 
-	n, err := client.GetNotificationMicrosoftTeamsByName(ctx, name)
+	n, err := c.GetNotificationMicrosoftTeamsByName(ctx, name)
 	if err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.ReadResponse[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]{}, nil
+		}
 		return infer.ReadResponse[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]{}, fmt.Errorf("failed to read Microsoft Teams notification: %w", err)
 	}
 

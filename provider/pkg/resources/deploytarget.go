@@ -23,9 +23,8 @@ type DeployTargetArgs struct {
 	SSHHost             *string `pulumi:"sshHost,optional"`
 	SSHPort             *string `pulumi:"sshPort,optional"`
 	BuildImage          *string `pulumi:"buildImage,optional"`
-	Disabled            *bool   `pulumi:"disabled,optional"`
-	RouterPattern       *string `pulumi:"routerPattern,optional"`
-	SharedBastionSecret *string `pulumi:"sharedBastionSecret,optional"`
+	Disabled      *bool   `pulumi:"disabled,optional"`
+	RouterPattern *string `pulumi:"routerPattern,optional"`
 }
 
 type DeployTargetState struct {
@@ -55,19 +54,22 @@ func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[Deplo
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	c := cfg.NewClient()
 
-	input := map[string]any{
-		"name":       req.Inputs.Name,
-		"consoleUrl": req.Inputs.ConsoleURL,
-	}
+	// Compute effective values for fields that have API-side defaults.
+	// Storing these explicitly in state prevents spurious drift on pulumi refresh.
+	effectiveCloudProvider := "kind"
 	if req.Inputs.CloudProvider != nil {
-		input["cloudProvider"] = *req.Inputs.CloudProvider
-	} else {
-		input["cloudProvider"] = "kind"
+		effectiveCloudProvider = *req.Inputs.CloudProvider
 	}
+	effectiveCloudRegion := "local"
 	if req.Inputs.CloudRegion != nil {
-		input["cloudRegion"] = *req.Inputs.CloudRegion
-	} else {
-		input["cloudRegion"] = "local"
+		effectiveCloudRegion = *req.Inputs.CloudRegion
+	}
+
+	input := map[string]any{
+		"name":          req.Inputs.Name,
+		"consoleUrl":    req.Inputs.ConsoleURL,
+		"cloudProvider": effectiveCloudProvider,
+		"cloudRegion":   effectiveCloudRegion,
 	}
 	setOptional(input, "sshHost", req.Inputs.SSHHost)
 	setOptional(input, "sshPort", req.Inputs.SSHPort)
@@ -75,10 +77,15 @@ func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[Deplo
 	setOptionalBool(input, "disabled", req.Inputs.Disabled)
 	setOptional(input, "routerPattern", req.Inputs.RouterPattern)
 
+	// Build normalized args with explicit effective values to avoid drift
+	normalizedArgs := req.Inputs
+	normalizedArgs.CloudProvider = &effectiveCloudProvider
+	normalizedArgs.CloudRegion = &effectiveCloudRegion
+
 	if req.DryRun {
 		return infer.CreateResponse[DeployTargetState]{
 			ID:     "preview-id",
-			Output: DeployTargetState{DeployTargetArgs: req.Inputs},
+			Output: DeployTargetState{DeployTargetArgs: normalizedArgs},
 		}, nil
 	}
 
@@ -106,7 +113,7 @@ func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[Deplo
 	return infer.CreateResponse[DeployTargetState]{
 		ID: strconv.Itoa(dt.ID),
 		Output: DeployTargetState{
-			DeployTargetArgs: req.Inputs,
+			DeployTargetArgs: normalizedArgs,
 			LagoonID:         dt.ID,
 			Created:          dt.Created,
 		},
@@ -158,7 +165,7 @@ func (r *DeployTarget) Delete(ctx context.Context, req infer.DeleteRequest[Deplo
 
 	if err := c.DeleteDeployTarget(ctx, req.State.Name); err != nil {
 		// Treat "not found" as success — resource is already gone
-		if errors.Is(err, client.ErrNotFound) || errors.Is(err, client.ErrAPI) {
+		if errors.Is(err, client.ErrNotFound) {
 			return infer.DeleteResponse{}, nil
 		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete deploy target: %w", err)
@@ -206,6 +213,9 @@ func (r *DeployTarget) Read(ctx context.Context, req infer.ReadRequest[DeployTar
 	if dt.RouterPattern != "" {
 		args.RouterPattern = &dt.RouterPattern
 	}
+	if dt.Disabled {
+		args.Disabled = &dt.Disabled
+	}
 
 	st := DeployTargetState{
 		DeployTargetArgs: args,
@@ -229,12 +239,34 @@ func (r *DeployTarget) Diff(ctx context.Context, req infer.DiffRequest[DeployTar
 	if req.Inputs.ConsoleURL != req.State.ConsoleURL {
 		diff["consoleUrl"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(req.Inputs.CloudProvider, req.State.CloudProvider) {
+
+	// Normalize defaulted fields before comparing: treat nil as the API default so
+	// omitting an optional field in the program never triggers a spurious update.
+	// Both sides are normalized so legacy state (nil) also matches the default.
+	inputCP, stateCP := req.Inputs.CloudProvider, req.State.CloudProvider
+	kind := "kind"
+	if inputCP == nil {
+		inputCP = &kind
+	}
+	if stateCP == nil {
+		stateCP = &kind
+	}
+	if ptrDiffers(inputCP, stateCP) {
 		diff["cloudProvider"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(req.Inputs.CloudRegion, req.State.CloudRegion) {
+
+	inputCR, stateCR := req.Inputs.CloudRegion, req.State.CloudRegion
+	local := "local"
+	if inputCR == nil {
+		inputCR = &local
+	}
+	if stateCR == nil {
+		stateCR = &local
+	}
+	if ptrDiffers(inputCR, stateCR) {
 		diff["cloudRegion"] = p.PropertyDiff{Kind: p.Update}
 	}
+
 	if ptrDiffers(req.Inputs.SSHHost, req.State.SSHHost) {
 		diff["sshHost"] = p.PropertyDiff{Kind: p.Update}
 	}
@@ -244,9 +276,21 @@ func (r *DeployTarget) Diff(ctx context.Context, req infer.DiffRequest[DeployTar
 	if ptrDiffers(req.Inputs.BuildImage, req.State.BuildImage) {
 		diff["buildImage"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrBoolDiffers(req.Inputs.Disabled, req.State.Disabled) {
+
+	// Normalize nil disabled to &false (the API default) so omitting the field
+	// doesn't report a spurious update when disabled is already false in state.
+	inputDis, stateDis := req.Inputs.Disabled, req.State.Disabled
+	falseVal := false
+	if inputDis == nil {
+		inputDis = &falseVal
+	}
+	if stateDis == nil {
+		stateDis = &falseVal
+	}
+	if ptrBoolDiffers(inputDis, stateDis) {
 		diff["disabled"] = p.PropertyDiff{Kind: p.Update}
 	}
+
 	if ptrDiffers(req.Inputs.RouterPattern, req.State.RouterPattern) {
 		diff["routerPattern"] = p.PropertyDiff{Kind: p.Update}
 	}

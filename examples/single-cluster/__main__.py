@@ -380,6 +380,7 @@ if lagoon_remote is not None:
         create=f'kubectl --context {cluster_config.context_name} -n {namespace_config.lagoon_core} get secret lagoon-core-secrets -o jsonpath="{{.data.JWTSECRET}}" | base64 -d',
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
+            additional_secret_outputs=["stdout"],
         ),
     )
 
@@ -387,7 +388,7 @@ if lagoon_remote is not None:
     lagoon_provider = pulumi_lagoon.Provider(
         "lagoon-provider",
         api_url=lagoon_core.api_url,
-        jwt_secret=read_jwt_secret.stdout,
+        jwt_secret=pulumi.Output.secret(read_jwt_secret.stdout),
         insecure=True,
     )
 

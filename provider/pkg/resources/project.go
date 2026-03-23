@@ -160,7 +160,7 @@ func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectSta
 
 	if err := c.DeleteProject(ctx, req.State.Name); err != nil {
 		// Treat "not found" as success — resource is already gone
-		if errors.Is(err, client.ErrNotFound) || errors.Is(err, client.ErrAPI) {
+		if errors.Is(err, client.ErrNotFound) {
 			return infer.DeleteResponse{}, nil
 		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete project: %w", err)

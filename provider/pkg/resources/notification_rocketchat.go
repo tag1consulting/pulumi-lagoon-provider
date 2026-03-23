@@ -2,11 +2,13 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
@@ -86,8 +88,11 @@ func (r *NotificationRocketChat) Update(ctx context.Context, req infer.UpdateReq
 
 func (r *NotificationRocketChat) Delete(ctx context.Context, req infer.DeleteRequest[NotificationRocketChatState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
-	if err := client.DeleteNotificationRocketChat(ctx, req.State.Name); err != nil {
+	c := cfg.NewClient()
+	if err := c.DeleteNotificationRocketChat(ctx, req.State.Name); err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete RocketChat notification: %w", err)
 	}
 	return infer.DeleteResponse{}, nil
@@ -95,15 +100,18 @@ func (r *NotificationRocketChat) Delete(ctx context.Context, req infer.DeleteReq
 
 func (r *NotificationRocketChat) Read(ctx context.Context, req infer.ReadRequest[NotificationRocketChatArgs, NotificationRocketChatState]) (infer.ReadResponse[NotificationRocketChatArgs, NotificationRocketChatState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	name := req.ID
 	if req.State.Name != "" {
 		name = req.State.Name
 	}
 
-	n, err := client.GetNotificationRocketChatByName(ctx, name)
+	n, err := c.GetNotificationRocketChatByName(ctx, name)
 	if err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.ReadResponse[NotificationRocketChatArgs, NotificationRocketChatState]{}, nil
+		}
 		return infer.ReadResponse[NotificationRocketChatArgs, NotificationRocketChatState]{}, fmt.Errorf("failed to read RocketChat notification: %w", err)
 	}
 

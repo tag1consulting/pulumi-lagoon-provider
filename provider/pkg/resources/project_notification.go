@@ -2,11 +2,13 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
@@ -41,7 +43,7 @@ func (s *ProjectNotificationState) Annotate(a infer.Annotator) {
 
 func (r *ProjectNotification) Create(ctx context.Context, req infer.CreateRequest[ProjectNotificationArgs]) (infer.CreateResponse[ProjectNotificationState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	notifType := strings.ToUpper(req.Inputs.NotificationType)
 	id := fmt.Sprintf("%s:%s:%s", req.Inputs.ProjectName, req.Inputs.NotificationType, req.Inputs.NotificationName)
@@ -53,22 +55,24 @@ func (r *ProjectNotification) Create(ctx context.Context, req infer.CreateReques
 		}, nil
 	}
 
-	if err := client.AddNotificationToProject(ctx, req.Inputs.ProjectName, notifType, req.Inputs.NotificationName); err != nil {
+	if err := c.AddNotificationToProject(ctx, req.Inputs.ProjectName, notifType, req.Inputs.NotificationName); err != nil {
 		return infer.CreateResponse[ProjectNotificationState]{}, fmt.Errorf("failed to add notification to project: %w", err)
 	}
 
-	// Look up project ID
-	info, err := client.CheckProjectNotificationExists(ctx, req.Inputs.ProjectName, req.Inputs.NotificationType, req.Inputs.NotificationName)
-	projectID := 0
-	if err == nil && info != nil {
-		projectID = info.ProjectID
+	// Look up project ID — surface errors rather than silently persisting projectId=0
+	info, err := c.CheckProjectNotificationExists(ctx, req.Inputs.ProjectName, req.Inputs.NotificationType, req.Inputs.NotificationName)
+	if err != nil {
+		return infer.CreateResponse[ProjectNotificationState]{}, fmt.Errorf("failed to verify project notification after create: %w", err)
+	}
+	if info == nil || !info.Exists {
+		return infer.CreateResponse[ProjectNotificationState]{}, fmt.Errorf("project notification was created but could not be verified")
 	}
 
 	return infer.CreateResponse[ProjectNotificationState]{
 		ID: id,
 		Output: ProjectNotificationState{
 			ProjectNotificationArgs: req.Inputs,
-			ProjectID:               projectID,
+			ProjectID:               info.ProjectID,
 		},
 	}, nil
 }
@@ -77,10 +81,13 @@ func (r *ProjectNotification) Create(ctx context.Context, req infer.CreateReques
 
 func (r *ProjectNotification) Delete(ctx context.Context, req infer.DeleteRequest[ProjectNotificationState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	notifType := strings.ToUpper(req.State.NotificationType)
-	if err := client.RemoveNotificationFromProject(ctx, req.State.ProjectName, notifType, req.State.NotificationName); err != nil {
+	if err := c.RemoveNotificationFromProject(ctx, req.State.ProjectName, notifType, req.State.NotificationName); err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to remove notification from project: %w", err)
 	}
 	return infer.DeleteResponse{}, nil
@@ -88,7 +95,7 @@ func (r *ProjectNotification) Delete(ctx context.Context, req infer.DeleteReques
 
 func (r *ProjectNotification) Read(ctx context.Context, req infer.ReadRequest[ProjectNotificationArgs, ProjectNotificationState]) (infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	// Import ID: {project_name}:{notification_type}:{notification_name}
 	parts := strings.SplitN(req.ID, ":", 3)
@@ -104,14 +111,14 @@ func (r *ProjectNotification) Read(ctx context.Context, req infer.ReadRequest[Pr
 		notificationName = req.State.NotificationName
 	}
 
-	info, err := client.CheckProjectNotificationExists(ctx, projectName, notificationType, notificationName)
+	info, err := c.CheckProjectNotificationExists(ctx, projectName, notificationType, notificationName)
 	if err != nil {
 		return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{}, fmt.Errorf("failed to read project notification: %w", err)
 	}
 
 	if !info.Exists {
-		return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{},
-			fmt.Errorf("notification '%s' (type=%s) not found on project '%s'", notificationName, notificationType, projectName)
+		// Resource was deleted out-of-band — return empty response so Pulumi removes it from state
+		return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{}, nil
 	}
 
 	args := ProjectNotificationArgs{

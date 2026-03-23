@@ -2,12 +2,14 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
@@ -159,15 +161,18 @@ func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[Enviro
 
 func (r *Environment) Delete(ctx context.Context, req infer.DeleteRequest[EnvironmentState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	// Lagoon's deleteEnvironment mutation requires the project name (String!), not the ID.
-	proj, err := client.GetProjectByID(ctx, req.State.ProjectID)
+	proj, err := c.GetProjectByID(ctx, req.State.ProjectID)
 	if err != nil {
 		return infer.DeleteResponse{}, fmt.Errorf("failed to look up project name for environment deletion: %w", err)
 	}
 
-	if err := client.DeleteEnvironment(ctx, req.State.Name, proj.Name); err != nil {
+	if err := c.DeleteEnvironment(ctx, req.State.Name, proj.Name); err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete environment: %w", err)
 	}
 	return infer.DeleteResponse{}, nil

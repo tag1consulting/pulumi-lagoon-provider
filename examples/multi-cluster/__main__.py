@@ -447,6 +447,7 @@ if lagoon_core is not None and config.create_example_project:
         create='kubectl --context kind-lagoon-prod -n lagoon-core get secret prod-core-lagoon-core-secrets -o jsonpath="{.data.JWTSECRET}" | base64 -d',
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
+            additional_secret_outputs=["stdout"],
         ),
     )
 
@@ -454,7 +455,7 @@ if lagoon_core is not None and config.create_example_project:
     lagoon_provider = pulumi_lagoon.Provider(
         "lagoon-provider",
         api_url=lagoon_core.api_url,
-        jwt_secret=read_jwt_secret.stdout,
+        jwt_secret=pulumi.Output.secret(read_jwt_secret.stdout),
         insecure=True,
     )
 

@@ -2,11 +2,13 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
@@ -87,8 +89,11 @@ func (r *NotificationSlack) Update(ctx context.Context, req infer.UpdateRequest[
 
 func (r *NotificationSlack) Delete(ctx context.Context, req infer.DeleteRequest[NotificationSlackState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
-	if err := client.DeleteNotificationSlack(ctx, req.State.Name); err != nil {
+	c := cfg.NewClient()
+	if err := c.DeleteNotificationSlack(ctx, req.State.Name); err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete Slack notification: %w", err)
 	}
 	return infer.DeleteResponse{}, nil
@@ -96,15 +101,18 @@ func (r *NotificationSlack) Delete(ctx context.Context, req infer.DeleteRequest[
 
 func (r *NotificationSlack) Read(ctx context.Context, req infer.ReadRequest[NotificationSlackArgs, NotificationSlackState]) (infer.ReadResponse[NotificationSlackArgs, NotificationSlackState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	name := req.ID
 	if req.State.Name != "" {
 		name = req.State.Name
 	}
 
-	n, err := client.GetNotificationSlackByName(ctx, name)
+	n, err := c.GetNotificationSlackByName(ctx, name)
 	if err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.ReadResponse[NotificationSlackArgs, NotificationSlackState]{}, nil
+		}
 		return infer.ReadResponse[NotificationSlackArgs, NotificationSlackState]{}, fmt.Errorf("failed to read Slack notification: %w", err)
 	}
 

@@ -2,12 +2,14 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
@@ -100,9 +102,12 @@ func (r *Variable) Update(ctx context.Context, req infer.UpdateRequest[VariableA
 
 func (r *Variable) Delete(ctx context.Context, req infer.DeleteRequest[VariableState]) (infer.DeleteResponse, error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
-	if err := client.DeleteVariable(ctx, req.State.Name, req.State.ProjectID, req.State.EnvironmentID); err != nil {
+	if err := c.DeleteVariable(ctx, req.State.Name, req.State.ProjectID, req.State.EnvironmentID); err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete variable: %w", err)
 	}
 	return infer.DeleteResponse{}, nil

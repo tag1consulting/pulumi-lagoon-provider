@@ -403,6 +403,7 @@ clean-all: clean
 
 PROVIDER_VERSION ?= 0.2.0-dev
 PROVIDER_BIN     := provider/bin/pulumi-resource-lagoon
+GO_BIN           ?= $(if $(GOPATH),$(GOPATH)/bin,$(HOME)/go/bin)
 
 go-build:
 	cd provider && CGO_ENABLED=0 go build -ldflags "-X main.Version=$(PROVIDER_VERSION)" \
@@ -429,4 +430,5 @@ go-sdk-go: go-build
 go-sdk-all: go-sdk-python go-sdk-nodejs go-sdk-go
 
 go-install: go-build
-	cp $(PROVIDER_BIN) $(GOPATH)/bin/ 2>/dev/null || cp $(PROVIDER_BIN) $(HOME)/go/bin/
+	mkdir -p $(GO_BIN)
+	cp $(PROVIDER_BIN) $(GO_BIN)/
