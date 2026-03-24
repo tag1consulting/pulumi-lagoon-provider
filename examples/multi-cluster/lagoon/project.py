@@ -6,6 +6,7 @@ This module demonstrates how to:
 3. Route production branches to prod cluster and dev branches to nonprod cluster
 """
 
+import re
 from dataclasses import dataclass
 from typing import Optional
 
@@ -155,7 +156,7 @@ def create_example_drupal_project(
             deploytarget_id=deploy_targets.prod_target.lagoon_id,
             production_environment=production_environment,
             # Branch pattern - which branches can be deployed
-            branches="^(main|develop|feature/.*)$",
+            branches=f"^({re.escape(production_environment)}|develop|feature/.*)$",
             # PR pattern - which PRs can be deployed
             pullrequests=".*",
         ),

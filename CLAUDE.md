@@ -25,7 +25,7 @@ The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1cons
 - Go-based native provider using `pulumi-go-provider` v1.3.0 (`infer` package)
 - Generated SDKs for Python, TypeScript, and Go from a single schema
 - Published to PyPI (`pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), and Go module
-- 200+ unit tests; comprehensive resource CRUD lifecycle
+- 198 unit tests; comprehensive resource CRUD lifecycle
 
 ## Development Environment
 

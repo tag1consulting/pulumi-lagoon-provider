@@ -50,6 +50,9 @@ func WithInsecureSSL() ClientOption {
 // WithMaxRetries sets the number of retries for transient errors.
 func WithMaxRetries(n int) ClientOption {
 	return func(c *Client) {
+		if n < 0 {
+			n = 0
+		}
 		c.maxRetries = n
 	}
 }
@@ -228,7 +231,8 @@ func (c *Client) refreshTokenIfNeeded() error {
 	}
 
 	c.tokenMu.RLock()
-	needsRefresh := !c.tokenExpAt.IsZero() && time.Now().After(c.tokenExpAt.Add(-5*time.Minute))
+	// Zero tokenExpAt means the token hasn't been refreshed yet — treat as needing refresh
+	needsRefresh := c.tokenExpAt.IsZero() || time.Now().After(c.tokenExpAt.Add(-5*time.Minute))
 	c.tokenMu.RUnlock()
 
 	if !needsRefresh {

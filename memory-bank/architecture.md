@@ -1,6 +1,6 @@
 # Pulumi Lagoon Provider - Architecture
 
-**Last Updated**: 2026-02-06
+**Last Updated**: 2026-03-24
 
 ## Two Provider Implementations
 

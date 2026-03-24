@@ -118,11 +118,17 @@ func CallPlain(
 
 	// extract res.property field if asked to do so
 	if property != "" {
-		v = v.FieldByName("Res")
+		f := v.FieldByName(property)
+		if !f.IsValid() {
+			return
+		}
+		v = f
 	}
 
 	// return by setting the result pointer; this style of returns shortens the generated code without generics
-	resultPtr.Elem().Set(v)
+	if v.IsValid() && v.Type().AssignableTo(resultPtr.Elem().Type()) {
+		resultPtr.Elem().Set(v)
+	}
 }
 
 func callPlainInner(

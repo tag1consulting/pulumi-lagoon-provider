@@ -70,6 +70,15 @@ func (r *Task) Create(ctx context.Context, req infer.CreateRequest[TaskArgs]) (i
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
+	// Validate type-specific required fields
+	taskType := strings.ToLower(req.Inputs.Type)
+	if taskType == "command" && (req.Inputs.Command == nil || *req.Inputs.Command == "") {
+		return infer.CreateResponse[TaskState]{}, fmt.Errorf("'command' is required when type is 'command'")
+	}
+	if taskType == "image" && (req.Inputs.Image == nil || *req.Inputs.Image == "") {
+		return infer.CreateResponse[TaskState]{}, fmt.Errorf("'image' is required when type is 'image'")
+	}
+
 	input := map[string]any{
 		"name":    req.Inputs.Name,
 		"type":    strings.ToUpper(req.Inputs.Type),
@@ -168,6 +177,8 @@ func (r *Task) Read(ctx context.Context, req infer.ReadRequest[TaskArgs, TaskSta
 	}
 	args.ProjectID = td.ProjectID
 	args.EnvironmentID = td.EnvironmentID
+	// Carry forward systemWide from state — the API doesn't return it
+	args.SystemWide = req.State.SystemWide
 	if td.GroupName != "" {
 		args.GroupName = &td.GroupName
 	}

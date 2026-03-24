@@ -299,6 +299,11 @@ func (c *Client) CheckProjectNotificationExists(ctx context.Context, projectName
 		return nil, err
 	}
 
+	// Check for null projectByName response (project doesn't exist)
+	if strings.TrimSpace(string(raw)) == "null" {
+		return nil, &LagoonNotFoundError{ResourceType: "Project", Identifier: projectName}
+	}
+
 	var project struct {
 		ID            int              `json:"id"`
 		Notifications []json.RawMessage `json:"notifications"`
@@ -325,7 +330,7 @@ func (c *Client) CheckProjectNotificationExists(ctx context.Context, projectName
 			Name     string `json:"name"`
 		}
 		if err := json.Unmarshal(rawN, &n); err != nil {
-			continue
+			return nil, fmt.Errorf("malformed notification payload: %w", err)
 		}
 		if n.TypeName == expectedTypeName && n.Name == notificationName {
 			return &ProjectNotificationInfo{ProjectID: project.ID, Exists: true}, nil

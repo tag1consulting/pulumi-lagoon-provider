@@ -1,18 +1,17 @@
 # Pulumi Lagoon Provider - Implementation Status
 
 **Last Updated**: 2026-03-24
-**Status**: Native Go Provider v0.2.0 RELEASED — All phases complete, PR #37 merged
+**Status**: Native Go Provider v0.2.0 READY FOR RELEASE — PR #39 in review
 
 ---
 
-## Native Go Provider (Current Work)
+## Native Go Provider (v0.2.0)
 
 ### Overview
 Migration from Python dynamic provider (v0.1.2) to native Go provider using `pulumi-go-provider` v1.3.0 with `infer` package and builder pattern.
 
-**Branch**: `native-go-provider`
-**PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/37 (Draft -> `develop`)
-**Latest Commit**: `35626ae`
+**Development Branch**: `native-go-provider` (merged to `develop` via PR #37)
+**Release PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/39 (`develop` → `main`)
 
 ### Phase 1: Scaffolding + GraphQL Client - COMPLETE
 - Go module initialized (`go.mod` with Go 1.24, pulumi-go-provider v1.3.0)

@@ -421,7 +421,8 @@ func TestTokenRefresh_NotNeeded(t *testing.T) {
 	}
 
 	c := NewClient(server.URL, "current-token", WithTokenFunc(tokenFunc))
-	// Token is not expired, tokenExpAt is zero (first use never triggers refresh)
+	// Set tokenExpAt to future — token is not expired, no refresh needed
+	c.tokenExpAt = time.Now().Add(1 * time.Hour)
 
 	_, err := c.Execute(context.Background(), "query { ok }", nil)
 	if err != nil {

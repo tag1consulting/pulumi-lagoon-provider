@@ -1,15 +1,14 @@
 # Next Session Quickstart - Native Go Pulumi Lagoon Provider
 
 **Date Updated**: 2026-03-24
-**Status**: v0.2.0 RELEASED — All phases complete, SDKs tested and published
+**Status**: v0.2.0 RELEASE IN PROGRESS — PR #39 under review
 
 ---
 
-## RESUME FROM HERE
+## CURRENT STATE
 
-**Branch**: `native-go-provider`
-**PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/37 (Draft, targeting `develop`)
-**Latest Commit**: `35626ae` - "Fix update mutations, idempotent deletes, and graceful read-not-found"
+**Development Branch**: `native-go-provider` (merged to `develop` via PR #37)
+**Release PR**: https://github.com/tag1consulting/pulumi-lagoon-provider/pull/39 (`develop` → `main`)
 
 ### What's Done
 - All 11 resources implemented and compiling
