@@ -102,9 +102,10 @@ func (r *NotificationRocketChat) Read(ctx context.Context, req infer.ReadRequest
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	c := cfg.NewClient()
 
-	name := req.ID
-	if req.State.Name != "" {
-		name = req.State.Name
+	// Prefer state name for lookup, fallback to ID
+	name := req.State.Name
+	if name == "" {
+		name = req.ID
 	}
 
 	n, err := c.GetNotificationRocketChatByName(ctx, name)

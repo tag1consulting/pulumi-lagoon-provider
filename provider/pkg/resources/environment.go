@@ -166,6 +166,10 @@ func (r *Environment) Delete(ctx context.Context, req infer.DeleteRequest[Enviro
 	// Lagoon's deleteEnvironment mutation requires the project name (String!), not the ID.
 	proj, err := c.GetProjectByID(ctx, req.State.ProjectID)
 	if err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			// Parent project already gone, environment is implicitly deleted
+			return infer.DeleteResponse{}, nil
+		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to look up project name for environment deletion: %w", err)
 	}
 
@@ -209,9 +213,15 @@ func (r *Environment) Read(ctx context.Context, req infer.ReadRequest[Environmen
 		return infer.ReadResponse[EnvironmentArgs, EnvironmentState]{}, fmt.Errorf("failed to read environment: %w", err)
 	}
 
+	// Preserve resolved project ID if API omits nested project
+	resolvedProjectID := env.ProjectID
+	if resolvedProjectID == 0 {
+		resolvedProjectID = projectID
+	}
+
 	args := EnvironmentArgs{
 		Name:            env.Name,
-		ProjectID:       env.ProjectID,
+		ProjectID:       resolvedProjectID,
 		DeployType:      strings.ToLower(env.DeployType),
 		EnvironmentType: strings.ToLower(env.EnvironmentType),
 	}
