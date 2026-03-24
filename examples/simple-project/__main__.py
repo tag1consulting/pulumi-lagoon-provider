@@ -49,6 +49,7 @@ lagoon_provider = pulumi_lagoon.Provider(
     api_url=lagoon_config.get("apiUrl"),
     token=lagoon_config.get_secret("token"),
     jwt_secret=lagoon_config.get_secret("jwtSecret"),
+    jwt_audience=lagoon_config.get("jwtAudience"),
     insecure=lagoon_config.get_bool("insecure"),
 )
 

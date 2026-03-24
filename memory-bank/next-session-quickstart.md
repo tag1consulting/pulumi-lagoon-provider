@@ -138,4 +138,4 @@ c := cfg.NewClient()
 ## Git Branches
 - `main` - Python dynamic provider (v0.1.2, production)
 - `develop` - Integration branch (PR target)
-- `native-go-provider` - Native Go provider work (current, PR #37 open)
+- `native-go-provider` - Native Go provider work (PR #37 merged to develop)

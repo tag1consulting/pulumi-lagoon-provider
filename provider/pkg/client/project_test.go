@@ -236,4 +236,7 @@ func TestCreateProject_APIError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
+	if !errors.Is(err, ErrAPI) {
+		t.Errorf("expected ErrAPI, got %T: %v", err, err)
+	}
 }

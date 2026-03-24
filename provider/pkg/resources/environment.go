@@ -47,7 +47,7 @@ func (a *EnvironmentArgs) Annotate(an infer.Annotator) {
 	an.Describe(&a.Name, "The environment name (typically the branch name).")
 	an.Describe(&a.ProjectID, "The parent project ID.")
 	an.Describe(&a.DeployType, "Deployment type: 'branch' or 'pullrequest'.")
-	an.Describe(&a.EnvironmentType, "Environment type: 'production', 'development', or 'standby'.")
+	an.Describe(&a.EnvironmentType, "Environment type: 'production' or 'development'.")
 	an.Describe(&a.DeployBaseRef, "The base ref for the deployment.")
 	an.Describe(&a.DeployHeadRef, "The head ref for pull request deployments.")
 	an.Describe(&a.DeployTitle, "Title for pull request deployments.")

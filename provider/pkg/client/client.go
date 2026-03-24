@@ -169,12 +169,12 @@ func (c *Client) executeOnce(ctx context.Context, query string, variables map[st
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil, &LagoonConnectionError{Message: "failed to marshal request", Cause: err}
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.apiURL, bytes.NewReader(body))
 	if err != nil {
-		return nil, &LagoonConnectionError{Message: "failed to create request", Cause: err}
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	c.tokenMu.RLock()
@@ -297,12 +297,14 @@ func (c *Client) DetectAPIVersion(ctx context.Context) string {
 			Name string `json:"name"`
 		} `json:"__type"`
 	}
-	if err := json.Unmarshal(data, &result); err != nil || result.Type == nil {
-		// Only cache if we got a valid response (not a transient error)
-		if data != nil {
-			c.apiVersion = "legacy"
-			c.apiVersionSet = true
-		}
+	if err := json.Unmarshal(data, &result); err != nil {
+		// Unmarshal failed — don't cache, may be transient
+		return "legacy"
+	}
+	if result.Type == nil {
+		// Valid response but type not found — this is a real legacy API
+		c.apiVersion = "legacy"
+		c.apiVersionSet = true
 		return "legacy"
 	}
 

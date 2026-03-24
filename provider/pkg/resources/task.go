@@ -292,9 +292,6 @@ func taskArgumentsDiffer(a, b *[]TaskArgumentInput) bool {
 	if aLen != bLen {
 		return true
 	}
-	if len(*a) != len(*b) {
-		return true
-	}
 	for i := range *a {
 		ai, bi := (*a)[i], (*b)[i]
 		if ai.Name != bi.Name || ai.DisplayName != bi.DisplayName || !strings.EqualFold(ai.Type, bi.Type) {

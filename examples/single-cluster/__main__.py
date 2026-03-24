@@ -446,7 +446,7 @@ if deploy_target is not None and config.create_example_project:
         ),
     )
 
-    pulumi.export("example_project_id", example_project.id)
+    pulumi.export("example_project_id", example_project.lagoon_id)
     pulumi.export("example_project_name", config.example_project_name)
 
 # =============================================================================
