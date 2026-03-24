@@ -1,3 +1,6 @@
 name: simple-project
-runtime: python
+runtime:
+  name: python
+  options:
+    virtualenv: venv
 description: Simple example of using the Pulumi Lagoon provider

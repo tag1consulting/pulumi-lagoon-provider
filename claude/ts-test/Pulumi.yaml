@@ -1,0 +1,3 @@
+name: lagoon-ts-test
+runtime: nodejs
+description: TypeScript SDK integration test for pulumi-lagoon native provider

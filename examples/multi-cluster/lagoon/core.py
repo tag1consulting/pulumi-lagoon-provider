@@ -72,9 +72,9 @@ def install_lagoon_core(
     harbor_admin_password = harbor.admin_password if harbor else "Harbor2024!"
 
     # Internal Keycloak URL for API communication (must include /auth path)
-    # Service name follows pattern: {release_name}-keycloak
+    # Helm chart "lagoon-core" creates services as {release_name}-lagoon-core-{component}
     keycloak_internal_url = (
-        f"http://{release_name}-keycloak.{namespace}.svc.cluster.local:8080/auth"
+        f"http://{release_name}-lagoon-core-keycloak.{namespace}.svc.cluster.local:8080/auth"
     )
 
     # Build Helm values
@@ -370,13 +370,13 @@ def install_lagoon_core(
     )
 
     # RabbitMQ is exposed internally via service and externally via NodePort
-    # Service name follows pattern: {release_name}-broker
-    rabbitmq_host = f"{release_name}-broker.{namespace}.svc.cluster.local"
+    # Helm chart "lagoon-core" creates services as {release_name}-lagoon-core-{component}
+    rabbitmq_host = f"{release_name}-lagoon-core-broker.{namespace}.svc.cluster.local"
     rabbitmq_nodeport = 30672  # Matches amqpNodePort in helm values
 
     # SSH service for build connections
-    # Service name follows pattern: {release_name}-ssh
-    ssh_host = f"{release_name}-ssh.{namespace}.svc.cluster.local"
+    # Helm chart "lagoon-core" creates services as {release_name}-lagoon-core-{component}
+    ssh_host = f"{release_name}-lagoon-core-ssh.{namespace}.svc.cluster.local"
 
     return LagoonCoreOutputs(
         release=release,
@@ -437,9 +437,9 @@ def create_rabbitmq_nodeport_service(
                 ),
             ],
             # Select the broker pods using the same labels as the Helm chart
-            # Note: The Helm chart sets component to "{release_name}-broker"
+            # Helm chart "lagoon-core" sets component to "{release_name}-lagoon-core-broker"
             selector={
-                "app.kubernetes.io/component": f"{release_name}-broker",
+                "app.kubernetes.io/component": f"{release_name}-lagoon-core-broker",
                 "app.kubernetes.io/instance": release_name,
                 "app.kubernetes.io/name": "lagoon-core",
             },

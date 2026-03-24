@@ -1,0 +1,3 @@
+name: lagoon-go-test
+runtime: go
+description: Go SDK integration test for pulumi-lagoon native provider
