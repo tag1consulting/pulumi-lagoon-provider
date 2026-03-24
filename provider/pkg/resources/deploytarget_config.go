@@ -141,7 +141,7 @@ func (r *DeployTargetConfig) Delete(ctx context.Context, req infer.DeleteRequest
 
 	if err := c.DeleteDeployTargetConfig(ctx, req.State.LagoonID, req.State.ProjectID); err != nil {
 		// Treat "not found" as success — resource is already gone
-		if errors.Is(err, client.ErrNotFound) || errors.Is(err, client.ErrAPI) {
+		if errors.Is(err, client.ErrNotFound) {
 			return infer.DeleteResponse{}, nil
 		}
 		return infer.DeleteResponse{}, fmt.Errorf("failed to delete deploy target config: %w", err)
@@ -220,16 +220,25 @@ func (r *DeployTargetConfig) Diff(ctx context.Context, req infer.DiffRequest[Dep
 	if req.Inputs.DeployTargetID != req.State.DeployTargetID {
 		diff["deployTargetId"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrDiffers(req.Inputs.Branches, req.State.Branches) {
+	// Normalize optional fields: nil and empty/zero are equivalent (API defaults)
+	inBranches := ptrOrDefault(req.Inputs.Branches, "")
+	stBranches := ptrOrDefault(req.State.Branches, "")
+	if inBranches != stBranches {
 		diff["branches"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(req.Inputs.Pullrequests, req.State.Pullrequests) {
+	inPR := ptrOrDefault(req.Inputs.Pullrequests, "")
+	stPR := ptrOrDefault(req.State.Pullrequests, "")
+	if inPR != stPR {
 		diff["pullrequests"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrIntDiffers(req.Inputs.Weight, req.State.Weight) {
+	inWeight := ptrIntOrDefault(req.Inputs.Weight, 0)
+	stWeight := ptrIntOrDefault(req.State.Weight, 0)
+	if inWeight != stWeight {
 		diff["weight"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(req.Inputs.DeployTargetProjectPattern, req.State.DeployTargetProjectPattern) {
+	inPattern := ptrOrDefault(req.Inputs.DeployTargetProjectPattern, "")
+	stPattern := ptrOrDefault(req.State.DeployTargetProjectPattern, "")
+	if inPattern != stPattern {
 		diff["deployTargetProjectPattern"] = p.PropertyDiff{Kind: p.Update}
 	}
 

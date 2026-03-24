@@ -53,3 +53,19 @@ func ptrBoolDiffers(a, b *bool) bool {
 	}
 	return *a != *b
 }
+
+// ptrOrDefault returns the value of a string pointer, or the default if nil.
+func ptrOrDefault(p *string, def string) string {
+	if p != nil {
+		return *p
+	}
+	return def
+}
+
+// ptrIntOrDefault returns the value of an int pointer, or the default if nil.
+func ptrIntOrDefault(p *int, def int) int {
+	if p != nil {
+		return *p
+	}
+	return def
+}

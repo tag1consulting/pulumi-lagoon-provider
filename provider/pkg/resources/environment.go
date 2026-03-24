@@ -85,10 +85,16 @@ func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[Enviro
 	setOptional(input, "openshiftProjectName", req.Inputs.OpenshiftProjectName)
 	setOptionalInt(input, "autoIdle", req.Inputs.AutoIdle)
 
+	// Store the effective deployBaseRef in state so it round-trips correctly.
+	effectiveInputs := req.Inputs
+	if effectiveInputs.DeployBaseRef == nil {
+		effectiveInputs.DeployBaseRef = &deployBaseRef
+	}
+
 	if req.DryRun {
 		return infer.CreateResponse[EnvironmentState]{
 			ID:     "preview-id",
-			Output: EnvironmentState{EnvironmentArgs: req.Inputs},
+			Output: EnvironmentState{EnvironmentArgs: effectiveInputs},
 		}, nil
 	}
 
@@ -100,7 +106,7 @@ func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[Enviro
 	return infer.CreateResponse[EnvironmentState]{
 		ID: strconv.Itoa(env.ID),
 		Output: EnvironmentState{
-			EnvironmentArgs: req.Inputs,
+			EnvironmentArgs: effectiveInputs,
 			LagoonID:        env.ID,
 			Route:           env.Route,
 			Routes:          env.Routes,
@@ -131,10 +137,16 @@ func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[Enviro
 	setOptional(input, "openshiftProjectName", req.Inputs.OpenshiftProjectName)
 	setOptionalInt(input, "autoIdle", req.Inputs.AutoIdle)
 
+	// Store the effective deployBaseRef in state so it round-trips correctly.
+	effectiveInputs := req.Inputs
+	if effectiveInputs.DeployBaseRef == nil {
+		effectiveInputs.DeployBaseRef = &deployBaseRef
+	}
+
 	if req.DryRun {
 		return infer.UpdateResponse[EnvironmentState]{
 			Output: EnvironmentState{
-				EnvironmentArgs: req.Inputs,
+				EnvironmentArgs: effectiveInputs,
 				LagoonID:        req.State.LagoonID,
 				Route:           req.State.Route,
 				Routes:          req.State.Routes,
@@ -150,7 +162,7 @@ func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[Enviro
 
 	return infer.UpdateResponse[EnvironmentState]{
 		Output: EnvironmentState{
-			EnvironmentArgs: req.Inputs,
+			EnvironmentArgs: effectiveInputs,
 			LagoonID:        env.ID,
 			Route:           env.Route,
 			Routes:          env.Routes,

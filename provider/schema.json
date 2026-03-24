@@ -255,7 +255,9 @@
           "description": "Router pattern for the deploy target."
         },
         "sharedBastionSecret": {
-          "type": "string"
+          "type": "string",
+          "description": "Shared bastion secret for the deploy target.",
+          "secret": true
         },
         "sshHost": {
           "type": "string",
@@ -302,7 +304,9 @@
           "description": "Router pattern for the deploy target."
         },
         "sharedBastionSecret": {
-          "type": "string"
+          "type": "string",
+          "description": "Shared bastion secret for the deploy target.",
+          "secret": true
         },
         "sshHost": {
           "type": "string",

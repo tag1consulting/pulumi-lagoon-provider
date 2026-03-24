@@ -587,6 +587,13 @@ query AdvancedTasksForEnvironment($environment: Int!) {
             service
             command
             permission
+            confirmationText
+            advancedTaskDefinitionArguments {
+                id
+                name
+                displayName
+                type
+            }
             project
             environment
             groupName
@@ -599,6 +606,13 @@ query AdvancedTasksForEnvironment($environment: Int!) {
             service
             image
             permission
+            confirmationText
+            advancedTaskDefinitionArguments {
+                id
+                name
+                displayName
+                type
+            }
             project
             environment
             groupName
@@ -617,6 +631,13 @@ query AdvancedTasksByEnvironment($environment: Int!) {
             service
             command
             permission
+            confirmationText
+            advancedTaskDefinitionArguments {
+                id
+                name
+                displayName
+                type
+            }
             project {
                 id
                 name
@@ -635,6 +656,13 @@ query AdvancedTasksByEnvironment($environment: Int!) {
             service
             image
             permission
+            confirmationText
+            advancedTaskDefinitionArguments {
+                id
+                name
+                displayName
+                type
+            }
             project {
                 id
                 name

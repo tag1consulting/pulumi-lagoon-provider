@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -77,7 +78,10 @@ func NewClient(apiURL, token string, opts ...ClientOption) *Client {
 
 	transport := &http.Transport{}
 	if !c.verifySSL {
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // user-configured
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,    //nolint:gosec // user-configured
+			MinVersion:         tls.VersionTLS12,
+		}
 	}
 
 	c.client = &http.Client{
@@ -151,12 +155,7 @@ func asError(err error, target **LagoonConnectionError) bool {
 	if err == nil {
 		return false
 	}
-	e, ok := err.(*LagoonConnectionError)
-	if ok {
-		*target = e
-		return true
-	}
-	return false
+	return errors.As(err, target)
 }
 
 func (c *Client) executeOnce(ctx context.Context, query string, variables map[string]any) (json.RawMessage, error) {

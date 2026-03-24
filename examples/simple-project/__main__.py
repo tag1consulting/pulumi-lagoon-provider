@@ -42,9 +42,10 @@ project_name = config.get("projectName") or "example-drupal-site"
 
 # Create Lagoon provider instance
 # Auth from env vars: LAGOON_API_URL, LAGOON_JWT_SECRET or LAGOON_TOKEN
+lagoon_config = pulumi.Config("lagoon")
 lagoon_provider = pulumi_lagoon.Provider(
     "lagoon-provider",
-    insecure=True,
+    insecure=lagoon_config.get_bool("insecure") or False,
 )
 
 lagoon_opts = pulumi.ResourceOptions(provider=lagoon_provider)

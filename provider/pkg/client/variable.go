@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -242,17 +243,16 @@ func (c *Client) getEnvironmentName(ctx context.Context, envID int) (string, err
 	if err := json.Unmarshal(raw, &env); err != nil {
 		return "", fmt.Errorf("failed to unmarshal environmentById: %w", err)
 	}
+	if env.Name == "" {
+		return "", fmt.Errorf("environment with ID %d not found (null or empty response)", env.ID)
+	}
 
 	return env.Name, nil
 }
 
 // isAPIError checks if an error is a LagoonAPIError and sets the target pointer.
 func isAPIError(err error, target **LagoonAPIError) bool {
-	e, ok := err.(*LagoonAPIError)
-	if ok && target != nil {
-		*target = e
-	}
-	return ok
+	return errors.As(err, target)
 }
 
 // isFieldNotFoundError returns true if the API error is a "Cannot query field" error,

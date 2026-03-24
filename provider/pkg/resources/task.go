@@ -239,12 +239,38 @@ func (r *Task) Diff(ctx context.Context, req infer.DiffRequest[TaskArgs, TaskSta
 	if ptrDiffers(req.Inputs.Description, req.State.Description) {
 		diff["description"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	if ptrDiffers(req.Inputs.Permission, req.State.Permission) {
+	// Use case-insensitive comparison for permission (lowered on read, uppered on create)
+	inPerm := strings.ToLower(ptrOrDefault(req.Inputs.Permission, ""))
+	stPerm := strings.ToLower(ptrOrDefault(req.State.Permission, ""))
+	if inPerm != stPerm {
 		diff["permission"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
 	if ptrDiffers(req.Inputs.ConfirmationText, req.State.ConfirmationText) {
 		diff["confirmationText"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
+	if taskArgumentsDiffer(req.Inputs.Arguments, req.State.Arguments) {
+		diff["arguments"] = p.PropertyDiff{Kind: p.UpdateReplace}
+	}
 
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil
+}
+
+// taskArgumentsDiffer returns true if two optional TaskArgumentInput slices differ.
+func taskArgumentsDiffer(a, b *[]TaskArgumentInput) bool {
+	if a == nil && b == nil {
+		return false
+	}
+	if a == nil || b == nil {
+		return true
+	}
+	if len(*a) != len(*b) {
+		return true
+	}
+	for i := range *a {
+		ai, bi := (*a)[i], (*b)[i]
+		if ai.Name != bi.Name || ai.DisplayName != bi.DisplayName || !strings.EqualFold(ai.Type, bi.Type) {
+			return true
+		}
+	}
+	return false
 }

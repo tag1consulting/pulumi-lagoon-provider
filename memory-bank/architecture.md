@@ -23,7 +23,7 @@
 
 ### High-Level Overview
 
-```
+```text
 ┌─────────────────┐
 │  Pulumi Program │  (Python/TS/Go via generated SDK)
 └────────┬────────┘
@@ -70,7 +70,7 @@
 
 ### Package Dependency Graph
 
-```
+```text
 main.go
   └── provider/provider.go
         ├── config/config.go
