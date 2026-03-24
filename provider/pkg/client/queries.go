@@ -94,6 +94,7 @@ mutation AddOrUpdateEnvironment($input: AddEnvironmentInput!) {
         deployHeadRef
         deployTitle
         autoIdle
+        openshiftProjectName
         route
         routes
         created

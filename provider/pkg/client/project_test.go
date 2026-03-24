@@ -150,11 +150,13 @@ func TestUpdateProject(t *testing.T) {
 		if !strings.Contains(query, "updateProject") {
 			t.Errorf("expected updateProject mutation")
 		}
-		// Verify id is included (JSON numbers decode as float64)
-		if input, ok := variables["input"].(map[string]any); ok {
-			if id, ok := input["id"].(float64); !ok || int(id) != 42 {
-				t.Errorf("expected id=42 in input, got %v", input["id"])
-			}
+		// Verify input map with id is present (JSON numbers decode as float64)
+		input, ok := variables["input"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected variables[\"input\"] to be a map, got %T", variables["input"])
+		}
+		if id, ok := input["id"].(float64); !ok || int(id) != 42 {
+			t.Errorf("expected id=42 in input, got %v", input["id"])
 		}
 		return map[string]any{
 			"updateProject": map[string]any{

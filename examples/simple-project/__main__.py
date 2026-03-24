@@ -42,11 +42,14 @@ deploytarget_id = config.require_int("deploytargetId")
 project_name = config.get("projectName") or "example-drupal-site"
 
 # Create Lagoon provider instance
-# Auth from env vars: LAGOON_API_URL, LAGOON_JWT_SECRET or LAGOON_TOKEN
+# Reads from pulumi config (lagoon:apiUrl, lagoon:token, etc.) or env vars
 lagoon_config = pulumi.Config("lagoon")
 lagoon_provider = pulumi_lagoon.Provider(
     "lagoon-provider",
-    insecure=lagoon_config.get_bool("insecure") or False,
+    api_url=lagoon_config.get("apiUrl"),
+    token=lagoon_config.get_secret("token"),
+    jwt_secret=lagoon_config.get_secret("jwtSecret"),
+    insecure=lagoon_config.get_bool("insecure"),
 )
 
 lagoon_opts = pulumi.ResourceOptions(provider=lagoon_provider)

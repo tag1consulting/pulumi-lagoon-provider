@@ -40,7 +40,7 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 - GoReleaser config (`.goreleaser.yml`) for cross-platform builds
 - Makefile targets: `make go-build`, `make go-test`, `make go-schema`, `make go-sdk-all`
 
-### Phase 5: Integration Testing - IN PROGRESS
+### Phase 5: Integration Testing - COMPLETE
 - **single-cluster**: TESTED (Create, Read verified via `pulumi refresh`)
 - **simple-project**: TESTED (full CRUD — Create, Read, Update, Delete all verified)
 - **multi-cluster**: TESTED (2026-02-23, re-tested with all fixes)
@@ -56,8 +56,8 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
   - Fixed: Update mutations need `{id, patch: {...}}` input structure (not flat)
   - Fixed: Create-or-update semantics for DeployTarget, Project, DeployTargetConfig
   - Fixed: Idempotent Delete and graceful Read-not-found for state cleanup
-- **TypeScript SDK**: NOT YET TESTED
-- **Go SDK**: NOT YET TESTED
+- **TypeScript SDK**: TESTED (2026-03-24, full CRUD verified against Kind cluster)
+- **Go SDK**: TESTED (2026-03-24, full CRUD verified against Kind cluster)
 
 ### Phase 6: CI/CD + Docs + Migration - COMPLETE
 - Release workflow (goreleaser + SDK publish) — GoReleaser config, PyPI publish workflow
@@ -139,28 +139,28 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 
 ## Resource Specifications (All 11 Implemented)
 
-### LagoonProject (`lagoon:index:Project`)
+### LagoonProject (`lagoon:lagoon:Project`)
 - ForceNew: `name`
 - Computed: `lagoonId`, `created`
 
-### LagoonEnvironment (`lagoon:index:Environment`)
+### LagoonEnvironment (`lagoon:lagoon:Environment`)
 - ForceNew: `name`, `projectId`
 - Computed: `lagoonId`, `route`, `routes`, `created`
 
-### LagoonVariable (`lagoon:index:Variable`)
+### LagoonVariable (`lagoon:lagoon:Variable`)
 - ForceNew: `name`, `projectId`, `environmentId`
 - Secret: `value`
 - Computed: `lagoonId`
 
-### LagoonDeployTarget (`lagoon:index:DeployTarget`)
+### LagoonDeployTarget (`lagoon:lagoon:DeployTarget`)
 - ForceNew: `name`
 - Computed: `lagoonId`, `created`
 
-### LagoonDeployTargetConfig (`lagoon:index:DeployTargetConfig`)
+### LagoonDeployTargetConfig (`lagoon:lagoon:DeployTargetConfig`)
 - ForceNew: `projectId`, `deployTargetId`
 - Computed: `lagoonId`
 
-### LagoonTask (`lagoon:index:Task`)
+### LagoonTask (`lagoon:lagoon:Task`)
 - ForceNew: `type`, `projectId`, `environmentId`, `groupName`, `systemWide`
 - Computed: `lagoonId`, `created`
 
@@ -170,7 +170,7 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 - **NotificationEmail**: ForceNew `name`
 - **NotificationMicrosoftTeams**: ForceNew `name`, Secret `webhook`
 
-### LagoonProjectNotification (`lagoon:index:ProjectNotification`)
+### LagoonProjectNotification (`lagoon:lagoon:ProjectNotification`)
 - ForceNew: ALL fields (Lagoon API doesn't support updating associations)
 
 ---

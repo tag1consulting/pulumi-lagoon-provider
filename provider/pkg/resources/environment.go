@@ -62,9 +62,28 @@ func (s *EnvironmentState) Annotate(a infer.Annotator) {
 	a.Describe(&s.Created, "The creation timestamp.")
 }
 
+var validDeployTypes = map[string]bool{"BRANCH": true, "PULLREQUEST": true, "PROMOTE": true}
+var validEnvTypes = map[string]bool{"PRODUCTION": true, "DEVELOPMENT": true}
+
+func validateEnvironmentEnums(deployType, envType string) error {
+	dt := strings.ToUpper(deployType)
+	if !validDeployTypes[dt] {
+		return fmt.Errorf("invalid deployType %q: must be one of branch, pullrequest, promote", deployType)
+	}
+	et := strings.ToUpper(envType)
+	if !validEnvTypes[et] {
+		return fmt.Errorf("invalid environmentType %q: must be one of production, development", envType)
+	}
+	return nil
+}
+
 func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[EnvironmentArgs]) (infer.CreateResponse[EnvironmentState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
+
+	if err := validateEnvironmentEnums(req.Inputs.DeployType, req.Inputs.EnvironmentType); err != nil {
+		return infer.CreateResponse[EnvironmentState]{}, err
+	}
 
 	// Default deployBaseRef to the environment name if not provided.
 	// The Lagoon API requires this field (String!).
@@ -118,6 +137,10 @@ func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[Enviro
 func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[EnvironmentArgs, EnvironmentState]) (infer.UpdateResponse[EnvironmentState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
+
+	if err := validateEnvironmentEnums(req.Inputs.DeployType, req.Inputs.EnvironmentType); err != nil {
+		return infer.UpdateResponse[EnvironmentState]{}, err
+	}
 
 	// Default deployBaseRef to the environment name if not provided.
 	deployBaseRef := req.Inputs.Name

@@ -444,7 +444,7 @@ if lagoon_core is not None and config.create_example_project:
     # Read the JWT secret from the k8s secret created by the Helm chart
     read_jwt_secret = command.Command(
         "read-jwt-secret",
-        create='kubectl --context kind-lagoon-prod -n lagoon-core get secret prod-core-lagoon-core-secrets -o jsonpath="{.data.JWTSECRET}" | base64 -d',
+        create=f'kubectl --context kind-lagoon-prod -n {namespace_config.lagoon_core} get secret prod-core-lagoon-core-secrets -o jsonpath="{{.data.JWTSECRET}}" | base64 -d',
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
             additional_secret_outputs=["stdout"],

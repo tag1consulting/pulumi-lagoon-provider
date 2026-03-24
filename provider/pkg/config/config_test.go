@@ -288,6 +288,9 @@ func TestConfigure_TokenPrecedence(t *testing.T) {
 	if cfg.Token != "direct-token" {
 		t.Errorf("expected direct token to take precedence, got %s", cfg.Token)
 	}
+	if cfg.JWTSecret != "" {
+		t.Errorf("expected JWTSecret to be cleared when direct token takes precedence, got %s", cfg.JWTSecret)
+	}
 }
 
 func TestConfigure_JWTSecretGeneratesToken(t *testing.T) {

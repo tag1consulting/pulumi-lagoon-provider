@@ -28,6 +28,12 @@ func TestSetOptionalInt(t *testing.T) {
 	if m["key"] != 42 {
 		t.Errorf("expected 42, got %v", m["key"])
 	}
+
+	zero := 0
+	setOptionalInt(m, "zero", &zero)
+	if m["zero"] != 0 {
+		t.Errorf("expected 0, got %v", m["zero"])
+	}
 }
 
 func TestSetOptionalBool(t *testing.T) {
@@ -41,6 +47,12 @@ func TestSetOptionalBool(t *testing.T) {
 	setOptionalBool(m, "key", &val)
 	if m["key"] != true {
 		t.Errorf("expected true, got %v", m["key"])
+	}
+
+	falseVal := false
+	setOptionalBool(m, "falseKey", &falseVal)
+	if m["falseKey"] != false {
+		t.Errorf("expected false, got %v", m["falseKey"])
 	}
 }
 

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 	lagoon "github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon"
@@ -19,10 +21,12 @@ func main() {
 		}
 		token := lagoonCfg.GetSecret("token")
 
+		// Only disable TLS for local development endpoints
+		isLocal := strings.HasPrefix(apiUrl, "http://localhost") || strings.HasPrefix(apiUrl, "http://127.0.0.1")
 		prov, err := lagoon.NewProvider(ctx, "lagoon", &lagoon.ProviderArgs{
 			ApiUrl:   pulumi.StringPtr(apiUrl),
 			Token:    token,
-			Insecure: pulumi.BoolPtr(true),
+			Insecure: pulumi.BoolPtr(isLocal),
 		})
 		if err != nil {
 			return err

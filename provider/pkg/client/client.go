@@ -288,9 +288,8 @@ func (c *Client) DetectAPIVersion(ctx context.Context) string {
 	probeQuery := `query { __type(name: "EnvVariableByNameInput") { name } }`
 	data, err := c.Execute(ctx, probeQuery, nil)
 	if err != nil {
-		c.apiVersion = "legacy"
-		c.apiVersionSet = true
-		return c.apiVersion
+		// Don't cache — transient errors shouldn't poison the version detection
+		return "legacy"
 	}
 
 	var result struct {

@@ -39,17 +39,9 @@
    make go-schema && make go-sdk-all
    ```
 
-3. **Test TypeScript SDK** (not yet done):
-   - Create a TypeScript example using the generated SDK in `sdk/nodejs/`
-
-4. **Test Go SDK** (not yet done):
-   - Create a Go example using the generated SDK in `sdk/go/`
-
-5. **Known issues to address**:
-   - Lagoon overrides project `branches`/`pullrequests` fields when DeployTargetConfig is set
-   - Token rotation still causes replacements (works now, but ideally prevent cascade)
-
-6. **Commit SDK regeneration and update PR #37**
+3. **TypeScript SDK** — TESTED (2026-03-24, full CRUD verified)
+4. **Go SDK** — TESTED (2026-03-24, full CRUD verified)
+5. **Release PR #39** (`develop` → `main`) — under review
 
 ---
 
