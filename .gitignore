@@ -29,6 +29,10 @@ ENV/
 env/
 .venv
 
+# Go provider build artifacts
+provider/bin/
+provider/pulumi-resource-lagoon
+
 # Pulumi
 .pulumi/
 Pulumi.*.yaml

@@ -49,8 +49,9 @@ from lagoon import (
 # Import registry
 from registry import install_harbor
 
-# Import pulumi_lagoon for deploy targets and projects
-import pulumi_lagoon as lagoon
+# Import pulumi_lagoon native provider for deploy targets and projects
+import pulumi_lagoon
+from pulumi_lagoon.lagoon import DeployTarget, DeployTargetArgs, Project, ProjectArgs
 
 # =============================================================================
 # Configuration
@@ -376,10 +377,19 @@ if lagoon_remote is not None:
     # This ensures we use the same secret the API is configured with
     read_jwt_secret = command.Command(
         "read-jwt-secret",
-        create=f'kubectl --context {cluster_config.context_name} -n {namespace_config.lagoon_core} get secret lagoon-core-secrets -o jsonpath="{{.data.JWTSECRET}}" | base64 -d',
+        create=f'kubectl --context {cluster_config.context_name} -n {namespace_config.lagoon_core} get secret lagoon-core-lagoon-core-secrets -o jsonpath="{{.data.JWTSECRET}}" | base64 -d',
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
+            additional_secret_outputs=["stdout"],
         ),
+    )
+
+    # Create native Lagoon provider instance
+    lagoon_provider = pulumi_lagoon.Provider(
+        "lagoon-provider",
+        api_url=lagoon_core.api_url,
+        jwt_secret=pulumi.Output.secret(read_jwt_secret.stdout),
+        insecure=True,
     )
 
     # Determine dependencies for deploy target
@@ -389,9 +399,9 @@ if lagoon_remote is not None:
 
     # Create a deploy target for the single cluster
     # This registers the Kind cluster as a deploy target in Lagoon
-    deploy_target = lagoon.LagoonDeployTarget(
+    deploy_target = DeployTarget(
         "single-cluster-target",
-        args=lagoon.LagoonDeployTargetArgs(
+        args=DeployTargetArgs(
             name=config.deploy_target_name,
             console_url="https://kubernetes.default.svc",  # Internal K8s API
             cloud_provider="kind",
@@ -401,16 +411,10 @@ if lagoon_remote is not None:
             # Router pattern determines how routes are generated
             # Format: ${environment}.${project}.${cluster-domain}
             router_pattern=f"${{environment}}.${{project}}.{domain_config.base}",
-            # API configuration for the pulumi-lagoon provider
-            # Use external API URL since Pulumi runs outside the cluster
-            api_url=lagoon_core.api_url,
-            # Use JWT secret from the deployed Helm chart (read from k8s secret)
-            jwt_secret=read_jwt_secret.stdout,
-            # Disable SSL verification for self-signed certificates (local development)
-            verify_ssl=False,
         ),
         opts=pulumi.ResourceOptions(
             depends_on=deploy_target_deps,
+            provider=lagoon_provider,
         ),
     )
 
@@ -424,12 +428,12 @@ if deploy_target is not None and config.create_example_project:
     pulumi.log.info("Creating example project...")
 
     # Create the example Drupal project
-    example_project = lagoon.LagoonProject(
+    example_project = Project(
         "example-project",
-        args=lagoon.LagoonProjectArgs(
+        args=ProjectArgs(
             name=config.example_project_name,
             git_url=config.example_project_git_url,
-            deploytarget_id=deploy_target.id.apply(lambda x: int(x)),
+            deploytarget_id=deploy_target.lagoon_id,
             production_environment="main",
             # Branch pattern - which branches can be deployed
             branches="^(main|develop|feature/.*)$",
@@ -438,10 +442,11 @@ if deploy_target is not None and config.create_example_project:
         ),
         opts=pulumi.ResourceOptions(
             depends_on=[deploy_target],
+            provider=lagoon_provider,
         ),
     )
 
-    pulumi.export("example_project_id", example_project.id)
+    pulumi.export("example_project_id", example_project.lagoon_id)
     pulumi.export("example_project_name", config.example_project_name)
 
 # =============================================================================

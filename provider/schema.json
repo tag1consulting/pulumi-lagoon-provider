@@ -1,0 +1,1016 @@
+{
+  "name": "lagoon",
+  "displayName": "Lagoon",
+  "version": "0.2.0",
+  "description": "Manage Lagoon hosting platform resources as infrastructure-as-code.",
+  "keywords": [
+    "lagoon",
+    "hosting",
+    "kubernetes",
+    "pulumi"
+  ],
+  "homepage": "https://github.com/tag1consulting/pulumi-lagoon-provider",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/tag1consulting/pulumi-lagoon-provider",
+  "pluginDownloadURL": "https://github.com/tag1consulting/pulumi-lagoon-provider/releases/download/v${VERSION}",
+  "publisher": "Tag1 Consulting",
+  "language": {
+    "go": {
+      "generateExtraInputTypes": true,
+      "generateResourceContainerTypes": true,
+      "importBasePath": "github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon"
+    },
+    "nodejs": {
+      "packageName": "@tag1consulting/pulumi-lagoon",
+      "respectSchemaVersion": true
+    },
+    "python": {
+      "packageName": "pulumi_lagoon",
+      "pyproject": {
+        "enabled": true
+      },
+      "respectSchemaVersion": true
+    }
+  },
+  "config": {
+    "variables": {
+      "apiUrl": {
+        "type": "string",
+        "description": "The Lagoon GraphQL API endpoint URL.",
+        "default": "https://api.lagoon.sh/graphql",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_API_URL"
+          ]
+        },
+        "secret": true
+      },
+      "insecure": {
+        "type": "boolean",
+        "description": "Disable SSL certificate verification when connecting to the Lagoon API.",
+        "default": false,
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_INSECURE"
+          ]
+        }
+      },
+      "jwtAudience": {
+        "type": "string",
+        "description": "The audience claim for generated JWT tokens. Defaults to 'api.dev'.",
+        "default": "api.dev",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_JWT_AUDIENCE"
+          ]
+        }
+      },
+      "jwtSecret": {
+        "type": "string",
+        "description": "The Lagoon core JWTSECRET. Used to generate admin tokens on-the-fly.",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_JWT_SECRET"
+          ]
+        },
+        "secret": true
+      },
+      "token": {
+        "type": "string",
+        "description": "A pre-configured JWT authentication token for the Lagoon API.",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_TOKEN"
+          ]
+        },
+        "secret": true
+      }
+    }
+  },
+  "types": {
+    "lagoon:resources:TaskArgumentInput": {
+      "properties": {
+        "displayName": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "type": "object",
+      "required": [
+        "name",
+        "displayName",
+        "type"
+      ]
+    }
+  },
+  "provider": {
+    "properties": {
+      "apiUrl": {
+        "type": "string",
+        "description": "The Lagoon GraphQL API endpoint URL.",
+        "default": "https://api.lagoon.sh/graphql",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_API_URL"
+          ]
+        },
+        "secret": true
+      },
+      "insecure": {
+        "type": "boolean",
+        "description": "Disable SSL certificate verification when connecting to the Lagoon API.",
+        "default": false,
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_INSECURE"
+          ]
+        }
+      },
+      "jwtAudience": {
+        "type": "string",
+        "description": "The audience claim for generated JWT tokens. Defaults to 'api.dev'.",
+        "default": "api.dev",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_JWT_AUDIENCE"
+          ]
+        }
+      },
+      "jwtSecret": {
+        "type": "string",
+        "description": "The Lagoon core JWTSECRET. Used to generate admin tokens on-the-fly.",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_JWT_SECRET"
+          ]
+        },
+        "secret": true
+      },
+      "token": {
+        "type": "string",
+        "description": "A pre-configured JWT authentication token for the Lagoon API.",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_TOKEN"
+          ]
+        },
+        "secret": true
+      }
+    },
+    "inputProperties": {
+      "apiUrl": {
+        "type": "string",
+        "description": "The Lagoon GraphQL API endpoint URL.",
+        "default": "https://api.lagoon.sh/graphql",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_API_URL"
+          ]
+        },
+        "secret": true
+      },
+      "insecure": {
+        "type": "boolean",
+        "description": "Disable SSL certificate verification when connecting to the Lagoon API.",
+        "default": false,
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_INSECURE"
+          ]
+        }
+      },
+      "jwtAudience": {
+        "type": "string",
+        "description": "The audience claim for generated JWT tokens. Defaults to 'api.dev'.",
+        "default": "api.dev",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_JWT_AUDIENCE"
+          ]
+        }
+      },
+      "jwtSecret": {
+        "type": "string",
+        "description": "The Lagoon core JWTSECRET. Used to generate admin tokens on-the-fly.",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_JWT_SECRET"
+          ]
+        },
+        "secret": true
+      },
+      "token": {
+        "type": "string",
+        "description": "A pre-configured JWT authentication token for the Lagoon API.",
+        "defaultInfo": {
+          "environment": [
+            "LAGOON_TOKEN"
+          ]
+        },
+        "secret": true
+      }
+    }
+  },
+  "resources": {
+    "lagoon:lagoon:DeployTarget": {
+      "description": "Manages a Lagoon Kubernetes deploy target (cluster).",
+      "properties": {
+        "buildImage": {
+          "type": "string",
+          "description": "Custom build image."
+        },
+        "cloudProvider": {
+          "type": "string",
+          "description": "Cloud provider (e.g., 'kind', 'aws', 'gcp'). Defaults to 'kind'."
+        },
+        "cloudRegion": {
+          "type": "string",
+          "description": "Cloud region (e.g., 'us-east-1', 'local'). Defaults to 'local'."
+        },
+        "consoleUrl": {
+          "type": "string",
+          "description": "The Kubernetes API URL."
+        },
+        "created": {
+          "type": "string"
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Whether the deploy target is disabled."
+        },
+        "lagoonId": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string",
+          "description": "The deploy target name."
+        },
+        "routerPattern": {
+          "type": "string",
+          "description": "Router pattern for the deploy target."
+        },
+        "sharedBastionSecret": {
+          "type": "string",
+          "description": "Shared bastion secret for the deploy target.",
+          "secret": true
+        },
+        "sshHost": {
+          "type": "string",
+          "description": "SSH host for builds."
+        },
+        "sshPort": {
+          "type": "string",
+          "description": "SSH port for builds."
+        }
+      },
+      "required": [
+        "name",
+        "consoleUrl",
+        "lagoonId",
+        "created"
+      ],
+      "inputProperties": {
+        "buildImage": {
+          "type": "string",
+          "description": "Custom build image."
+        },
+        "cloudProvider": {
+          "type": "string",
+          "description": "Cloud provider (e.g., 'kind', 'aws', 'gcp'). Defaults to 'kind'."
+        },
+        "cloudRegion": {
+          "type": "string",
+          "description": "Cloud region (e.g., 'us-east-1', 'local'). Defaults to 'local'."
+        },
+        "consoleUrl": {
+          "type": "string",
+          "description": "The Kubernetes API URL."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Whether the deploy target is disabled."
+        },
+        "name": {
+          "type": "string",
+          "description": "The deploy target name."
+        },
+        "routerPattern": {
+          "type": "string",
+          "description": "Router pattern for the deploy target."
+        },
+        "sharedBastionSecret": {
+          "type": "string",
+          "description": "Shared bastion secret for the deploy target.",
+          "secret": true
+        },
+        "sshHost": {
+          "type": "string",
+          "description": "SSH host for builds."
+        },
+        "sshPort": {
+          "type": "string",
+          "description": "SSH port for builds."
+        }
+      },
+      "requiredInputs": [
+        "name",
+        "consoleUrl"
+      ]
+    },
+    "lagoon:lagoon:DeployTargetConfig": {
+      "description": "Manages a deploy target configuration to route branches/PRs to specific clusters.",
+      "properties": {
+        "branches": {
+          "type": "string",
+          "description": "Regex pattern for branches to match."
+        },
+        "deployTargetId": {
+          "type": "integer",
+          "description": "The deploy target (Kubernetes cluster) ID."
+        },
+        "deployTargetProjectPattern": {
+          "type": "string",
+          "description": "Optional namespace pattern."
+        },
+        "lagoonId": {
+          "type": "integer"
+        },
+        "projectId": {
+          "type": "integer",
+          "description": "The project ID."
+        },
+        "pullrequests": {
+          "type": "string",
+          "description": "Whether to handle PRs ('true' or 'false')."
+        },
+        "weight": {
+          "type": "integer",
+          "description": "Priority weight (higher = more priority)."
+        }
+      },
+      "required": [
+        "projectId",
+        "deployTargetId",
+        "lagoonId"
+      ],
+      "inputProperties": {
+        "branches": {
+          "type": "string",
+          "description": "Regex pattern for branches to match."
+        },
+        "deployTargetId": {
+          "type": "integer",
+          "description": "The deploy target (Kubernetes cluster) ID."
+        },
+        "deployTargetProjectPattern": {
+          "type": "string",
+          "description": "Optional namespace pattern."
+        },
+        "projectId": {
+          "type": "integer",
+          "description": "The project ID."
+        },
+        "pullrequests": {
+          "type": "string",
+          "description": "Whether to handle PRs ('true' or 'false')."
+        },
+        "weight": {
+          "type": "integer",
+          "description": "Priority weight (higher = more priority)."
+        }
+      },
+      "requiredInputs": [
+        "projectId",
+        "deployTargetId"
+      ]
+    },
+    "lagoon:lagoon:Environment": {
+      "description": "Manages a Lagoon environment (branch/PR deployment).",
+      "properties": {
+        "autoIdle": {
+          "type": "integer",
+          "description": "Whether to auto-idle this environment (1=yes, 0=no)."
+        },
+        "created": {
+          "type": "string",
+          "description": "The creation timestamp."
+        },
+        "deployBaseRef": {
+          "type": "string",
+          "description": "The base ref for the deployment."
+        },
+        "deployHeadRef": {
+          "type": "string",
+          "description": "The head ref for pull request deployments."
+        },
+        "deployTitle": {
+          "type": "string",
+          "description": "Title for pull request deployments."
+        },
+        "deployType": {
+          "type": "string",
+          "description": "Deployment type: 'branch' or 'pullrequest'."
+        },
+        "environmentType": {
+          "type": "string",
+          "description": "Environment type: 'production', 'development', or 'standby'."
+        },
+        "lagoonId": {
+          "type": "integer",
+          "description": "The Lagoon-assigned numeric ID of the environment."
+        },
+        "name": {
+          "type": "string",
+          "description": "The environment name (typically the branch name)."
+        },
+        "openshiftProjectName": {
+          "type": "string",
+          "description": "Override namespace name on the cluster."
+        },
+        "projectId": {
+          "type": "integer",
+          "description": "The parent project ID."
+        },
+        "route": {
+          "type": "string",
+          "description": "The primary route URL for this environment."
+        },
+        "routes": {
+          "type": "string",
+          "description": "All route URLs for this environment."
+        }
+      },
+      "required": [
+        "name",
+        "projectId",
+        "deployType",
+        "environmentType",
+        "lagoonId",
+        "route",
+        "routes",
+        "created"
+      ],
+      "inputProperties": {
+        "autoIdle": {
+          "type": "integer",
+          "description": "Whether to auto-idle this environment (1=yes, 0=no)."
+        },
+        "deployBaseRef": {
+          "type": "string",
+          "description": "The base ref for the deployment."
+        },
+        "deployHeadRef": {
+          "type": "string",
+          "description": "The head ref for pull request deployments."
+        },
+        "deployTitle": {
+          "type": "string",
+          "description": "Title for pull request deployments."
+        },
+        "deployType": {
+          "type": "string",
+          "description": "Deployment type: 'branch' or 'pullrequest'."
+        },
+        "environmentType": {
+          "type": "string",
+          "description": "Environment type: 'production', 'development', or 'standby'."
+        },
+        "name": {
+          "type": "string",
+          "description": "The environment name (typically the branch name)."
+        },
+        "openshiftProjectName": {
+          "type": "string",
+          "description": "Override namespace name on the cluster."
+        },
+        "projectId": {
+          "type": "integer",
+          "description": "The parent project ID."
+        }
+      },
+      "requiredInputs": [
+        "name",
+        "projectId",
+        "deployType",
+        "environmentType"
+      ]
+    },
+    "lagoon:lagoon:NotificationEmail": {
+      "description": "Manages a Lagoon Email notification configuration.",
+      "properties": {
+        "emailAddress": {
+          "type": "string",
+          "description": "The email address to send notifications to."
+        },
+        "lagoonId": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string",
+          "description": "The notification name."
+        }
+      },
+      "required": [
+        "name",
+        "emailAddress",
+        "lagoonId"
+      ],
+      "inputProperties": {
+        "emailAddress": {
+          "type": "string",
+          "description": "The email address to send notifications to."
+        },
+        "name": {
+          "type": "string",
+          "description": "The notification name."
+        }
+      },
+      "requiredInputs": [
+        "name",
+        "emailAddress"
+      ]
+    },
+    "lagoon:lagoon:NotificationMicrosoftTeams": {
+      "description": "Manages a Lagoon Microsoft Teams notification configuration.",
+      "properties": {
+        "lagoonId": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string",
+          "description": "The notification name."
+        },
+        "webhook": {
+          "type": "string",
+          "description": "The Microsoft Teams webhook URL (stored as secret).",
+          "secret": true
+        }
+      },
+      "required": [
+        "name",
+        "webhook",
+        "lagoonId"
+      ],
+      "inputProperties": {
+        "name": {
+          "type": "string",
+          "description": "The notification name."
+        },
+        "webhook": {
+          "type": "string",
+          "description": "The Microsoft Teams webhook URL (stored as secret).",
+          "secret": true
+        }
+      },
+      "requiredInputs": [
+        "name",
+        "webhook"
+      ]
+    },
+    "lagoon:lagoon:NotificationRocketChat": {
+      "description": "Manages a Lagoon RocketChat notification configuration.",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "description": "The RocketChat channel."
+        },
+        "lagoonId": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string",
+          "description": "The notification name."
+        },
+        "webhook": {
+          "type": "string",
+          "description": "The RocketChat webhook URL (stored as secret).",
+          "secret": true
+        }
+      },
+      "required": [
+        "name",
+        "webhook",
+        "channel",
+        "lagoonId"
+      ],
+      "inputProperties": {
+        "channel": {
+          "type": "string",
+          "description": "The RocketChat channel."
+        },
+        "name": {
+          "type": "string",
+          "description": "The notification name."
+        },
+        "webhook": {
+          "type": "string",
+          "description": "The RocketChat webhook URL (stored as secret).",
+          "secret": true
+        }
+      },
+      "requiredInputs": [
+        "name",
+        "webhook",
+        "channel"
+      ]
+    },
+    "lagoon:lagoon:NotificationSlack": {
+      "description": "Manages a Lagoon Slack notification configuration.",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "description": "The Slack channel (e.g., '#deployments')."
+        },
+        "lagoonId": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string",
+          "description": "The notification name."
+        },
+        "webhook": {
+          "type": "string",
+          "description": "The Slack webhook URL (stored as secret).",
+          "secret": true
+        }
+      },
+      "required": [
+        "name",
+        "webhook",
+        "channel",
+        "lagoonId"
+      ],
+      "inputProperties": {
+        "channel": {
+          "type": "string",
+          "description": "The Slack channel (e.g., '#deployments')."
+        },
+        "name": {
+          "type": "string",
+          "description": "The notification name."
+        },
+        "webhook": {
+          "type": "string",
+          "description": "The Slack webhook URL (stored as secret).",
+          "secret": true
+        }
+      },
+      "requiredInputs": [
+        "name",
+        "webhook",
+        "channel"
+      ]
+    },
+    "lagoon:lagoon:Project": {
+      "description": "Manages a Lagoon project (application/site).",
+      "properties": {
+        "autoIdle": {
+          "type": "integer",
+          "description": "Whether to auto-idle environments (1=yes, 0=no)."
+        },
+        "branches": {
+          "type": "string",
+          "description": "Regex pattern for branches to deploy."
+        },
+        "created": {
+          "type": "string",
+          "description": "The creation timestamp of the project."
+        },
+        "deploytargetId": {
+          "type": "integer",
+          "description": "The deploy target (Kubernetes cluster) ID."
+        },
+        "gitUrl": {
+          "type": "string",
+          "description": "The Git repository URL (SSH or HTTPS format)."
+        },
+        "lagoonId": {
+          "type": "integer",
+          "description": "The Lagoon-assigned numeric ID of the project."
+        },
+        "name": {
+          "type": "string",
+          "description": "The project name. Must be unique, lowercase alphanumeric with hyphens."
+        },
+        "openshiftProjectPattern": {
+          "type": "string",
+          "description": "Namespace pattern for the project on the cluster."
+        },
+        "productionEnvironment": {
+          "type": "string",
+          "description": "Name of the production branch/environment."
+        },
+        "pullrequests": {
+          "type": "string",
+          "description": "Regex pattern for pull requests to deploy."
+        },
+        "storageCalc": {
+          "type": "integer",
+          "description": "Whether to calculate storage (1=yes, 0=no)."
+        }
+      },
+      "required": [
+        "name",
+        "gitUrl",
+        "deploytargetId",
+        "lagoonId",
+        "created"
+      ],
+      "inputProperties": {
+        "autoIdle": {
+          "type": "integer",
+          "description": "Whether to auto-idle environments (1=yes, 0=no)."
+        },
+        "branches": {
+          "type": "string",
+          "description": "Regex pattern for branches to deploy."
+        },
+        "deploytargetId": {
+          "type": "integer",
+          "description": "The deploy target (Kubernetes cluster) ID."
+        },
+        "gitUrl": {
+          "type": "string",
+          "description": "The Git repository URL (SSH or HTTPS format)."
+        },
+        "name": {
+          "type": "string",
+          "description": "The project name. Must be unique, lowercase alphanumeric with hyphens."
+        },
+        "openshiftProjectPattern": {
+          "type": "string",
+          "description": "Namespace pattern for the project on the cluster."
+        },
+        "productionEnvironment": {
+          "type": "string",
+          "description": "Name of the production branch/environment."
+        },
+        "pullrequests": {
+          "type": "string",
+          "description": "Regex pattern for pull requests to deploy."
+        },
+        "storageCalc": {
+          "type": "integer",
+          "description": "Whether to calculate storage (1=yes, 0=no)."
+        }
+      },
+      "requiredInputs": [
+        "name",
+        "gitUrl",
+        "deploytargetId"
+      ]
+    },
+    "lagoon:lagoon:ProjectNotification": {
+      "description": "Links a notification to a Lagoon project.",
+      "properties": {
+        "notificationName": {
+          "type": "string",
+          "description": "Name of the notification to link."
+        },
+        "notificationType": {
+          "type": "string",
+          "description": "Type of notification: 'slack', 'rocketchat', 'email', or 'microsoftteams'."
+        },
+        "projectId": {
+          "type": "integer",
+          "description": "The Lagoon project ID."
+        },
+        "projectName": {
+          "type": "string",
+          "description": "The project name."
+        }
+      },
+      "required": [
+        "projectName",
+        "notificationType",
+        "notificationName",
+        "projectId"
+      ],
+      "inputProperties": {
+        "notificationName": {
+          "type": "string",
+          "description": "Name of the notification to link."
+        },
+        "notificationType": {
+          "type": "string",
+          "description": "Type of notification: 'slack', 'rocketchat', 'email', or 'microsoftteams'."
+        },
+        "projectName": {
+          "type": "string",
+          "description": "The project name."
+        }
+      },
+      "requiredInputs": [
+        "projectName",
+        "notificationType",
+        "notificationName"
+      ]
+    },
+    "lagoon:lagoon:Task": {
+      "description": "Manages a Lagoon advanced task definition.",
+      "properties": {
+        "arguments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/types/lagoon:resources:TaskArgumentInput"
+          },
+          "description": "List of argument definitions for the task."
+        },
+        "command": {
+          "type": "string",
+          "description": "Command to execute (required for 'command' type)."
+        },
+        "confirmationText": {
+          "type": "string",
+          "description": "Text to display for user confirmation."
+        },
+        "created": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string",
+          "description": "Task description."
+        },
+        "environmentId": {
+          "type": "integer",
+          "description": "Environment ID (for environment-scoped tasks)."
+        },
+        "groupName": {
+          "type": "string",
+          "description": "Group name (for group-scoped tasks)."
+        },
+        "image": {
+          "type": "string",
+          "description": "Container image to run (required for 'image' type)."
+        },
+        "lagoonId": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string",
+          "description": "The task definition name."
+        },
+        "permission": {
+          "type": "string",
+          "description": "Permission level: 'guest', 'developer', or 'maintainer'."
+        },
+        "projectId": {
+          "type": "integer",
+          "description": "Project ID (for project-scoped tasks)."
+        },
+        "service": {
+          "type": "string",
+          "description": "Service container name to run the task in."
+        },
+        "systemWide": {
+          "type": "boolean",
+          "description": "If true, task is available system-wide (platform admin only)."
+        },
+        "type": {
+          "type": "string",
+          "description": "Task type: 'command' or 'image'."
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "service",
+        "lagoonId",
+        "created"
+      ],
+      "inputProperties": {
+        "arguments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/types/lagoon:resources:TaskArgumentInput"
+          },
+          "description": "List of argument definitions for the task."
+        },
+        "command": {
+          "type": "string",
+          "description": "Command to execute (required for 'command' type)."
+        },
+        "confirmationText": {
+          "type": "string",
+          "description": "Text to display for user confirmation."
+        },
+        "description": {
+          "type": "string",
+          "description": "Task description."
+        },
+        "environmentId": {
+          "type": "integer",
+          "description": "Environment ID (for environment-scoped tasks)."
+        },
+        "groupName": {
+          "type": "string",
+          "description": "Group name (for group-scoped tasks)."
+        },
+        "image": {
+          "type": "string",
+          "description": "Container image to run (required for 'image' type)."
+        },
+        "name": {
+          "type": "string",
+          "description": "The task definition name."
+        },
+        "permission": {
+          "type": "string",
+          "description": "Permission level: 'guest', 'developer', or 'maintainer'."
+        },
+        "projectId": {
+          "type": "integer",
+          "description": "Project ID (for project-scoped tasks)."
+        },
+        "service": {
+          "type": "string",
+          "description": "Service container name to run the task in."
+        },
+        "systemWide": {
+          "type": "boolean",
+          "description": "If true, task is available system-wide (platform admin only)."
+        },
+        "type": {
+          "type": "string",
+          "description": "Task type: 'command' or 'image'."
+        }
+      },
+      "requiredInputs": [
+        "name",
+        "type",
+        "service"
+      ]
+    },
+    "lagoon:lagoon:Variable": {
+      "description": "Manages a Lagoon environment or project-level variable.",
+      "properties": {
+        "environmentId": {
+          "type": "integer",
+          "description": "Environment ID (omit for project-level variables)."
+        },
+        "lagoonId": {
+          "type": "integer",
+          "description": "The Lagoon-assigned numeric ID of the variable."
+        },
+        "name": {
+          "type": "string",
+          "description": "The variable name."
+        },
+        "projectId": {
+          "type": "integer",
+          "description": "The parent project ID."
+        },
+        "scope": {
+          "type": "string",
+          "description": "Variable scope: 'build', 'runtime', 'global', 'container_registry', or 'internal_container_registry'."
+        },
+        "value": {
+          "type": "string",
+          "description": "The variable value (stored as secret).",
+          "secret": true
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "projectId",
+        "scope",
+        "lagoonId"
+      ],
+      "inputProperties": {
+        "environmentId": {
+          "type": "integer",
+          "description": "Environment ID (omit for project-level variables)."
+        },
+        "name": {
+          "type": "string",
+          "description": "The variable name."
+        },
+        "projectId": {
+          "type": "integer",
+          "description": "The parent project ID."
+        },
+        "scope": {
+          "type": "string",
+          "description": "Variable scope: 'build', 'runtime', 'global', 'container_registry', or 'internal_container_registry'."
+        },
+        "value": {
+          "type": "string",
+          "description": "The variable value (stored as secret).",
+          "secret": true
+        }
+      },
+      "requiredInputs": [
+        "name",
+        "value",
+        "projectId",
+        "scope"
+      ]
+    }
+  }
+}

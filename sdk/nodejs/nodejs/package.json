@@ -1,0 +1,29 @@
+{
+    "name": "@tag1consulting/pulumi-lagoon",
+    "version": "0.2.0-dev",
+    "keywords": [
+        "lagoon",
+        "hosting",
+        "kubernetes",
+        "pulumi"
+    ],
+    "homepage": "https://github.com/tag1consulting/pulumi-lagoon-provider",
+    "repository": "https://github.com/tag1consulting/pulumi-lagoon-provider",
+    "license": "Apache-2.0",
+    "scripts": {
+        "build": "tsc"
+    },
+    "dependencies": {
+        "@pulumi/pulumi": "^3.142.0"
+    },
+    "devDependencies": {
+        "@types/node": "^18",
+        "typescript": "^4.3.5"
+    },
+    "pulumi": {
+        "resource": true,
+        "name": "lagoon",
+        "version": "0.2.0-dev",
+        "server": "https://github.com/tag1consulting/pulumi-lagoon-provider/releases/download/v${VERSION}"
+    }
+}

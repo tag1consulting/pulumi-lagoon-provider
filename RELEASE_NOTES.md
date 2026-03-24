@@ -1,3 +1,72 @@
+# Release v0.2.0 (2026-03-24)
+
+This is a major release that replaces the Python dynamic provider with a native Go provider and generated multi-language SDKs.
+
+## Breaking Changes
+
+### Python SDK: Class names and import paths changed
+
+The `pulumi_lagoon` package on PyPI now ships the **native Go provider SDK** instead of the Python dynamic provider. All class names, module paths, and resource behaviors have changed.
+
+**Old (v0.1.x dynamic provider):**
+```python
+from pulumi_lagoon import LagoonProject, LagoonEnvironment, LagoonVariable
+from pulumi_lagoon import LagoonNotificationSlack, LagoonProjectNotification
+```
+
+**New (v0.2.x native SDK):**
+```python
+from pulumi_lagoon.lagoon import Project, Environment, Variable
+from pulumi_lagoon.lagoon import NotificationSlack, ProjectNotification
+```
+
+### Python 3.8 no longer supported
+
+The native SDK requires Python 3.9 or later.
+
+### Resource ID semantics changed
+
+Notification resources now use numeric Lagoon IDs as the Pulumi resource ID (instead of the resource name). This may require `pulumi import` to re-adopt existing resources.
+
+## Migration Guide
+
+1. Upgrade: `pip install --upgrade pulumi-lagoon`
+2. Update your Pulumi programs to use the new class names and import paths (see above)
+3. If you have existing state with v0.1.x resources, you may need to run `pulumi refresh` or re-import resources using `lagoon:lagoon:*` type tokens (e.g., `pulumi import lagoon:lagoon:NotificationSlack my-slack my-notification-name`)
+
+## Highlights
+
+- **Native Go provider**: Built with `pulumi-go-provider` for full type safety and performance
+- **Multi-language SDKs**: Generated Python, TypeScript, and Go SDKs from a single schema
+- **Improved correctness**: Proper Read/Diff/Update lifecycle for all resources; idempotent creates; graceful not-found handling
+- **Comprehensive tests**: 198 unit tests covering all resource types
+- **TypeScript SDK**: `@tag1consulting/pulumi-lagoon` on npm
+- **Go SDK**: `github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon`
+
+## New Features
+
+- All resources support create-or-update semantics (idempotent)
+- `DeployTargetConfig` resource for managing deploy target configurations
+- Improved Diff logic prevents spurious updates for optional fields with API defaults
+- `ErrNotFound` handling in Read methods marks deleted resources for re-creation
+
+## Resources
+
+All resources from v0.1.x are available under the new `pulumi_lagoon.lagoon` module:
+- `Project` (was `LagoonProject`)
+- `Environment` (was `LagoonEnvironment`)
+- `Variable` (was `LagoonVariable`)
+- `DeployTarget` (was `LagoonDeployTarget`)
+- `DeployTargetConfig` (was `LagoonDeployTargetConfig`)
+- `NotificationSlack` (was `LagoonNotificationSlack`)
+- `NotificationRocketChat` (was `LagoonNotificationRocketChat`)
+- `NotificationEmail` (was `LagoonNotificationEmail`)
+- `NotificationMicrosoftTeams` (was `LagoonNotificationMicrosoftTeams`)
+- `ProjectNotification` (was `LagoonProjectNotification`)
+- `Task` (was `LagoonTask`)
+
+---
+
 # Release v0.1.2 (2026-02-06)
 
 This release adds multi-version Lagoon API compatibility, supporting Lagoon versions v2.24.1 through v2.30.0.

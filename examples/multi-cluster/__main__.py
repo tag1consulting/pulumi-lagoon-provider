@@ -51,6 +51,9 @@ from lagoon import (
 )
 from registry import install_harbor
 
+# Import native Lagoon provider for deploy targets and projects
+import pulumi_lagoon
+
 # =============================================================================
 # Configuration
 # =============================================================================
@@ -436,8 +439,28 @@ example_project = None
 if lagoon_core is not None and config.create_example_project:
     pulumi.log.info("Creating example Drupal project with multi-cluster routing...")
 
+    from pulumi_command import local as command
+
+    # Read the JWT secret from the k8s secret created by the Helm chart
+    read_jwt_secret = command.Command(
+        "read-jwt-secret",
+        create=f'kubectl --context kind-lagoon-prod -n {namespace_config.lagoon_core} get secret prod-core-lagoon-core-secrets -o jsonpath="{{.data.JWTSECRET}}" | base64 -d',
+        opts=pulumi.ResourceOptions(
+            depends_on=[lagoon_core.release],
+            additional_secret_outputs=["stdout"],
+        ),
+    )
+
+    # Create native Lagoon provider instance
+    lagoon_provider = pulumi_lagoon.Provider(
+        "lagoon-provider",
+        api_url=lagoon_core.api_url,
+        jwt_secret=pulumi.Output.secret(read_jwt_secret.stdout),
+        insecure=True,
+    )
+
     # Determine dependencies for deploy targets
-    deploy_target_deps = [lagoon_core.release, keycloak_config_job]
+    deploy_target_deps = [lagoon_core.release, keycloak_config_job, read_jwt_secret]
     if knex_migrations is not None:
         deploy_target_deps.append(knex_migrations)
 
@@ -455,6 +478,7 @@ if lagoon_core is not None and config.create_example_project:
         domain_config=domain_config,
         # SSH host is the Lagoon SSH service in the prod cluster
         ssh_host=lagoon_core.ssh_host,
+        lagoon_provider=lagoon_provider,
         opts=pulumi.ResourceOptions(
             depends_on=deploy_target_deps,
         ),
@@ -471,6 +495,7 @@ if lagoon_core is not None and config.create_example_project:
         deploy_targets=deploy_targets,
         git_url=config.example_project_git_url,
         production_environment="main",
+        lagoon_provider=lagoon_provider,
         opts=pulumi.ResourceOptions(
             depends_on=[deploy_targets.prod_target, deploy_targets.nonprod_target],
         ),
