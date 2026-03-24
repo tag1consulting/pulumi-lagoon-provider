@@ -10,10 +10,7 @@ import (
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 		cfg := config.New(ctx, "")
-		deploytargetId, err := cfg.TryInt("deploytargetId")
-		if err != nil {
-			deploytargetId = 1
-		}
+		deploytargetId := cfg.RequireInt("deploytargetId")
 
 		lagoonCfg := config.New(ctx, "lagoon")
 		apiUrl := lagoonCfg.Get("apiUrl")

@@ -52,6 +52,9 @@ func (c *LagoonConfig) Annotate(a infer.Annotator) {
 // Configure validates the config and prepares it for use.
 // Called by the Pulumi engine when the provider is configured.
 func (c *LagoonConfig) Configure(ctx context.Context) error {
+	// Track whether token was derived from JWTSecret (vs explicitly provided)
+	tokenFromSecret := false
+
 	// If no direct token, try generating from JWT secret
 	if c.Token == "" && c.JWTSecret != "" {
 		token, err := c.generateAdminToken()
@@ -59,6 +62,7 @@ func (c *LagoonConfig) Configure(ctx context.Context) error {
 			return fmt.Errorf("failed to generate admin token from jwtSecret: %w", err)
 		}
 		c.Token = token
+		tokenFromSecret = true
 	}
 
 	// Also check env vars if nothing is configured yet
@@ -75,12 +79,19 @@ func (c *LagoonConfig) Configure(ctx context.Context) error {
 				return fmt.Errorf("failed to generate token from LAGOON_JWT_SECRET: %w", err)
 			}
 			c.Token = token
+			tokenFromSecret = true
 		}
 	}
 
 	if c.Token == "" {
 		return fmt.Errorf("lagoon authentication required: set 'token' or 'jwtSecret' in provider config, " +
 			"or use LAGOON_TOKEN/LAGOON_JWT_SECRET environment variables")
+	}
+
+	// Clear JWTSecret if token was explicitly provided (not derived from secret)
+	// so NewClient() won't set up a refresh callback that overrides the explicit token
+	if !tokenFromSecret {
+		c.JWTSecret = ""
 	}
 
 	return nil
@@ -94,7 +105,8 @@ func (c *LagoonConfig) NewClient() *client.Client {
 		opts = append(opts, client.WithInsecureSSL())
 	}
 
-	// If we have a JWT secret, enable automatic token refresh
+	// Only enable token refresh when the token was derived from a JWT secret
+	// (not when an explicit token was provided via config or LAGOON_TOKEN)
 	if c.JWTSecret != "" {
 		audience := c.JWTAudience
 		secret := c.JWTSecret

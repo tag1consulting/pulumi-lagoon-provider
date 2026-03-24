@@ -139,11 +139,14 @@ func (r *Variable) Read(ctx context.Context, req infer.ReadRequest[VariableArgs,
 			}
 			environmentID = &eid
 		}
-	} else {
-		// Refresh
+	} else if req.State.Name != "" {
+		// Refresh from existing state
 		projectID = req.State.ProjectID
 		environmentID = req.State.EnvironmentID
 		varName = req.State.Name
+	} else {
+		return infer.ReadResponse[VariableArgs, VariableState]{},
+			fmt.Errorf("invalid variable import ID '%s': expected format {project_id}:{env_id}:{var_name} or {project_id}::{var_name}", req.ID)
 	}
 
 	v, err := c.GetVariable(ctx, varName, projectID, environmentID)

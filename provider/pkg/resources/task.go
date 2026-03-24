@@ -270,11 +270,20 @@ func (r *Task) Diff(ctx context.Context, req infer.DiffRequest[TaskArgs, TaskSta
 }
 
 // taskArgumentsDiffer returns true if two optional TaskArgumentInput slices differ.
+// Treats nil and empty slice as equivalent.
 func taskArgumentsDiffer(a, b *[]TaskArgumentInput) bool {
-	if a == nil && b == nil {
+	aLen := 0
+	if a != nil {
+		aLen = len(*a)
+	}
+	bLen := 0
+	if b != nil {
+		bLen = len(*b)
+	}
+	if aLen == 0 && bLen == 0 {
 		return false
 	}
-	if a == nil || b == nil {
+	if aLen != bLen {
 		return true
 	}
 	if len(*a) != len(*b) {

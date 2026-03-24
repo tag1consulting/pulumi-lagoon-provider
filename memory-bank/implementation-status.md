@@ -43,7 +43,7 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 ### Phase 5: Integration Testing - IN PROGRESS
 - **single-cluster**: TESTED (Create, Read verified via `pulumi refresh`)
 - **simple-project**: TESTED (full CRUD — Create, Read, Update, Delete all verified)
-- **multi-cluster**: TESTED (2026-02-24, re-tested with all fixes)
+- **multi-cluster**: TESTED (2026-02-23, re-tested with all fixes)
   - 55 resources deployed (2 Kind clusters + full Lagoon stack)
   - Native provider created: 2 DeployTargets, 1 Project, 2 DeployTargetConfigs
   - Read verified via `pulumi refresh` (all resources read correctly from API)
@@ -59,10 +59,10 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 - **TypeScript SDK**: NOT YET TESTED
 - **Go SDK**: NOT YET TESTED
 
-### Phase 6: CI/CD + Docs + Migration - NOT STARTED
-- Release workflow (goreleaser + SDK publish)
-- Documentation updates (CLAUDE.md, README.md)
-- Migration guide (dynamic v0.1.x -> native v0.2.0)
+### Phase 6: CI/CD + Docs + Migration - COMPLETE
+- Release workflow (goreleaser + SDK publish) — GoReleaser config, PyPI publish workflow
+- Documentation updates (CLAUDE.md, README.md, RELEASE_NOTES.md)
+- Migration guide (dynamic v0.1.x -> native v0.2.0) — in RELEASE_NOTES.md
 
 ---
 
@@ -78,7 +78,7 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 
 ### Integration Testing (Live Lagoon on Kind)
 
-#### simple-project (15 Lagoon resources)
+#### simple-project (16 Lagoon resources)
 
 | Operation | Status | Details |
 |-----------|--------|---------|

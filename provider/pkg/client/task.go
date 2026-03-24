@@ -150,13 +150,27 @@ func (c *Client) GetTasksByEnvironment(ctx context.Context, environmentID int) (
 	data, err := c.Execute(ctx, queryAdvancedTasksForEnvironmentNew, map[string]any{"environment": environmentID})
 	if err != nil {
 		var apiErr *LagoonAPIError
-		if isAPIError(err, &apiErr) && (strings.Contains(apiErr.Message, "Cannot query field") || strings.Contains(apiErr.Message, "HTTP 400")) {
+		if isAPIError(err, &apiErr) && isFieldNotFoundOrLegacyError(apiErr) {
 			return c.getTasksByEnvironmentLegacy(ctx, environmentID)
 		}
 		return nil, err
 	}
 
 	return c.unmarshalTasks(data, "advancedTasksForEnvironment")
+}
+
+// isFieldNotFoundOrLegacyError checks both the top-level message and nested GraphQL errors
+// for "Cannot query field" or "HTTP 400" which indicate the API doesn't support the query.
+func isFieldNotFoundOrLegacyError(apiErr *LagoonAPIError) bool {
+	if strings.Contains(apiErr.Message, "Cannot query field") || strings.Contains(apiErr.Message, "HTTP 400") {
+		return true
+	}
+	for _, e := range apiErr.Errors {
+		if strings.Contains(e.Message, "Cannot query field") || strings.Contains(e.Message, "Unknown argument") {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Client) getTasksByEnvironmentLegacy(ctx context.Context, environmentID int) ([]TaskDefinition, error) {

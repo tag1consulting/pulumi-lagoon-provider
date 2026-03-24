@@ -192,9 +192,8 @@ func (r *DeployTargetConfig) Read(ctx context.Context, req infer.ReadRequest[Dep
 	if dtc.Pullrequests != "" {
 		args.Pullrequests = &dtc.Pullrequests
 	}
-	if dtc.Weight != 0 {
-		args.Weight = &dtc.Weight
-	}
+	// Always populate Weight so explicit 0 doesn't drift
+	args.Weight = &dtc.Weight
 	if dtc.DeployTargetProjectPattern != "" {
 		args.DeployTargetProjectPattern = &dtc.DeployTargetProjectPattern
 	}

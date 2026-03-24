@@ -13,7 +13,7 @@
 ### 2. Native Go Provider (v0.2.0 — released)
 - Merged via PR #37 → `develop` → `main`
 - Uses `pulumi-go-provider` v1.3.0 with `infer` package (request/response builder pattern)
-- 11 resources, 191+ unit tests
+- 11 resources, 198+ unit tests
 - Resolves all HIGH/MEDIUM findings from provider-analysis.md
 
 ---
@@ -238,7 +238,7 @@ Resources implement `Diff()` to mark immutable fields with `p.UpdateReplace`:
 
 ## Testing Strategy
 
-### Unit Tests (191)
+### Unit Tests (198)
 - Mock GraphQL server using `net/http/httptest`
 - Shared helper in `testutil_test.go`
 - Tests cover: CRUD operations, error handling, normalization, Diff behavior

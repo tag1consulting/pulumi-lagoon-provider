@@ -105,14 +105,22 @@ func (r *ProjectNotification) Read(ctx context.Context, req infer.ReadRequest[Pr
 		projectName = parts[0]
 		notificationType = parts[1]
 		notificationName = parts[2]
-	} else {
+	} else if req.State.ProjectName != "" {
+		// Refresh from existing state
 		projectName = req.State.ProjectName
 		notificationType = req.State.NotificationType
 		notificationName = req.State.NotificationName
+	} else {
+		return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{},
+			fmt.Errorf("invalid project notification import ID '%s': expected format {project_name}:{notification_type}:{notification_name}", req.ID)
 	}
 
 	info, err := c.CheckProjectNotificationExists(ctx, projectName, notificationType, notificationName)
 	if err != nil {
+		// Treat not-found (deleted project) as vanished resource
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{}, nil
+		}
 		return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{}, fmt.Errorf("failed to read project notification: %w", err)
 	}
 

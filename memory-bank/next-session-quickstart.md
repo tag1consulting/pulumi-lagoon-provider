@@ -15,7 +15,7 @@
 - 198 unit tests passing across 3 packages (client: 118, config: 13, resources: 67)
 - SDK generation complete (Python, TypeScript, Go)
 - GitHub Actions workflow for Go tests (`.github/workflows/test-go.yml`)
-- Draft PR #37 open targeting `develop`
+- PR #37 merged to `develop`; release PR #39 (`develop` → `main`) under review
 - Integration testing:
   - single-cluster: TESTED (Create, Read)
   - simple-project: TESTED (full CRUD)

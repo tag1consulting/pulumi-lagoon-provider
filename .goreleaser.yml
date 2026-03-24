@@ -2,7 +2,8 @@ version: 2
 
 before:
   hooks:
-    - go mod tidy
+    - cmd: go mod tidy
+      dir: provider
 
 builds:
   - id: pulumi-resource-lagoon

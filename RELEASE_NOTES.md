@@ -32,14 +32,14 @@ Notification resources now use numeric Lagoon IDs as the Pulumi resource ID (ins
 
 1. Upgrade: `pip install --upgrade pulumi-lagoon`
 2. Update your Pulumi programs to use the new class names and import paths (see above)
-3. If you have existing state with v0.1.x resources, you may need to run `pulumi refresh` or re-import resources
+3. If you have existing state with v0.1.x resources, you may need to run `pulumi refresh` or re-import resources using `lagoon:lagoon:*` type tokens (e.g., `pulumi import lagoon:lagoon:NotificationSlack my-slack my-notification-name`)
 
 ## Highlights
 
 - **Native Go provider**: Built with `pulumi-go-provider` for full type safety and performance
 - **Multi-language SDKs**: Generated Python, TypeScript, and Go SDKs from a single schema
 - **Improved correctness**: Proper Read/Diff/Update lifecycle for all resources; idempotent creates; graceful not-found handling
-- **Comprehensive tests**: 200+ unit tests covering all resource types
+- **Comprehensive tests**: 198 unit tests covering all resource types
 - **TypeScript SDK**: `@tag1consulting/pulumi-lagoon` on npm
 - **Go SDK**: `github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon`
 
@@ -63,6 +63,7 @@ All resources from v0.1.x are available under the new `pulumi_lagoon.lagoon` mod
 - `NotificationEmail` (was `LagoonNotificationEmail`)
 - `NotificationMicrosoftTeams` (was `LagoonNotificationMicrosoftTeams`)
 - `ProjectNotification` (was `LagoonProjectNotification`)
+- `Task` (was `LagoonTask`)
 
 ---
 

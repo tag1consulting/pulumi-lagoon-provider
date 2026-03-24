@@ -79,7 +79,7 @@ func NewClient(apiURL, token string, opts ...ClientOption) *Client {
 		opt(c)
 	}
 
-	transport := &http.Transport{}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
 	if !c.verifySSL {
 		transport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,    //nolint:gosec // user-configured
@@ -299,11 +299,15 @@ func (c *Client) DetectAPIVersion(ctx context.Context) string {
 		} `json:"__type"`
 	}
 	if err := json.Unmarshal(data, &result); err != nil || result.Type == nil {
-		c.apiVersion = "legacy"
-	} else {
-		c.apiVersion = "new"
+		// Only cache if we got a valid response (not a transient error)
+		if data != nil {
+			c.apiVersion = "legacy"
+			c.apiVersionSet = true
+		}
+		return "legacy"
 	}
 
+	c.apiVersion = "new"
 	c.apiVersionSet = true
 	return c.apiVersion
 }

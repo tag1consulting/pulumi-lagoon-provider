@@ -213,9 +213,8 @@ func (r *DeployTarget) Read(ctx context.Context, req infer.ReadRequest[DeployTar
 	if dt.RouterPattern != "" {
 		args.RouterPattern = &dt.RouterPattern
 	}
-	if dt.Disabled {
-		args.Disabled = &dt.Disabled
-	}
+	// Always populate Disabled from API so explicit false doesn't drift
+	args.Disabled = &dt.Disabled
 
 	st := DeployTargetState{
 		DeployTargetArgs: args,
