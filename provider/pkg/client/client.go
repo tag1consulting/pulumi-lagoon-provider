@@ -192,8 +192,13 @@ func (c *Client) executeOnce(ctx context.Context, query string, variables map[st
 		return nil, &LagoonConnectionError{Message: "failed to read response body", Cause: err}
 	}
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= 500 {
 		return nil, &LagoonConnectionError{
+			Message: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(respBody)),
+		}
+	}
+	if resp.StatusCode >= 400 {
+		return nil, &LagoonAPIError{
 			Message: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(respBody)),
 		}
 	}

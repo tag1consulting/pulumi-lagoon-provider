@@ -39,13 +39,17 @@ func mockGraphQLServer(t *testing.T, handler func(query string, variables map[st
 				"errors": []map[string]any{{"message": handlerErr.Error()}},
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(resp)
+			if err := json.NewEncoder(w).Encode(resp); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 
 		resp := map[string]any{"data": data}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}))
 }
 

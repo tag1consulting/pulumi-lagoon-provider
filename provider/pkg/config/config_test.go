@@ -140,16 +140,20 @@ func TestConfigure_WithJWTSecret(t *testing.T) {
 
 func TestConfigure_NoAuth(t *testing.T) {
 	// Clear env vars that might interfere
-	origToken := os.Getenv("LAGOON_TOKEN")
-	origSecret := os.Getenv("LAGOON_JWT_SECRET")
+	origToken, hadToken := os.LookupEnv("LAGOON_TOKEN")
+	origSecret, hadSecret := os.LookupEnv("LAGOON_JWT_SECRET")
 	os.Unsetenv("LAGOON_TOKEN")
 	os.Unsetenv("LAGOON_JWT_SECRET")
 	defer func() {
-		if origToken != "" {
+		if hadToken {
 			os.Setenv("LAGOON_TOKEN", origToken)
+		} else {
+			os.Unsetenv("LAGOON_TOKEN")
 		}
-		if origSecret != "" {
+		if hadSecret {
 			os.Setenv("LAGOON_JWT_SECRET", origSecret)
+		} else {
+			os.Unsetenv("LAGOON_JWT_SECRET")
 		}
 	}()
 

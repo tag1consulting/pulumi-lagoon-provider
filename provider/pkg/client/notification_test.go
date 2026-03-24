@@ -14,6 +14,19 @@ func TestCreateNotificationSlack(t *testing.T) {
 		if !strings.Contains(query, "addNotificationSlack") {
 			t.Errorf("expected addNotificationSlack mutation")
 		}
+		input, ok := variables["input"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected variables[\"input\"] to be a map, got %T", variables["input"])
+		}
+		if name, _ := input["name"].(string); name != "deploy-alerts" {
+			t.Errorf("expected input name=deploy-alerts, got %v", input["name"])
+		}
+		if webhook, _ := input["webhook"].(string); webhook != "https://hooks.slack.com/xxx" {
+			t.Errorf("expected input webhook=https://hooks.slack.com/xxx, got %v", input["webhook"])
+		}
+		if channel, _ := input["channel"].(string); channel != "#deployments" {
+			t.Errorf("expected input channel=#deployments, got %v", input["channel"])
+		}
 		return map[string]any{
 			"addNotificationSlack": map[string]any{
 				"id":      1,

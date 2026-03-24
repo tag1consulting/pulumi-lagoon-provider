@@ -8,11 +8,12 @@ const lagoonCfg = new pulumi.Config("lagoon");
 const apiUrl = lagoonCfg.get("apiUrl") || "http://localhost:7080/graphql";
 const token = lagoonCfg.getSecret("token");
 
-// Create Lagoon provider
+// Create Lagoon provider — only disable TLS for local development
+const isLocal = apiUrl.startsWith("http://localhost") || apiUrl.startsWith("http://127.0.0.1");
 const lagoonProvider = new lagoon.Provider("lagoon", {
     apiUrl: apiUrl,
     token: token,
-    insecure: true,
+    insecure: isLocal,
 });
 const opts: pulumi.ResourceOptions = { provider: lagoonProvider };
 

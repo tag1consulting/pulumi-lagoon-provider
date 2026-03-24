@@ -57,7 +57,10 @@ func GetEnvOrDefault(def interface{}, parser envParser, vars ...string) interfac
 	for _, v := range vars {
 		if value, ok := os.LookupEnv(v); ok {
 			if parser != nil {
-				return parser(value)
+				if parsed := parser(value); parsed != nil {
+					return parsed
+				}
+				continue
 			}
 			return value
 		}

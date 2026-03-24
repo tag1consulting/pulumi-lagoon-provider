@@ -315,6 +315,9 @@ func (c *Client) CheckProjectNotificationExists(ctx context.Context, projectName
 	}
 
 	expectedTypeName := typeNameMap[strings.ToLower(notificationType)]
+	if expectedTypeName == "" {
+		return nil, fmt.Errorf("unsupported notification type: %s", notificationType)
+	}
 
 	for _, rawN := range project.Notifications {
 		var n struct {

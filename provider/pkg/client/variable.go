@@ -244,7 +244,7 @@ func (c *Client) getEnvironmentName(ctx context.Context, envID int) (string, err
 		return "", fmt.Errorf("failed to unmarshal environmentById: %w", err)
 	}
 	if env.Name == "" {
-		return "", fmt.Errorf("environment with ID %d not found (null or empty response)", env.ID)
+		return "", fmt.Errorf("environment with ID %d not found (null or empty response)", envID)
 	}
 
 	return env.Name, nil

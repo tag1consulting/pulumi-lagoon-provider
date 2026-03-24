@@ -115,7 +115,7 @@ func (r *Variable) Delete(ctx context.Context, req infer.DeleteRequest[VariableS
 
 func (r *Variable) Read(ctx context.Context, req infer.ReadRequest[VariableArgs, VariableState]) (infer.ReadResponse[VariableArgs, VariableState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	// Parse import ID: {project_id}:{env_id}:{var_name} or {project_id}::{var_name}
 	parts := strings.SplitN(req.ID, ":", 3)
@@ -146,8 +146,11 @@ func (r *Variable) Read(ctx context.Context, req infer.ReadRequest[VariableArgs,
 		varName = req.State.Name
 	}
 
-	v, err := client.GetVariable(ctx, varName, projectID, environmentID)
+	v, err := c.GetVariable(ctx, varName, projectID, environmentID)
 	if err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.ReadResponse[VariableArgs, VariableState]{}, nil
+		}
 		return infer.ReadResponse[VariableArgs, VariableState]{}, fmt.Errorf("failed to read variable: %w", err)
 	}
 

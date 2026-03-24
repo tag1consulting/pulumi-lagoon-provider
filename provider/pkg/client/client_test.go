@@ -434,7 +434,9 @@ func TestTokenRefresh_NotNeeded(t *testing.T) {
 }
 
 func TestTokenRefresh_Error(t *testing.T) {
+	var called int32
 	tokenFunc := func() (string, error) {
+		atomic.AddInt32(&called, 1)
 		return "", fmt.Errorf("refresh failed")
 	}
 
@@ -447,6 +449,9 @@ func TestTokenRefresh_Error(t *testing.T) {
 	}
 	if !errors.Is(err, ErrConnection) {
 		t.Errorf("expected LagoonConnectionError, got %T", err)
+	}
+	if atomic.LoadInt32(&called) == 0 {
+		t.Error("expected tokenFunc to be invoked at least once")
 	}
 }
 

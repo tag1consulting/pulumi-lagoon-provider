@@ -140,15 +140,18 @@ func (r *Task) Delete(ctx context.Context, req infer.DeleteRequest[TaskState]) (
 
 func (r *Task) Read(ctx context.Context, req infer.ReadRequest[TaskArgs, TaskState]) (infer.ReadResponse[TaskArgs, TaskState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	tdID, err := strconv.Atoi(req.ID)
 	if err != nil {
 		return infer.ReadResponse[TaskArgs, TaskState]{}, fmt.Errorf("invalid task ID '%s': must be numeric", req.ID)
 	}
 
-	td, err := client.GetTaskDefinitionByID(ctx, tdID)
+	td, err := c.GetTaskDefinitionByID(ctx, tdID)
 	if err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.ReadResponse[TaskArgs, TaskState]{}, nil
+		}
 		return infer.ReadResponse[TaskArgs, TaskState]{}, fmt.Errorf("failed to read task: %w", err)
 	}
 

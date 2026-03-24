@@ -86,7 +86,7 @@ export class Variable extends pulumi.CustomResource {
             resourceInputs["name"] = args?.name;
             resourceInputs["projectId"] = args?.projectId;
             resourceInputs["scope"] = args?.scope;
-            resourceInputs["value"] = args?.value ? pulumi.secret(args.value) : undefined;
+            resourceInputs["value"] = args?.value !== undefined ? pulumi.secret(args.value) : undefined;
             resourceInputs["lagoonId"] = undefined /*out*/;
         } else {
             resourceInputs["environmentId"] = undefined /*out*/;

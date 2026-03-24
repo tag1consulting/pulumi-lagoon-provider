@@ -70,21 +70,48 @@ var (
 	ErrDuplicateEntry = errors.New("lagoon duplicate entry")
 )
 
+// isDuplicateMessage returns true if a message indicates a duplicate entry.
+func isDuplicateMessage(msg string) bool {
+	lower := strings.ToLower(msg)
+	return strings.Contains(lower, "duplicate entry") ||
+		strings.Contains(lower, "already exists")
+}
+
 // IsDuplicateEntry returns true if the error is a Lagoon API error indicating
 // the resource already exists. This can be a MySQL duplicate entry constraint
 // violation or an application-level "already exists" error.
 func IsDuplicateEntry(err error) bool {
 	var apiErr *LagoonAPIError
 	if errors.As(err, &apiErr) {
-		msg := strings.ToLower(apiErr.Message)
-		return strings.Contains(msg, "duplicate entry") ||
-			strings.Contains(msg, "already exists")
+		if isDuplicateMessage(apiErr.Message) {
+			return true
+		}
+		for _, e := range apiErr.Errors {
+			if isDuplicateMessage(e.Message) {
+				return true
+			}
+		}
 	}
 	return false
 }
 
 // Is enables errors.Is() support for typed errors.
-func (e *LagoonAPIError) Is(target error) bool        { return target == ErrAPI }
+func (e *LagoonAPIError) Is(target error) bool {
+	if target == ErrAPI {
+		return true
+	}
+	if target == ErrDuplicateEntry {
+		if isDuplicateMessage(e.Message) {
+			return true
+		}
+		for _, ge := range e.Errors {
+			if isDuplicateMessage(ge.Message) {
+				return true
+			}
+		}
+	}
+	return false
+}
 func (e *LagoonConnectionError) Is(target error) bool  { return target == ErrConnection }
 func (e *LagoonNotFoundError) Is(target error) bool    { return target == ErrNotFound }
 func (e *LagoonValidationError) Is(target error) bool  { return target == ErrValidation }

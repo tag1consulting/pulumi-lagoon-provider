@@ -1,7 +1,7 @@
 # Next Session Quickstart - Native Go Pulumi Lagoon Provider
 
-**Date Updated**: 2026-02-24
-**Status**: Phase 5 IN PROGRESS - Multi-cluster fully tested, TypeScript/Go SDKs remain
+**Date Updated**: 2026-03-24
+**Status**: v0.2.0 RELEASED — All phases complete, SDKs tested and published
 
 ---
 

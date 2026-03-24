@@ -49,7 +49,7 @@ func main() {
 			DeployType:      pulumi.String("branch"),
 			DeployBaseRef:   pulumi.StringPtr("develop"),
 			EnvironmentType: pulumi.String("development"),
-		}, pulumi.Provider(prov), pulumi.DependsOn([]pulumi.Resource{project}))
+		}, opts, pulumi.DependsOn([]pulumi.Resource{project}))
 		if err != nil {
 			return err
 		}

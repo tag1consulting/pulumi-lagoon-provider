@@ -1,7 +1,7 @@
 # Pulumi Lagoon Provider - Implementation Status
 
-**Last Updated**: 2026-02-24
-**Status**: Native Go Provider - Phases 1-4 COMPLETE, Phase 5 Integration Testing IN PROGRESS, PR #37 Open
+**Last Updated**: 2026-03-24
+**Status**: Native Go Provider v0.2.0 RELEASED — All phases complete, PR #37 merged
 
 ---
 
@@ -70,6 +70,7 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 ## Test Coverage Summary
 
 ### Go Tests (Native Provider) - 198 tests
+
 | Package | Tests | Time | Description |
 |---------|-------|------|-------------|
 | `pkg/client` | 118 | ~5s | GraphQL client, all resource CRUD operations, error helpers |
@@ -79,6 +80,7 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 ### Integration Testing (Live Lagoon on Kind)
 
 #### simple-project (15 Lagoon resources)
+
 | Operation | Status | Details |
 |-----------|--------|---------|
 | **Create** | PASS | All 16 resources created successfully |
@@ -88,6 +90,7 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 | **Re-create** | PASS | Full roundtrip: empty → create → refresh → destroy |
 
 #### multi-cluster (5 native provider resources)
+
 | Operation | Status | Details |
 |-----------|--------|---------|
 | **Create** | PASS | 2 DeployTargets + 1 Project + 2 DeployTargetConfigs |

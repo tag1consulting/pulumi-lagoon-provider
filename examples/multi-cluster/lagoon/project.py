@@ -160,9 +160,11 @@ def create_example_drupal_project(
             pullrequests=".*",
         ),
         opts=pulumi.ResourceOptions.merge(
-            pulumi.ResourceOptions(
-                depends_on=[deploy_targets.prod_target, deploy_targets.nonprod_target],
-                parent=opts.parent if opts else None,
+            pulumi.ResourceOptions.merge(
+                opts,
+                pulumi.ResourceOptions(
+                    depends_on=[deploy_targets.prod_target, deploy_targets.nonprod_target],
+                ),
             ),
             provider_opts,
         ),
@@ -180,9 +182,9 @@ def create_example_drupal_project(
             weight=10,  # Higher priority - matches first for 'main'
         ),
         opts=pulumi.ResourceOptions.merge(
-            pulumi.ResourceOptions(
-                depends_on=[project],
-                parent=opts.parent if opts else None,
+            pulumi.ResourceOptions.merge(
+                opts,
+                pulumi.ResourceOptions(depends_on=[project]),
             ),
             provider_opts,
         ),
@@ -200,9 +202,9 @@ def create_example_drupal_project(
             weight=1,  # Lower priority - only used when prod config doesn't match
         ),
         opts=pulumi.ResourceOptions.merge(
-            pulumi.ResourceOptions(
-                depends_on=[project],
-                parent=opts.parent if opts else None,
+            pulumi.ResourceOptions.merge(
+                opts,
+                pulumi.ResourceOptions(depends_on=[project]),
             ),
             provider_opts,
         ),

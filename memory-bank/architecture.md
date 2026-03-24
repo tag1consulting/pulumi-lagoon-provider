@@ -10,11 +10,10 @@
 - Uses Pulumi dynamic provider interface
 - 11 resources, 513 unit tests
 
-### 2. Native Go Provider (in development)
-- Branch: `native-go-provider`
-- PR: #37 (Draft -> `develop`)
-- Uses `pulumi-go-provider` v0.25.0 with `infer` package
-- 11 resources, 191 unit tests
+### 2. Native Go Provider (v0.2.0 — released)
+- Merged via PR #37 → `develop` → `main`
+- Uses `pulumi-go-provider` v1.3.0 with `infer` package (request/response builder pattern)
+- 11 resources, 191+ unit tests
 - Resolves all HIGH/MEDIUM findings from provider-analysis.md
 
 ---
@@ -82,13 +81,13 @@ main.go
 
 ### Resource Layer (`provider/pkg/resources/`)
 
-Each resource implements the `infer` interfaces using plain function signatures (v0.25.0 API):
+Each resource implements the `infer` interfaces using request/response structs (v1.3.0 API):
 
 ```go
-type LagoonProject struct{}
+type Project struct{}
 
 // Input struct (what user provides)
-type LagoonProjectArgs struct {
+type ProjectArgs struct {
     Name                 string  `pulumi:"name"`
     GitURL               string  `pulumi:"gitUrl"`
     DeploytargetID       int     `pulumi:"deploytargetId"`
@@ -97,18 +96,18 @@ type LagoonProjectArgs struct {
 }
 
 // Output struct (what provider returns)
-type LagoonProjectState struct {
-    LagoonProjectArgs              // Embeds all inputs
+type ProjectState struct {
+    ProjectArgs              // Embeds all inputs
     LagoonID int    `pulumi:"lagoonId"`
     Created  string `pulumi:"created"`
 }
 
-// CRUD methods use plain signatures:
-func (r *LagoonProject) Create(ctx context.Context, name string, input LagoonProjectArgs, preview bool) (string, LagoonProjectState, error)
-func (r *LagoonProject) Read(ctx context.Context, id string, inputs LagoonProjectArgs, state LagoonProjectState) (string, LagoonProjectArgs, LagoonProjectState, error)
-func (r *LagoonProject) Update(ctx context.Context, id string, olds LagoonProjectState, news LagoonProjectArgs, preview bool) (LagoonProjectState, error)
-func (r *LagoonProject) Delete(ctx context.Context, id string, props LagoonProjectState) error
-func (r *LagoonProject) Diff(ctx context.Context, id string, olds LagoonProjectState, news LagoonProjectArgs) (p.DiffResponse, error)
+// CRUD methods use request/response structs:
+func (r *Project) Create(ctx context.Context, req infer.CreateRequest[ProjectArgs]) (infer.CreateResponse[ProjectState], error)
+func (r *Project) Read(ctx context.Context, req infer.ReadRequest[ProjectArgs, ProjectState]) (infer.ReadResponse[ProjectArgs, ProjectState], error)
+func (r *Project) Update(ctx context.Context, req infer.UpdateRequest[ProjectArgs, ProjectState]) (infer.UpdateResponse[ProjectState], error)
+func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectState]) (infer.DeleteResponse, error)
+func (r *Project) Diff(ctx context.Context, req infer.DiffRequest[ProjectArgs, ProjectState]) (infer.DiffResponse, error)
 ```
 
 ### Client Layer (`provider/pkg/client/`)

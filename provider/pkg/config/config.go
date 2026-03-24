@@ -69,6 +69,7 @@ func (c *LagoonConfig) Configure(ctx context.Context) error {
 	}
 	if c.Token == "" {
 		if envSecret := os.Getenv("LAGOON_JWT_SECRET"); envSecret != "" {
+			c.JWTSecret = envSecret // Persist for token refresh in NewClient()
 			token, err := generateAdminTokenFromSecret(envSecret, c.JWTAudience)
 			if err != nil {
 				return fmt.Errorf("failed to generate token from LAGOON_JWT_SECRET: %w", err)

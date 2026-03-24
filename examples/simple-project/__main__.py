@@ -8,7 +8,8 @@ This example demonstrates how to use the Pulumi Lagoon provider to:
 5. Link notifications to projects
 
 Prerequisites:
-- Lagoon API access (set LAGOON_API_URL and LAGOON_JWT_SECRET or LAGOON_TOKEN)
+- Lagoon API access via pulumi config (lagoon:apiUrl, lagoon:token or lagoon:jwtSecret)
+  or environment variables (LAGOON_API_URL, LAGOON_TOKEN or LAGOON_JWT_SECRET)
 - A deploy target (Kubernetes cluster) ID
 """
 
@@ -233,12 +234,12 @@ project_teams = ProjectNotification(
 )
 
 # Export useful outputs
-pulumi.export("project_id", project.id)
+pulumi.export("project_id", project.lagoon_id)
 pulumi.export("project_name", project.name)
 pulumi.export("production_url", prod_env.route)
 pulumi.export("development_url", dev_env.route)
-pulumi.export("production_environment_id", prod_env.id)
-pulumi.export("development_environment_id", dev_env.id)
+pulumi.export("production_environment_id", prod_env.lagoon_id)
+pulumi.export("development_environment_id", dev_env.lagoon_id)
 
 # Notification outputs
 pulumi.export("slack_notification_name", slack_notification.name)

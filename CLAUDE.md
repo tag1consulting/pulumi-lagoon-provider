@@ -30,7 +30,7 @@ The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1cons
 ## Development Environment
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.9+
 - Pulumi CLI installed
 - Access to a Lagoon instance with API credentials
 - GraphQL API endpoint and authentication token

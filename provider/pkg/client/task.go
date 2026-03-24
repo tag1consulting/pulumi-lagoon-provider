@@ -150,7 +150,7 @@ func (c *Client) GetTasksByEnvironment(ctx context.Context, environmentID int) (
 	data, err := c.Execute(ctx, queryAdvancedTasksForEnvironmentNew, map[string]any{"environment": environmentID})
 	if err != nil {
 		var apiErr *LagoonAPIError
-		if isAPIError(err, &apiErr) && (strings.Contains(apiErr.Message, "Cannot query field") || strings.Contains(apiErr.Message, "400")) {
+		if isAPIError(err, &apiErr) && (strings.Contains(apiErr.Message, "Cannot query field") || strings.Contains(apiErr.Message, "HTTP 400")) {
 			return c.getTasksByEnvironmentLegacy(ctx, environmentID)
 		}
 		return nil, err

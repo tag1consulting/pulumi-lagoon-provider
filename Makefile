@@ -103,7 +103,7 @@ help:
 	@echo "  - kind CLI installed (https://kind.sigs.k8s.io/)"
 	@echo "  - kubectl installed"
 	@echo "  - pulumi CLI installed"
-	@echo "  - Python 3.8+"
+	@echo "  - Python 3.9+"
 
 #==============================================================================
 # Complete Setup
@@ -406,7 +406,7 @@ PROVIDER_BIN     := provider/bin/pulumi-resource-lagoon
 GO_BIN           ?= $(if $(GOPATH),$(GOPATH)/bin,$(HOME)/go/bin)
 
 go-build:
-	cd provider && CGO_ENABLED=0 go build -ldflags "-X main.Version=$(PROVIDER_VERSION)" \
+	cd provider && mkdir -p bin && CGO_ENABLED=0 go build -ldflags "-X main.Version=$(PROVIDER_VERSION)" \
 		-o bin/pulumi-resource-lagoon ./cmd/pulumi-resource-lagoon
 
 go-test:
