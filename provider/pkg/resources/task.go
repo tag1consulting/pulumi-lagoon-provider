@@ -70,13 +70,19 @@ func (r *Task) Create(ctx context.Context, req infer.CreateRequest[TaskArgs]) (i
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
 	client := cfg.NewClient()
 
-	// Validate type-specific required fields
+	// Validate task type and type-specific required fields
 	taskType := strings.ToLower(req.Inputs.Type)
-	if taskType == "command" && (req.Inputs.Command == nil || *req.Inputs.Command == "") {
-		return infer.CreateResponse[TaskState]{}, fmt.Errorf("'command' is required when type is 'command'")
-	}
-	if taskType == "image" && (req.Inputs.Image == nil || *req.Inputs.Image == "") {
-		return infer.CreateResponse[TaskState]{}, fmt.Errorf("'image' is required when type is 'image'")
+	switch taskType {
+	case "command":
+		if req.Inputs.Command == nil || *req.Inputs.Command == "" {
+			return infer.CreateResponse[TaskState]{}, fmt.Errorf("'command' is required when type is 'command'")
+		}
+	case "image":
+		if req.Inputs.Image == nil || *req.Inputs.Image == "" {
+			return infer.CreateResponse[TaskState]{}, fmt.Errorf("'image' is required when type is 'image'")
+		}
+	default:
+		return infer.CreateResponse[TaskState]{}, fmt.Errorf("unknown task type %q: must be 'command' or 'image'", req.Inputs.Type)
 	}
 
 	input := map[string]any{

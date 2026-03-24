@@ -146,6 +146,14 @@ func TestIsDuplicateEntry(t *testing.T) {
 			err:      fmt.Errorf("create failed: %w", &LagoonAPIError{Message: "Resource already exists"}),
 			expected: true,
 		},
+		{
+			name: "duplicate in nested Errors slice",
+			err: &LagoonAPIError{
+				Message: "graphql error",
+				Errors:  []GraphQLError{{Message: "Duplicate entry 'foo' for key 'name'"}},
+			},
+			expected: true,
+		},
 	}
 
 	for _, tt := range tests {

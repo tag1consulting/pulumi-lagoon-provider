@@ -377,7 +377,7 @@ if lagoon_remote is not None:
     # This ensures we use the same secret the API is configured with
     read_jwt_secret = command.Command(
         "read-jwt-secret",
-        create=f'kubectl --context {cluster_config.context_name} -n {namespace_config.lagoon_core} get secret lagoon-core-secrets -o jsonpath="{{.data.JWTSECRET}}" | base64 -d',
+        create=f'kubectl --context {cluster_config.context_name} -n {namespace_config.lagoon_core} get secret lagoon-core-lagoon-core-secrets -o jsonpath="{{.data.JWTSECRET}}" | base64 -d',
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
             additional_secret_outputs=["stdout"],

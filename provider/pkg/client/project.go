@@ -116,7 +116,6 @@ func (c *Client) GetProjectByID(ctx context.Context, projectID int) (*Project, e
 }
 
 // UpdateProject updates an existing project.
-// UpdateProject updates a project.
 // The Lagoon UpdateProjectInput requires {id, patch: {...fields...}}.
 func (c *Client) UpdateProject(ctx context.Context, projectID int, input map[string]any) (*Project, error) {
 	data, err := c.Execute(ctx, mutationUpdateProject, map[string]any{
