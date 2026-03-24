@@ -10,21 +10,22 @@ This provider allows you to declaratively manage Lagoon hosting platform resourc
 
 ## Project Status
 
-**Status**: v0.1.2 Released (Experimental)
+**Status**: v0.2.0 Released (Native Go Provider)
 
-The provider is available on PyPI (`pip install pulumi-lagoon`). This is a Python-based dynamic provider with comprehensive resource support. A native Go provider may be built in the future.
+The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), and Go (`github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon`). v0.2.0 ships the native Go provider with generated multi-language SDKs, replacing the Python dynamic provider.
 
 ## Architecture
 
-### Phase 1: Dynamic Provider (Current)
+### Phase 1: Dynamic Provider (Complete — superseded by Phase 2)
 - Python-based Pulumi dynamic provider
 - Direct GraphQL API integration with Lagoon
 - Supports resources: Projects, Environments, Variables, Deploy Targets, Deploy Target Configs, Tasks, and Notifications (Slack, RocketChat, Email, Microsoft Teams)
 
-### Phase 2: Native Provider (Future)
-- Go-based native provider using Pulumi SDK
-- Generated SDKs for Python, TypeScript, Go
-- Full production-ready implementation
+### Phase 2: Native Provider (Current)
+- Go-based native provider using `pulumi-go-provider` v1.3.0 (`infer` package)
+- Generated SDKs for Python, TypeScript, and Go from a single schema
+- Published to PyPI (`pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), and Go module
+- 200+ unit tests; comprehensive resource CRUD lifecycle
 
 ## Development Environment
 
@@ -320,9 +321,9 @@ export LAGOON_TOKEN=<your-token>
 - [x] Notification resources (Slack, RocketChat, Email, Microsoft Teams)
 - [x] Project notification associations
 - [x] Task resources (advanced task definitions)
+- [x] Native Go provider
+- [x] Multi-language SDK generation (Python, TypeScript, Go)
 - [ ] Additional resources (Groups)
-- [ ] Native Go provider
-- [ ] Multi-language SDK generation
 - [ ] Community adoption
 
 ## Contributing
