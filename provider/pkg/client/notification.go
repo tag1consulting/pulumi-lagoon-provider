@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // Notification represents a generic Lagoon notification.
@@ -313,7 +314,7 @@ func (c *Client) CheckProjectNotificationExists(ctx context.Context, projectName
 		"microsoftteams": "NotificationMicrosoftTeams",
 	}
 
-	expectedTypeName := typeNameMap[notificationType]
+	expectedTypeName := typeNameMap[strings.ToLower(notificationType)]
 
 	for _, rawN := range project.Notifications {
 		var n struct {

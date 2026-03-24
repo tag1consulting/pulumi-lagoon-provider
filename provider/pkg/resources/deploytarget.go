@@ -267,13 +267,39 @@ func (r *DeployTarget) Diff(ctx context.Context, req infer.DiffRequest[DeployTar
 		diff["cloudRegion"] = p.PropertyDiff{Kind: p.Update}
 	}
 
-	if ptrDiffers(req.Inputs.SSHHost, req.State.SSHHost) {
+	// Normalize optional string fields to "" (the API default for unset) so that
+	// omitting a field that was never set doesn't produce a spurious update.
+	emptyStr := ""
+	inputSSHHost, stateSSHHost := req.Inputs.SSHHost, req.State.SSHHost
+	if inputSSHHost == nil {
+		inputSSHHost = &emptyStr
+	}
+	if stateSSHHost == nil {
+		stateSSHHost = &emptyStr
+	}
+	if ptrDiffers(inputSSHHost, stateSSHHost) {
 		diff["sshHost"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(req.Inputs.SSHPort, req.State.SSHPort) {
+
+	inputSSHPort, stateSSHPort := req.Inputs.SSHPort, req.State.SSHPort
+	if inputSSHPort == nil {
+		inputSSHPort = &emptyStr
+	}
+	if stateSSHPort == nil {
+		stateSSHPort = &emptyStr
+	}
+	if ptrDiffers(inputSSHPort, stateSSHPort) {
 		diff["sshPort"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(req.Inputs.BuildImage, req.State.BuildImage) {
+
+	inputBuildImage, stateBuildImage := req.Inputs.BuildImage, req.State.BuildImage
+	if inputBuildImage == nil {
+		inputBuildImage = &emptyStr
+	}
+	if stateBuildImage == nil {
+		stateBuildImage = &emptyStr
+	}
+	if ptrDiffers(inputBuildImage, stateBuildImage) {
 		diff["buildImage"] = p.PropertyDiff{Kind: p.Update}
 	}
 
@@ -291,7 +317,14 @@ func (r *DeployTarget) Diff(ctx context.Context, req infer.DiffRequest[DeployTar
 		diff["disabled"] = p.PropertyDiff{Kind: p.Update}
 	}
 
-	if ptrDiffers(req.Inputs.RouterPattern, req.State.RouterPattern) {
+	inputRouterPattern, stateRouterPattern := req.Inputs.RouterPattern, req.State.RouterPattern
+	if inputRouterPattern == nil {
+		inputRouterPattern = &emptyStr
+	}
+	if stateRouterPattern == nil {
+		stateRouterPattern = &emptyStr
+	}
+	if ptrDiffers(inputRouterPattern, stateRouterPattern) {
 		diff["routerPattern"] = p.PropertyDiff{Kind: p.Update}
 	}
 

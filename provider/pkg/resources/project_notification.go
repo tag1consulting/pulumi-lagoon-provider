@@ -116,7 +116,7 @@ func (r *ProjectNotification) Read(ctx context.Context, req infer.ReadRequest[Pr
 		return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{}, fmt.Errorf("failed to read project notification: %w", err)
 	}
 
-	if !info.Exists {
+	if info == nil || !info.Exists {
 		// Resource was deleted out-of-band — return empty response so Pulumi removes it from state
 		return infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState]{}, nil
 	}

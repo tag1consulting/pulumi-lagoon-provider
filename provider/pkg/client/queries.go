@@ -111,6 +111,11 @@ query EnvironmentByName($name: String!, $project: Int!) {
         }
         environmentType
         deployType
+        deployBaseRef
+        deployHeadRef
+        deployTitle
+        autoIdle
+        openshiftProjectName
         route
         routes
         created

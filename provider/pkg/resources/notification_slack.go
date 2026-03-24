@@ -120,7 +120,7 @@ func (r *NotificationSlack) Read(ctx context.Context, req infer.ReadRequest[Noti
 	st := NotificationSlackState{NotificationSlackArgs: args, LagoonID: n.ID}
 
 	return infer.ReadResponse[NotificationSlackArgs, NotificationSlackState]{
-		ID:     name,
+		ID:     strconv.Itoa(n.ID),
 		Inputs: args,
 		State:  st,
 	}, nil

@@ -114,7 +114,7 @@ func (r *NotificationEmail) Read(ctx context.Context, req infer.ReadRequest[Noti
 	st := NotificationEmailState{NotificationEmailArgs: args, LagoonID: n.ID}
 
 	return infer.ReadResponse[NotificationEmailArgs, NotificationEmailState]{
-		ID:     name,
+		ID:     strconv.Itoa(n.ID),
 		Inputs: args,
 		State:  st,
 	}, nil

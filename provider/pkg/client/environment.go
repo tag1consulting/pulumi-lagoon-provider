@@ -7,18 +7,19 @@ import (
 
 // Environment represents a Lagoon environment.
 type Environment struct {
-	ID              int    `json:"id"`
-	Name            string `json:"name"`
-	ProjectID       int    `json:"-"` // normalized from project object
-	EnvironmentType string `json:"environmentType"`
-	DeployType      string `json:"deployType"`
-	DeployBaseRef   string `json:"deployBaseRef"`
-	DeployHeadRef   string `json:"deployHeadRef"`
-	DeployTitle     string `json:"deployTitle"`
-	AutoIdle        *int   `json:"autoIdle"`
-	Route           string `json:"route"`
-	Routes          string `json:"routes"`
-	Created         string `json:"created"`
+	ID                   int    `json:"id"`
+	Name                 string `json:"name"`
+	ProjectID            int    `json:"-"` // normalized from project object
+	EnvironmentType      string `json:"environmentType"`
+	DeployType           string `json:"deployType"`
+	DeployBaseRef        string `json:"deployBaseRef"`
+	DeployHeadRef        string `json:"deployHeadRef"`
+	DeployTitle          string `json:"deployTitle"`
+	AutoIdle             *int   `json:"autoIdle"`
+	OpenshiftProjectName string `json:"openshiftProjectName"`
+	Route                string `json:"route"`
+	Routes               string `json:"routes"`
+	Created              string `json:"created"`
 }
 
 // environmentRaw is used for unmarshaling the API response which nests project.
@@ -29,30 +30,32 @@ type environmentRaw struct {
 		ID   int    `json:"id"`
 		Name string `json:"name"`
 	} `json:"project"`
-	EnvironmentType string `json:"environmentType"`
-	DeployType      string `json:"deployType"`
-	DeployBaseRef   string `json:"deployBaseRef"`
-	DeployHeadRef   string `json:"deployHeadRef"`
-	DeployTitle     string `json:"deployTitle"`
-	AutoIdle        *int   `json:"autoIdle"`
-	Route           string `json:"route"`
-	Routes          string `json:"routes"`
-	Created         string `json:"created"`
+	EnvironmentType      string `json:"environmentType"`
+	DeployType           string `json:"deployType"`
+	DeployBaseRef        string `json:"deployBaseRef"`
+	DeployHeadRef        string `json:"deployHeadRef"`
+	DeployTitle          string `json:"deployTitle"`
+	AutoIdle             *int   `json:"autoIdle"`
+	OpenshiftProjectName string `json:"openshiftProjectName"`
+	Route                string `json:"route"`
+	Routes               string `json:"routes"`
+	Created              string `json:"created"`
 }
 
 func normalizeEnvironment(raw environmentRaw) Environment {
 	e := Environment{
-		ID:              raw.ID,
-		Name:            raw.Name,
-		EnvironmentType: raw.EnvironmentType,
-		DeployType:      raw.DeployType,
-		DeployBaseRef:   raw.DeployBaseRef,
-		DeployHeadRef:   raw.DeployHeadRef,
-		DeployTitle:     raw.DeployTitle,
-		AutoIdle:        raw.AutoIdle,
-		Route:           raw.Route,
-		Routes:          raw.Routes,
-		Created:         raw.Created,
+		ID:                   raw.ID,
+		Name:                 raw.Name,
+		EnvironmentType:      raw.EnvironmentType,
+		DeployType:           raw.DeployType,
+		DeployBaseRef:        raw.DeployBaseRef,
+		DeployHeadRef:        raw.DeployHeadRef,
+		DeployTitle:          raw.DeployTitle,
+		AutoIdle:             raw.AutoIdle,
+		OpenshiftProjectName: raw.OpenshiftProjectName,
+		Route:                raw.Route,
+		Routes:               raw.Routes,
+		Created:              raw.Created,
 	}
 	if raw.Project != nil {
 		e.ProjectID = raw.Project.ID

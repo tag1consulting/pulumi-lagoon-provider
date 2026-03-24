@@ -119,7 +119,7 @@ func (r *NotificationRocketChat) Read(ctx context.Context, req infer.ReadRequest
 	st := NotificationRocketChatState{NotificationRocketChatArgs: args, LagoonID: n.ID}
 
 	return infer.ReadResponse[NotificationRocketChatArgs, NotificationRocketChatState]{
-		ID:     name,
+		ID:     strconv.Itoa(n.ID),
 		Inputs: args,
 		State:  st,
 	}, nil

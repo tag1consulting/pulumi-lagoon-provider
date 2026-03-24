@@ -114,7 +114,7 @@ func (r *NotificationMicrosoftTeams) Read(ctx context.Context, req infer.ReadReq
 	st := NotificationMicrosoftTeamsState{NotificationMicrosoftTeamsArgs: args, LagoonID: n.ID}
 
 	return infer.ReadResponse[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]{
-		ID:     name,
+		ID:     strconv.Itoa(n.ID),
 		Inputs: args,
 		State:  st,
 	}, nil

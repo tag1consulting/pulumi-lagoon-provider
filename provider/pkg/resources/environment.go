@@ -68,27 +68,27 @@ func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[Enviro
 
 	// Default deployBaseRef to the environment name if not provided.
 	// The Lagoon API requires this field (String!).
-	inputs := req.Inputs
-	if inputs.DeployBaseRef == nil {
-		inputs.DeployBaseRef = &inputs.Name
+	deployBaseRef := req.Inputs.Name
+	if req.Inputs.DeployBaseRef != nil {
+		deployBaseRef = *req.Inputs.DeployBaseRef
 	}
 
 	input := map[string]any{
-		"name":            inputs.Name,
-		"project":         inputs.ProjectID,
-		"deployType":      strings.ToUpper(inputs.DeployType),
-		"environmentType": strings.ToUpper(inputs.EnvironmentType),
-		"deployBaseRef":   *inputs.DeployBaseRef,
+		"name":            req.Inputs.Name,
+		"project":         req.Inputs.ProjectID,
+		"deployType":      strings.ToUpper(req.Inputs.DeployType),
+		"environmentType": strings.ToUpper(req.Inputs.EnvironmentType),
+		"deployBaseRef":   deployBaseRef,
 	}
-	setOptional(input, "deployHeadRef", inputs.DeployHeadRef)
-	setOptional(input, "deployTitle", inputs.DeployTitle)
-	setOptional(input, "openshiftProjectName", inputs.OpenshiftProjectName)
-	setOptionalInt(input, "autoIdle", inputs.AutoIdle)
+	setOptional(input, "deployHeadRef", req.Inputs.DeployHeadRef)
+	setOptional(input, "deployTitle", req.Inputs.DeployTitle)
+	setOptional(input, "openshiftProjectName", req.Inputs.OpenshiftProjectName)
+	setOptionalInt(input, "autoIdle", req.Inputs.AutoIdle)
 
 	if req.DryRun {
 		return infer.CreateResponse[EnvironmentState]{
 			ID:     "preview-id",
-			Output: EnvironmentState{EnvironmentArgs: inputs},
+			Output: EnvironmentState{EnvironmentArgs: req.Inputs},
 		}, nil
 	}
 
@@ -100,7 +100,7 @@ func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[Enviro
 	return infer.CreateResponse[EnvironmentState]{
 		ID: strconv.Itoa(env.ID),
 		Output: EnvironmentState{
-			EnvironmentArgs: inputs,
+			EnvironmentArgs: req.Inputs,
 			LagoonID:        env.ID,
 			Route:           env.Route,
 			Routes:          env.Routes,
@@ -114,27 +114,27 @@ func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[Enviro
 	client := cfg.NewClient()
 
 	// Default deployBaseRef to the environment name if not provided.
-	inputs := req.Inputs
-	if inputs.DeployBaseRef == nil {
-		inputs.DeployBaseRef = &inputs.Name
+	deployBaseRef := req.Inputs.Name
+	if req.Inputs.DeployBaseRef != nil {
+		deployBaseRef = *req.Inputs.DeployBaseRef
 	}
 
 	input := map[string]any{
-		"name":            inputs.Name,
-		"project":         inputs.ProjectID,
-		"deployType":      strings.ToUpper(inputs.DeployType),
-		"environmentType": strings.ToUpper(inputs.EnvironmentType),
-		"deployBaseRef":   *inputs.DeployBaseRef,
+		"name":            req.Inputs.Name,
+		"project":         req.Inputs.ProjectID,
+		"deployType":      strings.ToUpper(req.Inputs.DeployType),
+		"environmentType": strings.ToUpper(req.Inputs.EnvironmentType),
+		"deployBaseRef":   deployBaseRef,
 	}
-	setOptional(input, "deployHeadRef", inputs.DeployHeadRef)
-	setOptional(input, "deployTitle", inputs.DeployTitle)
-	setOptional(input, "openshiftProjectName", inputs.OpenshiftProjectName)
-	setOptionalInt(input, "autoIdle", inputs.AutoIdle)
+	setOptional(input, "deployHeadRef", req.Inputs.DeployHeadRef)
+	setOptional(input, "deployTitle", req.Inputs.DeployTitle)
+	setOptional(input, "openshiftProjectName", req.Inputs.OpenshiftProjectName)
+	setOptionalInt(input, "autoIdle", req.Inputs.AutoIdle)
 
 	if req.DryRun {
 		return infer.UpdateResponse[EnvironmentState]{
 			Output: EnvironmentState{
-				EnvironmentArgs: inputs,
+				EnvironmentArgs: req.Inputs,
 				LagoonID:        req.State.LagoonID,
 				Route:           req.State.Route,
 				Routes:          req.State.Routes,
@@ -150,7 +150,7 @@ func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[Enviro
 
 	return infer.UpdateResponse[EnvironmentState]{
 		Output: EnvironmentState{
-			EnvironmentArgs: inputs,
+			EnvironmentArgs: req.Inputs,
 			LagoonID:        env.ID,
 			Route:           env.Route,
 			Routes:          env.Routes,
@@ -180,7 +180,7 @@ func (r *Environment) Delete(ctx context.Context, req infer.DeleteRequest[Enviro
 
 func (r *Environment) Read(ctx context.Context, req infer.ReadRequest[EnvironmentArgs, EnvironmentState]) (infer.ReadResponse[EnvironmentArgs, EnvironmentState], error) {
 	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	c := cfg.NewClient()
 
 	// Parse composite ID: {project_id}:{env_name}
 	parts := strings.SplitN(req.ID, ":", 2)
@@ -201,8 +201,11 @@ func (r *Environment) Read(ctx context.Context, req infer.ReadRequest[Environmen
 		envName = req.State.Name
 	}
 
-	env, err := client.GetEnvironmentByName(ctx, envName, projectID)
+	env, err := c.GetEnvironmentByName(ctx, envName, projectID)
 	if err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.ReadResponse[EnvironmentArgs, EnvironmentState]{ID: ""}, nil
+		}
 		return infer.ReadResponse[EnvironmentArgs, EnvironmentState]{}, fmt.Errorf("failed to read environment: %w", err)
 	}
 
@@ -223,6 +226,9 @@ func (r *Environment) Read(ctx context.Context, req infer.ReadRequest[Environmen
 	}
 	if env.AutoIdle != nil {
 		args.AutoIdle = env.AutoIdle
+	}
+	if env.OpenshiftProjectName != "" {
+		args.OpenshiftProjectName = &env.OpenshiftProjectName
 	}
 
 	st := EnvironmentState{
@@ -258,7 +264,17 @@ func (r *Environment) Diff(ctx context.Context, req infer.DiffRequest[Environmen
 	if !strings.EqualFold(req.Inputs.EnvironmentType, req.State.EnvironmentType) {
 		diff["environmentType"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(req.Inputs.DeployBaseRef, req.State.DeployBaseRef) {
+	// Normalize deployBaseRef: treat nil as the environment name (same default as Create/Update)
+	// to avoid spurious diffs when the user omits this optional field.
+	inputDBR := req.Inputs.DeployBaseRef
+	if inputDBR == nil {
+		inputDBR = &req.Inputs.Name
+	}
+	stateDBR := req.State.DeployBaseRef
+	if stateDBR == nil {
+		stateDBR = &req.State.Name
+	}
+	if ptrDiffers(inputDBR, stateDBR) {
 		diff["deployBaseRef"] = p.PropertyDiff{Kind: p.Update}
 	}
 	if ptrDiffers(req.Inputs.DeployHeadRef, req.State.DeployHeadRef) {
