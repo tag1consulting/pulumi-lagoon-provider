@@ -40,6 +40,10 @@ SSH_HOST="${LAGOON_SSH_HOST:-localhost}"
 while [[ $# -gt 0 ]]; do
     case $1 in
         -n|--name)
+            if [ $# -lt 2 ] || [[ "$2" == -* ]]; then
+                echo "ERROR: --name requires a value." >&2
+                exit 1
+            fi
             CONFIG_NAME="$2"
             shift 2
             ;;
@@ -155,11 +159,20 @@ TOKEN=$("$SCRIPT_DIR/get-token.sh") || {
 echo "Token obtained successfully."
 
 # Discover SSH NodePort from the cluster (required by lagoon config add)
-if [ -z "${LAGOON_SSH_PORT:-}" ] && [ -n "$SSH_SVC" ]; then
+if [ -n "${LAGOON_SSH_PORT:-}" ]; then
+    SSH_PORT="$LAGOON_SSH_PORT"
+elif [ -n "$SSH_SVC" ]; then
     SSH_PORT=$(kubectl --context "$KUBE_CONTEXT" -n "$LAGOON_NAMESPACE" \
         get svc "$SSH_SVC" -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || true)
+    if [ -z "$SSH_PORT" ]; then
+        echo "ERROR: Could not discover SSH NodePort from service '$SSH_SVC'."
+        echo "Set LAGOON_SSH_PORT explicitly or verify SSH_SVC/KUBE_CONTEXT/LAGOON_NAMESPACE."
+        exit 1
+    fi
+else
+    echo "ERROR: SSH_SVC is not set for this preset. Set LAGOON_SSH_PORT explicitly."
+    exit 1
 fi
-SSH_PORT="${LAGOON_SSH_PORT:-${SSH_PORT:-22}}"
 
 # Configure lagoon CLI
 echo ""
