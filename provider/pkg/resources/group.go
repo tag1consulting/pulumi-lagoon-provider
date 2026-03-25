@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
@@ -22,7 +21,7 @@ type GroupArgs struct {
 
 type GroupState struct {
 	GroupArgs
-	LagoonID int `pulumi:"lagoonId"`
+	LagoonID string `pulumi:"lagoonId"`
 }
 
 func (r *Group) Annotate(a infer.Annotator) {
@@ -56,7 +55,7 @@ func (r *Group) Create(ctx context.Context, req infer.CreateRequest[GroupArgs]) 
 	}
 
 	return infer.CreateResponse[GroupState]{
-		ID:     strconv.Itoa(g.ID),
+		ID:     g.ID,
 		Output: GroupState{GroupArgs: req.Inputs, LagoonID: g.ID},
 	}, nil
 }
@@ -78,15 +77,13 @@ func (r *Group) Read(ctx context.Context, req infer.ReadRequest[GroupArgs, Group
 		return infer.ReadResponse[GroupArgs, GroupState]{}, fmt.Errorf("failed to read group: %w", err)
 	}
 
-	var parentGroupName *string
-	if g.ParentGroup != nil {
-		parentGroupName = &g.ParentGroup.Name
-	}
-	args := GroupArgs{Name: g.Name, ParentGroupName: parentGroupName}
+	// parentGroupName is not available from the Lagoon API (parentGroup is not
+	// exposed on GroupInterface), so preserve it from the prior state.
+	args := GroupArgs{Name: g.Name, ParentGroupName: req.State.ParentGroupName}
 	st := GroupState{GroupArgs: args, LagoonID: g.ID}
 
 	return infer.ReadResponse[GroupArgs, GroupState]{
-		ID:     strconv.Itoa(g.ID),
+		ID:     g.ID,
 		Inputs: args,
 		State:  st,
 	}, nil

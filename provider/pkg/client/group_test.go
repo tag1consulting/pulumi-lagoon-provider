@@ -23,7 +23,7 @@ func TestCreateGroup(t *testing.T) {
 			t.Error("expected no parentGroup for root group")
 		}
 		return map[string]any{
-			"addGroup": map[string]any{"id": 1, "name": "my-group"},
+			"addGroup": map[string]any{"id": "uuid-1", "name": "my-group"},
 		}, nil
 	})
 	defer server.Close()
@@ -33,8 +33,8 @@ func TestCreateGroup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateGroup failed: %v", err)
 	}
-	if g.ID != 1 {
-		t.Errorf("expected ID=1, got %d", g.ID)
+	if g.ID != "uuid-1" {
+		t.Errorf("expected ID=uuid-1, got %s", g.ID)
 	}
 	if g.Name != "my-group" {
 		t.Errorf("expected Name=my-group, got %s", g.Name)
@@ -55,7 +55,7 @@ func TestCreateGroup_WithParent(t *testing.T) {
 			t.Errorf("expected parentGroup name=parent-group, got %v", parentGroup["name"])
 		}
 		return map[string]any{
-			"addGroup": map[string]any{"id": 2, "name": "child-group"},
+			"addGroup": map[string]any{"id": "uuid-2", "name": "child-group"},
 		}, nil
 	})
 	defer server.Close()
@@ -66,8 +66,8 @@ func TestCreateGroup_WithParent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateGroup with parent failed: %v", err)
 	}
-	if g.ID != 2 {
-		t.Errorf("expected ID=2, got %d", g.ID)
+	if g.ID != "uuid-2" {
+		t.Errorf("expected ID=uuid-2, got %s", g.ID)
 	}
 }
 
@@ -78,8 +78,8 @@ func TestGetGroupByName(t *testing.T) {
 		}
 		return map[string]any{
 			"allGroups": []map[string]any{
-				{"id": 1, "name": "group-a"},
-				{"id": 2, "name": "group-b"},
+				{"id": "uuid-a", "name": "group-a"},
+				{"id": "uuid-b", "name": "group-b"},
 			},
 		}, nil
 	})
@@ -90,8 +90,8 @@ func TestGetGroupByName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetGroupByName failed: %v", err)
 	}
-	if g.ID != 2 {
-		t.Errorf("expected ID=2, got %d", g.ID)
+	if g.ID != "uuid-b" {
+		t.Errorf("expected ID=uuid-b, got %s", g.ID)
 	}
 }
 
@@ -99,7 +99,7 @@ func TestGetGroupByName_NotFound(t *testing.T) {
 	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
 		return map[string]any{
 			"allGroups": []map[string]any{
-				{"id": 1, "name": "other-group"},
+				{"id": "uuid-other", "name": "other-group"},
 			},
 		}, nil
 	})
@@ -129,7 +129,7 @@ func TestUpdateGroup(t *testing.T) {
 			t.Errorf("expected group name=my-group, got %v", group["name"])
 		}
 		return map[string]any{
-			"updateGroup": map[string]any{"id": 1, "name": "renamed-group"},
+			"updateGroup": map[string]any{"id": "uuid-1", "name": "renamed-group"},
 		}, nil
 	})
 	defer server.Close()
@@ -164,5 +164,21 @@ func TestDeleteGroup(t *testing.T) {
 	c := NewClient(server.URL, "token")
 	if err := c.DeleteGroup(context.Background(), "my-group"); err != nil {
 		t.Fatalf("DeleteGroup failed: %v", err)
+	}
+}
+
+func TestDeleteGroup_NotFound(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return nil, &LagoonAPIError{Message: "Group not found: missing-group"}
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	err := c.DeleteGroup(context.Background(), "missing-group")
+	if err == nil {
+		t.Fatal("expected error for missing group")
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %T: %v", err, err)
 	}
 }

@@ -57,10 +57,7 @@ func GetEnvOrDefault(def interface{}, parser envParser, vars ...string) interfac
 	for _, v := range vars {
 		if value, ok := os.LookupEnv(v); ok {
 			if parser != nil {
-				if parsed := parser(value); parsed != nil {
-					return parsed
-				}
-				continue
+				return parser(value)
 			}
 			return value
 		}
@@ -118,17 +115,11 @@ func CallPlain(
 
 	// extract res.property field if asked to do so
 	if property != "" {
-		f := v.FieldByName(property)
-		if !f.IsValid() {
-			return
-		}
-		v = f
+		v = v.FieldByName("Res")
 	}
 
 	// return by setting the result pointer; this style of returns shortens the generated code without generics
-	if v.IsValid() && v.Type().AssignableTo(resultPtr.Elem().Type()) {
-		resultPtr.Elem().Set(v)
-	}
+	resultPtr.Elem().Set(v)
 }
 
 func callPlainInner(

@@ -494,8 +494,8 @@
       "description": "Manages a Lagoon group for organizing projects and users.",
       "properties": {
         "lagoonId": {
-          "type": "integer",
-          "description": "The Lagoon internal ID of the group."
+          "type": "string",
+          "description": "The Lagoon internal ID of the group (UUID)."
         },
         "name": {
           "type": "string",

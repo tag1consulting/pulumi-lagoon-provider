@@ -2,19 +2,18 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 )
 
-// GroupParent holds the minimal parent-group data returned by the API.
-type GroupParent struct {
-	Name string `json:"name"`
-}
-
 // Group represents a Lagoon group.
+// Note: Lagoon group IDs are UUIDs (strings), not integers.
+// parentGroup is not exposed on GroupInterface in the Lagoon API, so
+// ParentGroupName is managed from Pulumi state rather than read from the API.
 type Group struct {
-	ID          int          `json:"id"`
-	Name        string       `json:"name"`
-	ParentGroup *GroupParent `json:"parentGroup"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // CreateGroup creates a new Lagoon group.
@@ -83,5 +82,13 @@ func (c *Client) DeleteGroup(ctx context.Context, name string) error {
 	}
 
 	_, err := c.Execute(ctx, mutationDeleteGroup, map[string]any{"input": input})
+	if err != nil {
+		// Convert "Group not found" API errors to LagoonNotFoundError
+		// so callers can use errors.Is(err, ErrNotFound).
+		var apiErr *LagoonAPIError
+		if errors.As(err, &apiErr) && strings.Contains(apiErr.Message, "Group not found") {
+			return &LagoonNotFoundError{ResourceType: "Group", Identifier: name}
+		}
+	}
 	return err
 }
