@@ -301,6 +301,14 @@ Lagoon uses Keycloak for authentication. This example automatically configures:
 1. **Direct Access Grants** - Enables OAuth password grant for CLI tools
 2. **lagoonadmin user** - Creates a platform-owner user for API access
 
+### Lagoon CLI Setup
+
+To configure the lagoon CLI for this deployment, see [LAGOON_CLI_SETUP.md](./LAGOON_CLI_SETUP.md) for detailed instructions, or run:
+
+```bash
+./scripts/setup-lagoon-cli.sh
+```
+
 ### CLI Authentication (Programmatic)
 
 The easiest way to test API access is with the make target:
