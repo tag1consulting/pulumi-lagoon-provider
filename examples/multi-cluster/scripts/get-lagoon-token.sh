@@ -12,13 +12,11 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # Default configuration
-CLUSTER_NAME="${LAGOON_CLUSTER_NAME:-lagoon-test}"
+CLUSTER_NAME="${LAGOON_CLUSTER_NAME:-lagoon-prod}"
 CONTEXT="kind-${CLUSTER_NAME}"
 # Use HTTPS ingress endpoint (with self-signed cert)
-KEYCLOAK_URL="${LAGOON_KEYCLOAK_URL:-https://keycloak.lagoon.test}"
+KEYCLOAK_URL="${LAGOON_KEYCLOAK_URL:-https://keycloak.lagoon.local:8443}"
 KEYCLOAK_REALM="lagoon"
 KEYCLOAK_CLIENT="lagoon-ui"
 USERNAME="${LAGOON_USER:-lagoonadmin}"
@@ -53,8 +51,8 @@ while [[ $# -gt 0 ]]; do
             echo "  -h, --help             Show this help message"
             echo ""
             echo "Environment variables:"
-            echo "  LAGOON_CLUSTER_NAME    Kind cluster name (default: lagoon-test)"
-            echo "  LAGOON_KEYCLOAK_URL    Keycloak URL (default: https://keycloak.lagoon.test)"
+            echo "  LAGOON_CLUSTER_NAME    Kind cluster name (default: lagoon-prod)"
+            echo "  LAGOON_KEYCLOAK_URL    Keycloak URL (default: https://keycloak.lagoon.local:8443)"
             echo "  LAGOON_USER            Username (default: lagoonadmin)"
             echo "  LAGOON_PASSWORD        Password (default: fetched from k8s secret)"
             exit 0
@@ -85,10 +83,10 @@ fi
 # Fetch password from Kubernetes secret if not provided
 if [ -z "$PASSWORD" ]; then
     log "Fetching lagoonadmin password from Kubernetes secret..."
-    PASSWORD=$(kubectl --context "${CONTEXT}" get secret lagoon-core-keycloak -n lagoon \
+    PASSWORD=$(kubectl --context "${CONTEXT}" get secret prod-core-lagoon-core-keycloak -n lagoon-core \
         -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' 2>/dev/null | base64 -d) || {
         error "Failed to fetch password from Kubernetes secret.
-Make sure the cluster is deployed and the lagoon namespace exists."
+Make sure the cluster is deployed and the lagoon-core namespace exists."
     }
     if [ -z "$PASSWORD" ]; then
         error "Password secret is empty. Lagoon may not be fully deployed."
@@ -118,23 +116,30 @@ RESPONSE=$(curl -sf ${CURL_OPTS} -X POST "${TOKEN_ENDPOINT}" \
 
 Possible causes:
 - Keycloak is not ready (wait a few minutes after cluster deployment)
-- Keycloak ingress not accessible (check /etc/hosts has keycloak.lagoon.test)
+- Keycloak ingress not accessible (check /etc/hosts has keycloak.lagoon.local)
 - Invalid username/password
 
 Try:
-  kubectl --context ${CONTEXT} -n lagoon get pods | grep keycloak
+  kubectl --context ${CONTEXT} -n lagoon-core get pods | grep keycloak
   curl -kv ${TOKEN_ENDPOINT}"
 }
 
-# Extract access token
-ACCESS_TOKEN=$(echo "${RESPONSE}" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+# Extract access token and expiration
+if command -v jq &>/dev/null; then
+    ACCESS_TOKEN=$(echo "${RESPONSE}" | jq -r '.access_token')
+    EXPIRES_IN=$(echo "${RESPONSE}" | jq -r '.expires_in')
+    # jq returns "null" for missing fields
+    [ "$ACCESS_TOKEN" = "null" ] && ACCESS_TOKEN=""
+    [ "$EXPIRES_IN" = "null" ] && EXPIRES_IN=""
+else
+    ACCESS_TOKEN=$(echo "${RESPONSE}" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+    EXPIRES_IN=$(echo "${RESPONSE}" | grep -o '"expires_in":[0-9]*' | cut -d':' -f2)
+fi
 
 if [ -z "$ACCESS_TOKEN" ]; then
     error "Failed to extract access_token from response: ${RESPONSE}"
 fi
 
-# Extract token expiration
-EXPIRES_IN=$(echo "${RESPONSE}" | grep -o '"expires_in":[0-9]*' | cut -d':' -f2)
 if [ -n "$EXPIRES_IN" ] && [ "$QUIET" = false ]; then
     log "Token obtained successfully (expires in ${EXPIRES_IN} seconds)"
 fi

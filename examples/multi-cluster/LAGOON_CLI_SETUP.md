@@ -17,7 +17,7 @@ From the `examples/multi-cluster` directory, run:
 
 This script:
 1. Obtains an OAuth token from Keycloak (using `lagoonadmin` credentials)
-2. Configures the lagoon CLI with the test cluster endpoints
+2. Configures the lagoon CLI with the multi-cluster endpoints
 3. Sets the configuration as default
 4. Verifies with `lagoon whoami`
 
@@ -78,6 +78,10 @@ If you prefer to configure the CLI manually:
 
 ### 2. Configure CLI
 
+The example below uses HTTP NodePort endpoints for simplicity — no TLS trust setup
+required. For HTTPS ingress URLs (as used by `setup-lagoon-cli.sh`), see the
+[HTTPS with Ingress](#alternative-https-with-ingress) section.
+
 ```bash
 TOKEN=$(./scripts/get-lagoon-token.sh -q)
 
@@ -111,7 +115,7 @@ The `-f` flag forces reconfiguration, obtaining a fresh token.
 
 ## Service Endpoints
 
-The test cluster exposes services via NodePorts to avoid TLS certificate issues:
+The prod cluster exposes services via NodePorts to avoid TLS certificate issues:
 
 | Service | NodePort URL | Purpose |
 |---------|--------------|---------|
@@ -119,7 +123,7 @@ The test cluster exposes services via NodePorts to avoid TLS certificate issues:
 | Keycloak | `http://localhost:30370` | OAuth authentication |
 | Lagoon UI | `http://localhost:31311` | Web interface |
 
-These HTTP endpoints work without needing to trust the test cluster's self-signed CA certificate.
+These HTTP endpoints work without needing to trust the cluster's self-signed CA certificate.
 
 ### Alternative: HTTPS with Ingress
 
@@ -128,28 +132,28 @@ If you need to use the HTTPS ingress endpoints:
 1. **Linux** - Trust the CA certificate:
    ```bash
    # Export the CA certificate first
-   kubectl --context kind-lagoon-test -n cert-manager get secret lagoon-test-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/lagoon-test-ca.crt
+   kubectl --context kind-lagoon-prod -n cert-manager get secret lagoon-prod-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/lagoon-prod-ca.crt
 
    # Trust it system-wide
-   sudo cp /tmp/lagoon-test-ca.crt /usr/local/share/ca-certificates/lagoon-test-ca.crt
+   sudo cp /tmp/lagoon-prod-ca.crt /usr/local/share/ca-certificates/lagoon-prod-ca.crt
    sudo update-ca-certificates
    ```
 
 2. **macOS** - Trust the CA certificate:
    ```bash
    # Export the CA certificate first
-   kubectl --context kind-lagoon-test -n cert-manager get secret lagoon-test-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/lagoon-test-ca.crt
+   kubectl --context kind-lagoon-prod -n cert-manager get secret lagoon-prod-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/lagoon-prod-ca.crt
 
    # Trust it system-wide
-   sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/lagoon-test-ca.crt
+   sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/lagoon-prod-ca.crt
    ```
 
 Then configure with HTTPS URLs:
 ```bash
 lagoon config add \
     --lagoon local-test-https \
-    --graphql https://api.lagoon.test/graphql \
-    --ui https://ui.lagoon.test \
+    --graphql https://api.lagoon.local:8443/graphql \
+    --ui https://ui.lagoon.local:8443 \
     --token "$TOKEN"
 ```
 
@@ -159,7 +163,7 @@ lagoon config add \
 
 Install the CLI following the [Installation](#installation) section above.
 
-### "Cluster 'lagoon-test' not found"
+### "Cluster 'lagoon-prod' not found"
 
 The clusters aren't running. Deploy them:
 
@@ -175,7 +179,7 @@ make multi-cluster-deploy
 
 1. **Check if Keycloak is ready:**
    ```bash
-   kubectl --context kind-lagoon-test -n lagoon get pods | grep keycloak
+   kubectl --context kind-lagoon-prod -n lagoon-core get pods | grep keycloak
    ```
    Wait for the pod to be `Running` and `Ready`.
 
@@ -186,7 +190,7 @@ make multi-cluster-deploy
 
 3. **Verify NodePort is accessible:**
    ```bash
-   kubectl --context kind-lagoon-test -n lagoon get svc lagoon-core-keycloak
+   kubectl --context kind-lagoon-prod -n lagoon-core get svc | grep keycloak
    ```
 
 ### "Configuration verification failed"
@@ -211,10 +215,10 @@ Check that the services are running and NodePorts are accessible:
 
 ```bash
 # Check all Lagoon pods
-kubectl --context kind-lagoon-test -n lagoon get pods
+kubectl --context kind-lagoon-prod -n lagoon-core get pods
 
 # Check NodePort services
-kubectl --context kind-lagoon-test -n lagoon get svc | grep NodePort
+kubectl --context kind-lagoon-prod -n lagoon-core get svc | grep NodePort
 
 # Test API connectivity
 curl http://localhost:30030/graphql -X POST \

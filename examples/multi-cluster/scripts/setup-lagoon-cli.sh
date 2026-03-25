@@ -24,8 +24,8 @@ PASSWORD="${LAGOON_PASSWORD:-lagoonadmin}"
 FORCE=false
 
 # Lagoon API endpoints (using HTTPS ingress with self-signed certs)
-API_URL="https://api.lagoon.test/graphql"
-UI_URL="https://ui.lagoon.test"
+API_URL="https://api.lagoon.local:8443/graphql"
+UI_URL="https://ui.lagoon.local:8443"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -127,6 +127,9 @@ echo "  Name: ${CONFIG_NAME}"
 echo "  API:  ${API_URL}"
 echo "  UI:   ${UI_URL}"
 
+# Note: --token passes the value on the command line, which briefly exposes it
+# in process listings (ps aux). This is acceptable for local development use.
+# The lagoon CLI does not currently support reading the token from stdin or env.
 lagoon config add \
     --lagoon "${CONFIG_NAME}" \
     --graphql "${API_URL}" \
