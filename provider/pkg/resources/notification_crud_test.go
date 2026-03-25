@@ -522,3 +522,242 @@ func TestNotificationSlackDelete_APIError(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestNotificationSlackUpdate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		updateNotificationSlackFn: func(_ context.Context, _ string, _ map[string]any) (*client.Notification, error) {
+			return nil, fmt.Errorf("update failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationSlack{}
+	_, err := r.Update(ctx, infer.UpdateRequest[NotificationSlackArgs, NotificationSlackState]{
+		ID:     "10",
+		Inputs: NotificationSlackArgs{Name: "deploy-slack", Webhook: "https://hooks.slack.com/new", Channel: "#deployments"},
+		State:  NotificationSlackState{NotificationSlackArgs: NotificationSlackArgs{Name: "deploy-slack", Webhook: "https://hooks.slack.com/old", Channel: "#deployments"}, LagoonID: 10},
+	})
+	if err == nil {
+		t.Fatal("expected error when update API fails")
+	}
+}
+
+func TestNotificationSlackRead_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getNotificationSlackByNameFn: func(_ context.Context, _ string) (*client.Notification, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationSlack{}
+	_, err := r.Read(ctx, infer.ReadRequest[NotificationSlackArgs, NotificationSlackState]{
+		ID:    "10",
+		State: NotificationSlackState{NotificationSlackArgs: NotificationSlackArgs{Name: "deploy-slack"}, LagoonID: 10},
+	})
+	if err == nil {
+		t.Fatal("expected error when read API fails")
+	}
+}
+
+// ==================== RocketChat Error Paths ====================
+
+func TestNotificationRocketChatCreate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		createNotificationRocketChatFn: func(_ context.Context, _, _, _ string) (*client.Notification, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationRocketChat{}
+	_, err := r.Create(ctx, infer.CreateRequest[NotificationRocketChatArgs]{
+		Inputs: NotificationRocketChatArgs{Name: "fail", Webhook: "https://x", Channel: "#x"},
+	})
+	if err == nil {
+		t.Fatal("expected error when create API fails")
+	}
+}
+
+func TestNotificationRocketChatUpdate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		updateNotificationRocketChatFn: func(_ context.Context, _ string, _ map[string]any) (*client.Notification, error) {
+			return nil, fmt.Errorf("update failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationRocketChat{}
+	_, err := r.Update(ctx, infer.UpdateRequest[NotificationRocketChatArgs, NotificationRocketChatState]{
+		Inputs: NotificationRocketChatArgs{Name: "rc-notif", Webhook: "https://rc.example.com/new", Channel: "#general"},
+		State:  NotificationRocketChatState{NotificationRocketChatArgs: NotificationRocketChatArgs{Name: "rc-notif", Webhook: "https://rc.example.com/old", Channel: "#general"}, LagoonID: 11},
+	})
+	if err == nil {
+		t.Fatal("expected error when update API fails")
+	}
+}
+
+func TestNotificationRocketChatDelete_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		deleteNotificationRocketChatFn: func(_ context.Context, _ string) error {
+			return fmt.Errorf("delete failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationRocketChat{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[NotificationRocketChatState]{
+		State: NotificationRocketChatState{NotificationRocketChatArgs: NotificationRocketChatArgs{Name: "rc-notif"}, LagoonID: 11},
+	})
+	if err == nil {
+		t.Fatal("expected error when delete API fails")
+	}
+}
+
+func TestNotificationRocketChatRead_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getNotificationRocketChatByNameFn: func(_ context.Context, _ string) (*client.Notification, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationRocketChat{}
+	_, err := r.Read(ctx, infer.ReadRequest[NotificationRocketChatArgs, NotificationRocketChatState]{
+		ID:    "11",
+		State: NotificationRocketChatState{NotificationRocketChatArgs: NotificationRocketChatArgs{Name: "rc-notif"}, LagoonID: 11},
+	})
+	if err == nil {
+		t.Fatal("expected error when read API fails")
+	}
+}
+
+// ==================== Email Error Paths ====================
+
+func TestNotificationEmailCreate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		createNotificationEmailFn: func(_ context.Context, _, _ string) (*client.Notification, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationEmail{}
+	_, err := r.Create(ctx, infer.CreateRequest[NotificationEmailArgs]{
+		Inputs: NotificationEmailArgs{Name: "fail", EmailAddress: "fail@example.com"},
+	})
+	if err == nil {
+		t.Fatal("expected error when create API fails")
+	}
+}
+
+func TestNotificationEmailUpdate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		updateNotificationEmailFn: func(_ context.Context, _ string, _ map[string]any) (*client.Notification, error) {
+			return nil, fmt.Errorf("update failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationEmail{}
+	_, err := r.Update(ctx, infer.UpdateRequest[NotificationEmailArgs, NotificationEmailState]{
+		Inputs: NotificationEmailArgs{Name: "email-notif", EmailAddress: "new@example.com"},
+		State:  NotificationEmailState{NotificationEmailArgs: NotificationEmailArgs{Name: "email-notif", EmailAddress: "old@example.com"}, LagoonID: 12},
+	})
+	if err == nil {
+		t.Fatal("expected error when update API fails")
+	}
+}
+
+func TestNotificationEmailDelete_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		deleteNotificationEmailFn: func(_ context.Context, _ string) error {
+			return fmt.Errorf("delete failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationEmail{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[NotificationEmailState]{
+		State: NotificationEmailState{NotificationEmailArgs: NotificationEmailArgs{Name: "email-notif"}, LagoonID: 12},
+	})
+	if err == nil {
+		t.Fatal("expected error when delete API fails")
+	}
+}
+
+func TestNotificationEmailRead_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getNotificationEmailByNameFn: func(_ context.Context, _ string) (*client.Notification, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationEmail{}
+	_, err := r.Read(ctx, infer.ReadRequest[NotificationEmailArgs, NotificationEmailState]{
+		ID:    "12",
+		State: NotificationEmailState{NotificationEmailArgs: NotificationEmailArgs{Name: "email-notif"}, LagoonID: 12},
+	})
+	if err == nil {
+		t.Fatal("expected error when read API fails")
+	}
+}
+
+// ==================== Microsoft Teams Error Paths ====================
+
+func TestNotificationMicrosoftTeamsCreate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		createNotificationMicrosoftTeamsFn: func(_ context.Context, _, _ string) (*client.Notification, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationMicrosoftTeams{}
+	_, err := r.Create(ctx, infer.CreateRequest[NotificationMicrosoftTeamsArgs]{
+		Inputs: NotificationMicrosoftTeamsArgs{Name: "fail", Webhook: "https://teams.example.com/hook"},
+	})
+	if err == nil {
+		t.Fatal("expected error when create API fails")
+	}
+}
+
+func TestNotificationMicrosoftTeamsUpdate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		updateNotificationMicrosoftTeamsFn: func(_ context.Context, _ string, _ map[string]any) (*client.Notification, error) {
+			return nil, fmt.Errorf("update failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationMicrosoftTeams{}
+	_, err := r.Update(ctx, infer.UpdateRequest[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]{
+		Inputs: NotificationMicrosoftTeamsArgs{Name: "teams-notif", Webhook: "https://teams.example.com/new"},
+		State:  NotificationMicrosoftTeamsState{NotificationMicrosoftTeamsArgs: NotificationMicrosoftTeamsArgs{Name: "teams-notif", Webhook: "https://teams.example.com/old"}, LagoonID: 13},
+	})
+	if err == nil {
+		t.Fatal("expected error when update API fails")
+	}
+}
+
+func TestNotificationMicrosoftTeamsDelete_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		deleteNotificationMicrosoftTeamsFn: func(_ context.Context, _ string) error {
+			return fmt.Errorf("delete failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationMicrosoftTeams{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[NotificationMicrosoftTeamsState]{
+		State: NotificationMicrosoftTeamsState{NotificationMicrosoftTeamsArgs: NotificationMicrosoftTeamsArgs{Name: "teams-notif"}, LagoonID: 13},
+	})
+	if err == nil {
+		t.Fatal("expected error when delete API fails")
+	}
+}
+
+func TestNotificationMicrosoftTeamsRead_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getNotificationMicrosoftTeamsByNameFn: func(_ context.Context, _ string) (*client.Notification, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationMicrosoftTeams{}
+	_, err := r.Read(ctx, infer.ReadRequest[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]{
+		ID:    "13",
+		State: NotificationMicrosoftTeamsState{NotificationMicrosoftTeamsArgs: NotificationMicrosoftTeamsArgs{Name: "teams-notif"}, LagoonID: 13},
+	})
+	if err == nil {
+		t.Fatal("expected error when read API fails")
+	}
+}

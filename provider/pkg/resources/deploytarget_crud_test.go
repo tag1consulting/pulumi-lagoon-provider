@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/pulumi/pulumi-go-provider/infer"
@@ -286,5 +287,62 @@ func TestDeployTargetRead_InvalidID(t *testing.T) {
 	_, err := r.Read(ctx, infer.ReadRequest[DeployTargetArgs, DeployTargetState]{ID: "not-a-number"})
 	if err == nil {
 		t.Fatal("expected error for non-numeric ID")
+	}
+}
+
+func TestDeployTargetCreate_DuplicateAdopt_UpdateFails(t *testing.T) {
+	mock := &mockLagoonClient{
+		createDeployTargetFn: func(_ context.Context, _ map[string]any) (*client.DeployTarget, error) {
+			return nil, &client.LagoonAPIError{Message: "Duplicate entry 'mycluster' for key 'name'"}
+		},
+		getDeployTargetByNameFn: func(_ context.Context, name string) (*client.DeployTarget, error) {
+			return &client.DeployTarget{ID: 99, Name: name}, nil
+		},
+		updateDeployTargetFn: func(_ context.Context, _ int, _ map[string]any) (*client.DeployTarget, error) {
+			return nil, fmt.Errorf("update failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTarget{}
+	_, err := r.Create(ctx, infer.CreateRequest[DeployTargetArgs]{
+		Inputs: DeployTargetArgs{Name: "mycluster", ConsoleURL: "https://k8s.example.com"},
+	})
+	if err == nil {
+		t.Fatal("expected error when adopt-update fails")
+	}
+	if !strings.Contains(err.Error(), "failed to update") {
+		t.Errorf("expected error to mention update failure, got: %v", err)
+	}
+}
+
+func TestDeployTargetUpdate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		updateDeployTargetFn: func(_ context.Context, _ int, _ map[string]any) (*client.DeployTarget, error) {
+			return nil, fmt.Errorf("update failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTarget{}
+	_, err := r.Update(ctx, infer.UpdateRequest[DeployTargetArgs, DeployTargetState]{
+		ID:     "7",
+		Inputs: DeployTargetArgs{Name: "mycluster", ConsoleURL: "https://new.k8s.example.com"},
+		State:  DeployTargetState{DeployTargetArgs: DeployTargetArgs{Name: "mycluster", ConsoleURL: "https://old.k8s.example.com"}, LagoonID: 7},
+	})
+	if err == nil {
+		t.Fatal("expected error when update API fails")
+	}
+}
+
+func TestDeployTargetRead_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getDeployTargetByIDFn: func(_ context.Context, _ int) (*client.DeployTarget, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTarget{}
+	_, err := r.Read(ctx, infer.ReadRequest[DeployTargetArgs, DeployTargetState]{ID: "7"})
+	if err == nil {
+		t.Fatal("expected error when read API fails")
 	}
 }

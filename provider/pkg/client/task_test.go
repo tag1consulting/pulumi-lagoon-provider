@@ -506,6 +506,59 @@ func TestGetTasksByEnvironment_NonFallbackError(t *testing.T) {
 	}
 }
 
+func TestCreateTaskDefinition_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"addAdvancedTaskDefinition": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.CreateTaskDefinition(context.Background(), map[string]any{
+		"name":    "my-task",
+		"type":    "COMMAND",
+		"service": "cli",
+		"command": "drush cr",
+	})
+	if err == nil {
+		t.Fatal("expected error for malformed addAdvancedTaskDefinition response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestGetTaskDefinitionByID_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"advancedTaskDefinitionById": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetTaskDefinitionByID(context.Background(), 50)
+	if err == nil {
+		t.Fatal("expected error for malformed advancedTaskDefinitionById response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestGetTasksByEnvironment_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"advancedTasksForEnvironment": "not-an-array"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetTasksByEnvironment(context.Background(), 10)
+	if err == nil {
+		t.Fatal("expected error for malformed advancedTasksForEnvironment response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
 func TestIsFieldNotFoundOrLegacyError(t *testing.T) {
 	tests := []struct {
 		name    string

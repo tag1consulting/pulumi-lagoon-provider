@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/pulumi/pulumi-go-provider/infer"
@@ -323,6 +324,45 @@ func TestProjectRead_InvalidID(t *testing.T) {
 	_, err := r.Read(ctx, infer.ReadRequest[ProjectArgs, ProjectState]{ID: "not-a-number"})
 	if err == nil {
 		t.Fatal("expected error for non-numeric ID")
+	}
+}
+
+func TestProjectCreate_DuplicateAdopt_UpdateFails(t *testing.T) {
+	mock := &mockLagoonClient{
+		createProjectFn: func(_ context.Context, _ map[string]any) (*client.Project, error) {
+			return nil, &client.LagoonAPIError{Message: "Duplicate entry 'myproject' for key 'name'"}
+		},
+		getProjectByNameFn: func(_ context.Context, name string) (*client.Project, error) {
+			return &client.Project{ID: 99, Name: name}, nil
+		},
+		updateProjectFn: func(_ context.Context, _ int, _ map[string]any) (*client.Project, error) {
+			return nil, fmt.Errorf("update failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Project{}
+	_, err := r.Create(ctx, infer.CreateRequest[ProjectArgs]{
+		Inputs: ProjectArgs{Name: "myproject", GitURL: "git@example.com:repo.git", DeploytargetID: 1},
+	})
+	if err == nil {
+		t.Fatal("expected error when adopt-update fails")
+	}
+	if !strings.Contains(err.Error(), "failed to update") {
+		t.Errorf("expected error to mention update failure, got: %v", err)
+	}
+}
+
+func TestProjectRead_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getProjectByIDFn: func(_ context.Context, _ int) (*client.Project, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Project{}
+	_, err := r.Read(ctx, infer.ReadRequest[ProjectArgs, ProjectState]{ID: "42"})
+	if err == nil {
+		t.Fatal("expected error when API returns error")
 	}
 }
 

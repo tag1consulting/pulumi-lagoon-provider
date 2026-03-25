@@ -341,3 +341,72 @@ func TestEnvironmentCreate_APIError(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestEnvironmentUpdate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		addOrUpdateEnvironmentFn: func(_ context.Context, _ map[string]any) (*client.Environment, error) {
+			return nil, fmt.Errorf("update failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Environment{}
+	_, err := r.Update(ctx, infer.UpdateRequest[EnvironmentArgs, EnvironmentState]{
+		ID:     "10",
+		Inputs: EnvironmentArgs{Name: "develop", ProjectID: 1, DeployType: "branch", EnvironmentType: "development"},
+		State:  EnvironmentState{EnvironmentArgs: EnvironmentArgs{Name: "develop", ProjectID: 1, DeployType: "branch", EnvironmentType: "development"}, LagoonID: 10},
+	})
+	if err == nil {
+		t.Fatal("expected error when update API fails")
+	}
+}
+
+func TestEnvironmentDelete_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getProjectByIDFn: func(_ context.Context, id int) (*client.Project, error) {
+			return &client.Project{ID: id, Name: "myproject"}, nil
+		},
+		deleteEnvironmentFn: func(_ context.Context, _, _ string) error {
+			return fmt.Errorf("delete failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Environment{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[EnvironmentState]{
+		ID:    "10",
+		State: EnvironmentState{EnvironmentArgs: EnvironmentArgs{Name: "develop", ProjectID: 1}, LagoonID: 10},
+	})
+	if err == nil {
+		t.Fatal("expected error when delete API fails")
+	}
+}
+
+func TestEnvironmentDelete_ProjectLookupError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getProjectByIDFn: func(_ context.Context, _ int) (*client.Project, error) {
+			return nil, fmt.Errorf("project lookup failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Environment{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[EnvironmentState]{
+		ID:    "10",
+		State: EnvironmentState{EnvironmentArgs: EnvironmentArgs{Name: "develop", ProjectID: 1}, LagoonID: 10},
+	})
+	if err == nil {
+		t.Fatal("expected error when project lookup fails")
+	}
+}
+
+func TestEnvironmentRead_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getEnvironmentByNameFn: func(_ context.Context, _ string, _ int) (*client.Environment, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Environment{}
+	_, err := r.Read(ctx, infer.ReadRequest[EnvironmentArgs, EnvironmentState]{ID: "1:develop"})
+	if err == nil {
+		t.Fatal("expected error when read API fails")
+	}
+}

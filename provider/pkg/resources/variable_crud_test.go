@@ -283,6 +283,40 @@ func TestVariableRead_InvalidEnvID(t *testing.T) {
 	}
 }
 
+func TestVariableCreate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		addVariableFn: func(_ context.Context, _ string, _ string, _ int, _ string, _ *int) (*client.Variable, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Variable{}
+	_, err := r.Create(ctx, infer.CreateRequest[VariableArgs]{
+		Inputs: VariableArgs{Name: "MY_VAR", Value: "secret", ProjectID: 1, Scope: "build"},
+	})
+	if err == nil {
+		t.Fatal("expected error when create API fails")
+	}
+}
+
+func TestVariableUpdate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		addVariableFn: func(_ context.Context, _ string, _ string, _ int, _ string, _ *int) (*client.Variable, error) {
+			return nil, fmt.Errorf("update failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Variable{}
+	_, err := r.Update(ctx, infer.UpdateRequest[VariableArgs, VariableState]{
+		ID:     "5",
+		Inputs: VariableArgs{Name: "MY_VAR", Value: "new-value", ProjectID: 1, Scope: "build"},
+		State:  VariableState{VariableArgs: VariableArgs{Name: "MY_VAR", Value: "old-value", ProjectID: 1, Scope: "build"}, LagoonID: 5},
+	})
+	if err == nil {
+		t.Fatal("expected error when update API fails")
+	}
+}
+
 func TestVariableRead_RefreshFromState(t *testing.T) {
 	mock := &mockLagoonClient{
 		getVariableFn: func(_ context.Context, name string, _ int, _ *int) (*client.Variable, error) {

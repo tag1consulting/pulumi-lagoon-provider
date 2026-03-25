@@ -245,6 +245,26 @@ func TestProjectNotificationRead_InvalidImportID(t *testing.T) {
 	}
 }
 
+func TestProjectNotificationDelete_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		removeNotificationFromProjectFn: func(_ context.Context, _, _, _ string) error {
+			return fmt.Errorf("remove failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &ProjectNotification{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[ProjectNotificationState]{
+		ID: "myproject:slack:deploy-slack",
+		State: ProjectNotificationState{
+			ProjectNotificationArgs: ProjectNotificationArgs{ProjectName: "myproject", NotificationType: "slack", NotificationName: "deploy-slack"},
+			ProjectID:               42,
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error when remove API fails")
+	}
+}
+
 func TestProjectNotificationRead_RefreshFromState(t *testing.T) {
 	mock := &mockLagoonClient{
 		checkProjectNotificationExistsFn: func(_ context.Context, projectName, notifType, notifName string) (*client.ProjectNotificationInfo, error) {

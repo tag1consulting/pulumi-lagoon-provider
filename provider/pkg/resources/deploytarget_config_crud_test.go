@@ -281,6 +281,33 @@ func TestDeployTargetConfigRead_RefreshFromState(t *testing.T) {
 	}
 }
 
+func TestDeployTargetConfigDelete_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		deleteDeployTargetConfigFn: func(_ context.Context, _ int, _ int) error {
+			return fmt.Errorf("delete failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTargetConfig{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[DeployTargetConfigState]{
+		ID:    "100",
+		State: DeployTargetConfigState{DeployTargetConfigArgs: DeployTargetConfigArgs{ProjectID: 1, DeployTargetID: 7}, LagoonID: 100},
+	})
+	if err == nil {
+		t.Fatal("expected error when delete API fails")
+	}
+}
+
+func TestDeployTargetConfigRead_InvalidConfigID(t *testing.T) {
+	mock := &mockLagoonClient{}
+	ctx := testCtx(mock)
+	r := &DeployTargetConfig{}
+	_, err := r.Read(ctx, infer.ReadRequest[DeployTargetConfigArgs, DeployTargetConfigState]{ID: "1:notanumber"})
+	if err == nil {
+		t.Fatal("expected error for non-numeric config_id")
+	}
+}
+
 func TestDeployTargetConfigUpdate_APIError(t *testing.T) {
 	mock := &mockLagoonClient{
 		updateDeployTargetConfigFn: func(_ context.Context, _ int, _ map[string]any) (*client.DeployTargetConfig, error) {

@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/pulumi/pulumi-go-provider/infer"
@@ -335,5 +336,53 @@ func TestTaskCreate_ProjectScoped(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
+	}
+}
+
+func TestTaskCreate_APIError(t *testing.T) {
+	cmd := "drush cr"
+	mock := &mockLagoonClient{
+		createTaskDefinitionFn: func(_ context.Context, _ map[string]any) (*client.TaskDefinition, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Task{}
+	_, err := r.Create(ctx, infer.CreateRequest[TaskArgs]{
+		Inputs: TaskArgs{Name: "clear-cache", Type: "command", Service: "cli", Command: &cmd},
+	})
+	if err == nil {
+		t.Fatal("expected error when create API fails")
+	}
+}
+
+func TestTaskDelete_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		deleteTaskDefinitionFn: func(_ context.Context, _ int) error {
+			return fmt.Errorf("delete failed")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Task{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[TaskState]{
+		ID:    "20",
+		State: TaskState{TaskArgs: TaskArgs{Name: "clear-cache"}, LagoonID: 20},
+	})
+	if err == nil {
+		t.Fatal("expected error when delete API fails")
+	}
+}
+
+func TestTaskRead_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getTaskDefinitionByIDFn: func(_ context.Context, _ int) (*client.TaskDefinition, error) {
+			return nil, fmt.Errorf("api error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Task{}
+	_, err := r.Read(ctx, infer.ReadRequest[TaskArgs, TaskState]{ID: "20"})
+	if err == nil {
+		t.Fatal("expected error when read API fails")
 	}
 }

@@ -402,3 +402,106 @@ func TestCreateDeployTarget_APIError(t *testing.T) {
 		t.Errorf("expected ErrAPI, got %T: %v", err, err)
 	}
 }
+
+func TestCreateDeployTarget_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"addKubernetes": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.CreateDeployTarget(context.Background(), map[string]any{
+		"name":       "cluster-1",
+		"consoleUrl": "https://k8s.example.com",
+	})
+	if err == nil {
+		t.Fatal("expected error for malformed addKubernetes response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestGetAllDeployTargets_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"allKubernetes": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetAllDeployTargets(context.Background())
+	if err == nil {
+		t.Fatal("expected error for malformed allKubernetes response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestUpdateDeployTarget_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"updateKubernetes": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.UpdateDeployTarget(context.Background(), 1, map[string]any{"consoleUrl": "https://new.example.com"})
+	if err == nil {
+		t.Fatal("expected error for malformed updateKubernetes response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestCreateDeployTargetConfig_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"addDeployTargetConfig": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.CreateDeployTargetConfig(context.Background(), map[string]any{
+		"project":      5,
+		"deployTarget": 1,
+		"branches":     "main",
+	})
+	if err == nil {
+		t.Fatal("expected error for malformed addDeployTargetConfig response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestGetDeployTargetConfigsByProject_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"deployTargetConfigsByProjectId": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetDeployTargetConfigsByProject(context.Background(), 5)
+	if err == nil {
+		t.Fatal("expected error for malformed deployTargetConfigsByProjectId response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestUpdateDeployTargetConfig_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"updateDeployTargetConfig": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.UpdateDeployTargetConfig(context.Background(), 10, map[string]any{"weight": 5})
+	if err == nil {
+		t.Fatal("expected error for malformed updateDeployTargetConfig response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}

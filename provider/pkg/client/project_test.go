@@ -258,3 +258,55 @@ func TestGetProjectByName_NullResponse(t *testing.T) {
 		t.Errorf("expected ErrNotFound, got %T: %v", err, err)
 	}
 }
+
+func TestCreateProject_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"addProject": "not-an-object"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.CreateProject(context.Background(), map[string]any{
+		"name":      "test-project",
+		"gitUrl":    "git@example.com:repo.git",
+		"openshift": 1,
+	})
+	if err == nil {
+		t.Fatal("expected error for malformed addProject response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestGetProjectByID_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"allProjects": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetProjectByID(context.Background(), 1)
+	if err == nil {
+		t.Fatal("expected error for malformed allProjects response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestUpdateProject_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"updateProject": 123}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.UpdateProject(context.Background(), 42, map[string]any{"gitUrl": "git@new.com:repo.git"})
+	if err == nil {
+		t.Fatal("expected error for malformed updateProject response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
