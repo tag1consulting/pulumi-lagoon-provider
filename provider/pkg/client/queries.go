@@ -394,6 +394,37 @@ mutation DeleteNotificationEmail($input: DeleteNotificationEmailInput!) {
     deleteNotificationEmail(input: $input)
 }`
 
+// --- Group Operations ---
+
+const mutationAddGroup = `
+mutation AddGroup($input: AddGroupInput!) {
+    addGroup(input: $input) {
+        id
+        name
+    }
+}`
+
+const queryAllGroups = `
+query AllGroups {
+    allGroups {
+        id
+        name
+    }
+}`
+
+const mutationUpdateGroup = `
+mutation UpdateGroup($input: UpdateGroupInput!) {
+    updateGroup(input: $input) {
+        id
+        name
+    }
+}`
+
+const mutationDeleteGroup = `
+mutation DeleteGroup($input: DeleteGroupInput!) {
+    deleteGroup(input: $input)
+}`
+
 const mutationAddNotificationMicrosoftTeams = `
 mutation AddNotificationMicrosoftTeams($input: AddNotificationMicrosoftTeamsInput!) {
     addNotificationMicrosoftTeams(input: $input) {
