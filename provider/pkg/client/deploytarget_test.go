@@ -383,3 +383,22 @@ func TestNormalizeDeployTargetConfig_WithNested(t *testing.T) {
 		t.Errorf("expected ProjectID=7, got %d", dtc.ProjectID)
 	}
 }
+
+func TestCreateDeployTarget_APIError(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return nil, errors.New("duplicate deploy target name")
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.CreateDeployTarget(context.Background(), map[string]any{
+		"name":       "existing-cluster",
+		"consoleUrl": "https://k8s.example.com",
+	})
+	if err == nil {
+		t.Fatal("expected error from CreateDeployTarget")
+	}
+	if !errors.Is(err, ErrAPI) {
+		t.Errorf("expected ErrAPI, got %T: %v", err, err)
+	}
+}

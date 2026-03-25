@@ -10,7 +10,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 // Task manages a Lagoon advanced task definition.
@@ -67,8 +66,7 @@ func (a *TaskArgs) Annotate(an infer.Annotator) {
 }
 
 func (r *Task) Create(ctx context.Context, req infer.CreateRequest[TaskArgs]) (infer.CreateResponse[TaskState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	// Validate task type and type-specific required fields
 	taskType := strings.ToLower(req.Inputs.Type)
@@ -141,8 +139,7 @@ func (r *Task) Create(ctx context.Context, req infer.CreateRequest[TaskArgs]) (i
 // No Update — task definitions are replaced on any change since Lagoon API doesn't support update.
 
 func (r *Task) Delete(ctx context.Context, req infer.DeleteRequest[TaskState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	if err := c.DeleteTaskDefinition(ctx, req.State.LagoonID); err != nil {
 		if errors.Is(err, client.ErrNotFound) {
@@ -154,8 +151,7 @@ func (r *Task) Delete(ctx context.Context, req infer.DeleteRequest[TaskState]) (
 }
 
 func (r *Task) Read(ctx context.Context, req infer.ReadRequest[TaskArgs, TaskState]) (infer.ReadResponse[TaskArgs, TaskState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	tdID, err := strconv.Atoi(req.ID)
 	if err != nil {

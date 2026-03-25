@@ -500,3 +500,43 @@ func TestUpdateNotificationMicrosoftTeams(t *testing.T) {
 		t.Errorf("expected updated webhook")
 	}
 }
+
+func TestCheckProjectNotificationExists_NullProject(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{
+			"projectByName": nil,
+		}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.CheckProjectNotificationExists(context.Background(), "nonexistent-project", "slack", "deploy-alerts")
+	if err == nil {
+		t.Fatal("expected error for null projectByName response")
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %T: %v", err, err)
+	}
+}
+
+func TestCheckProjectNotificationExists_UnsupportedType(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{
+			"projectByName": map[string]any{
+				"id":            42,
+				"name":          "my-project",
+				"notifications": []map[string]any{},
+			},
+		}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.CheckProjectNotificationExists(context.Background(), "my-project", "sms", "my-notif")
+	if err == nil {
+		t.Fatal("expected error for unsupported notification type")
+	}
+	if !strings.Contains(err.Error(), "unsupported notification type") {
+		t.Errorf("expected 'unsupported notification type' in error, got: %v", err)
+	}
+}

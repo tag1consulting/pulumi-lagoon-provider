@@ -9,7 +9,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 // Project manages a Lagoon project resource.
@@ -60,8 +59,7 @@ func (s *ProjectState) Annotate(a infer.Annotator) {
 
 // Create creates a new Lagoon project.
 func (r *Project) Create(ctx context.Context, req infer.CreateRequest[ProjectArgs]) (infer.CreateResponse[ProjectState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	input := map[string]any{
 		"name":      req.Inputs.Name,
@@ -115,8 +113,7 @@ func (r *Project) Create(ctx context.Context, req infer.CreateRequest[ProjectArg
 
 // Update updates an existing Lagoon project.
 func (r *Project) Update(ctx context.Context, req infer.UpdateRequest[ProjectArgs, ProjectState]) (infer.UpdateResponse[ProjectState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	input := map[string]any{
 		"gitUrl":    req.Inputs.GitURL,
@@ -155,8 +152,7 @@ func (r *Project) Update(ctx context.Context, req infer.UpdateRequest[ProjectArg
 
 // Delete deletes a Lagoon project.
 func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	if err := c.DeleteProject(ctx, req.State.Name); err != nil {
 		// Treat "not found" as success — resource is already gone
@@ -170,8 +166,7 @@ func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectSta
 
 // Read reads a Lagoon project for import/refresh.
 func (r *Project) Read(ctx context.Context, req infer.ReadRequest[ProjectArgs, ProjectState]) (infer.ReadResponse[ProjectArgs, ProjectState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	lagoonID, err := strconv.Atoi(req.ID)
 	if err != nil {

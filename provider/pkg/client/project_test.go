@@ -240,3 +240,21 @@ func TestCreateProject_APIError(t *testing.T) {
 		t.Errorf("expected ErrAPI, got %T: %v", err, err)
 	}
 }
+
+func TestGetProjectByName_NullResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{
+			"projectByName": nil,
+		}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetProjectByName(context.Background(), "nonexistent-project")
+	if err == nil {
+		t.Fatal("expected error for null projectByName response")
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %T: %v", err, err)
+	}
+}

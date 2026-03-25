@@ -10,7 +10,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 // DeployTargetConfig manages a Lagoon deploy target configuration.
@@ -45,8 +44,7 @@ func (a *DeployTargetConfigArgs) Annotate(an infer.Annotator) {
 }
 
 func (r *DeployTargetConfig) Create(ctx context.Context, req infer.CreateRequest[DeployTargetConfigArgs]) (infer.CreateResponse[DeployTargetConfigState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	input := map[string]any{
 		"project":      req.Inputs.ProjectID,
@@ -104,8 +102,7 @@ func (r *DeployTargetConfig) Create(ctx context.Context, req infer.CreateRequest
 }
 
 func (r *DeployTargetConfig) Update(ctx context.Context, req infer.UpdateRequest[DeployTargetConfigArgs, DeployTargetConfigState]) (infer.UpdateResponse[DeployTargetConfigState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	input := map[string]any{}
 	setOptional(input, "branches", req.Inputs.Branches)
@@ -136,8 +133,7 @@ func (r *DeployTargetConfig) Update(ctx context.Context, req infer.UpdateRequest
 }
 
 func (r *DeployTargetConfig) Delete(ctx context.Context, req infer.DeleteRequest[DeployTargetConfigState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	if err := c.DeleteDeployTargetConfig(ctx, req.State.LagoonID, req.State.ProjectID); err != nil {
 		// Treat "not found" as success — resource is already gone
@@ -150,8 +146,7 @@ func (r *DeployTargetConfig) Delete(ctx context.Context, req infer.DeleteRequest
 }
 
 func (r *DeployTargetConfig) Read(ctx context.Context, req infer.ReadRequest[DeployTargetConfigArgs, DeployTargetConfigState]) (infer.ReadResponse[DeployTargetConfigArgs, DeployTargetConfigState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	// Import ID format: {project_id}:{config_id}
 	parts := strings.SplitN(req.ID, ":", 2)

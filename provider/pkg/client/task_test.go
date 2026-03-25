@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -267,5 +269,312 @@ func TestNormalizeTaskDefinition_AllFields(t *testing.T) {
 	}
 	if td.GroupName != "my-group" {
 		t.Errorf("expected groupName, got %s", td.GroupName)
+	}
+}
+
+func TestGetTasksByEnvironment_Success(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		// New API query — advancedTasksForEnvironment
+		if strings.Contains(query, "advancedTasksForEnvironment") {
+			return map[string]any{
+				"advancedTasksForEnvironment": []map[string]any{
+					{
+						"id":          10,
+						"name":        "task-1",
+						"description": "First task",
+						"type":        "COMMAND",
+						"service":     "cli",
+						"command":     "drush cr",
+						"permission":  "DEVELOPER",
+						"project":     nil,
+						"environment": nil,
+						"advancedTaskDefinitionArguments": []map[string]any{},
+					},
+					{
+						"id":          20,
+						"name":        "task-2",
+						"description": "Second task",
+						"type":        "IMAGE",
+						"service":     "cli",
+						"image":       "myimage:latest",
+						"permission":  "MAINTAINER",
+						"project":     5,
+						"environment": 10,
+						"advancedTaskDefinitionArguments": []map[string]any{},
+					},
+				},
+			}, nil
+		}
+		return nil, errors.New("unexpected query: " + query)
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	tasks, err := c.GetTasksByEnvironment(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("GetTasksByEnvironment failed: %v", err)
+	}
+	if len(tasks) != 2 {
+		t.Fatalf("expected 2 tasks, got %d", len(tasks))
+	}
+	if tasks[0].Name != "task-1" {
+		t.Errorf("expected task-1, got %s", tasks[0].Name)
+	}
+	if tasks[1].Name != "task-2" {
+		t.Errorf("expected task-2, got %s", tasks[1].Name)
+	}
+	// New API returns project/environment as ints
+	if tasks[1].ProjectID == nil || *tasks[1].ProjectID != 5 {
+		t.Errorf("expected ProjectID=5 for task-2, got %v", tasks[1].ProjectID)
+	}
+	if tasks[1].EnvironmentID == nil || *tasks[1].EnvironmentID != 10 {
+		t.Errorf("expected EnvironmentID=10 for task-2, got %v", tasks[1].EnvironmentID)
+	}
+}
+
+func TestGetTasksByEnvironment_FallbackToLegacy_CannotQueryField(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		// New API query returns "Cannot query field" error
+		if strings.Contains(query, "advancedTasksForEnvironment") {
+			return nil, errors.New("Cannot query field 'advancedTasksForEnvironment'")
+		}
+		// Legacy fallback
+		if strings.Contains(query, "advancedTasksByEnvironment") {
+			return map[string]any{
+				"advancedTasksByEnvironment": []map[string]any{
+					{
+						"id":          30,
+						"name":        "legacy-task",
+						"description": "Legacy task",
+						"type":        "COMMAND",
+						"service":     "cli",
+						"command":     "drush status",
+						"permission":  "DEVELOPER",
+						"project":     map[string]any{"id": 1, "name": "project-1"},
+						"environment": map[string]any{"id": 5, "name": "main"},
+						"advancedTaskDefinitionArguments": []map[string]any{},
+					},
+				},
+			}, nil
+		}
+		return nil, errors.New("unexpected query: " + query)
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	tasks, err := c.GetTasksByEnvironment(context.Background(), 5)
+	if err != nil {
+		t.Fatalf("GetTasksByEnvironment (fallback) failed: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(tasks))
+	}
+	if tasks[0].Name != "legacy-task" {
+		t.Errorf("expected legacy-task, got %s", tasks[0].Name)
+	}
+	// Legacy API returns project as object
+	if tasks[0].ProjectID == nil || *tasks[0].ProjectID != 1 {
+		t.Errorf("expected ProjectID=1, got %v", tasks[0].ProjectID)
+	}
+}
+
+func TestGetTasksByEnvironment_FallbackToLegacy_HTTP400(t *testing.T) {
+	callCount := 0
+	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		body, _ := io.ReadAll(r.Body)
+		var req graphQLRequest
+		json.Unmarshal(body, &req)
+
+		if callCount == 1 {
+			// First call (new API) — return a GraphQL error with "HTTP 400" in the message
+			resp := map[string]any{
+				"errors": []map[string]any{{"message": "HTTP 400: Bad Request"}},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(resp)
+			return
+		}
+		// Second call (legacy fallback)
+		resp := map[string]any{
+			"data": map[string]any{
+				"advancedTasksByEnvironment": []map[string]any{
+					{
+						"id":          40,
+						"name":        "fallback-task",
+						"description": "Fallback",
+						"type":        "COMMAND",
+						"service":     "cli",
+						"command":     "echo ok",
+						"permission":  "DEVELOPER",
+						"project":     nil,
+						"environment": nil,
+						"advancedTaskDefinitionArguments": []map[string]any{},
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	tasks, err := c.GetTasksByEnvironment(context.Background(), 5)
+	if err != nil {
+		t.Fatalf("GetTasksByEnvironment (HTTP 400 fallback) failed: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(tasks))
+	}
+	if tasks[0].Name != "fallback-task" {
+		t.Errorf("expected fallback-task, got %s", tasks[0].Name)
+	}
+}
+
+func TestGetTasksByEnvironment_FallbackToLegacy_NestedUnknownArgument(t *testing.T) {
+	callCount := 0
+	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+
+		if callCount == 1 {
+			// First call — return nested "Unknown argument" error
+			resp := map[string]any{
+				"errors": []map[string]any{
+					{"message": "Unknown argument 'environment' on field 'Query.advancedTasksForEnvironment'"},
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(resp)
+			return
+		}
+		// Second call (legacy)
+		resp := map[string]any{
+			"data": map[string]any{
+				"advancedTasksByEnvironment": []map[string]any{
+					{
+						"id":          50,
+						"name":        "nested-fallback",
+						"description": "",
+						"type":        "COMMAND",
+						"service":     "cli",
+						"command":     "true",
+						"permission":  "GUEST",
+						"project":     nil,
+						"environment": nil,
+						"advancedTaskDefinitionArguments": []map[string]any{},
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	tasks, err := c.GetTasksByEnvironment(context.Background(), 5)
+	if err != nil {
+		t.Fatalf("GetTasksByEnvironment (nested Unknown argument fallback) failed: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(tasks))
+	}
+	if tasks[0].Name != "nested-fallback" {
+		t.Errorf("expected nested-fallback, got %s", tasks[0].Name)
+	}
+}
+
+func TestGetTasksByEnvironment_NonFallbackError(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		// Return a real API error that should NOT trigger fallback
+		return nil, errors.New("Internal server processing error")
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetTasksByEnvironment(context.Background(), 5)
+	if err == nil {
+		t.Fatal("expected error to be propagated")
+	}
+	if !errors.Is(err, ErrAPI) {
+		t.Errorf("expected ErrAPI, got %T: %v", err, err)
+	}
+	// Ensure it's not a "not found" type error — it should be the actual API error
+	if strings.Contains(err.Error(), "Cannot query field") {
+		t.Error("should not contain 'Cannot query field' — this was a real error")
+	}
+}
+
+func TestIsFieldNotFoundOrLegacyError(t *testing.T) {
+	tests := []struct {
+		name    string
+		apiErr  *LagoonAPIError
+		want    bool
+	}{
+		{
+			name:   "top-level Cannot query field",
+			apiErr: &LagoonAPIError{Message: "Cannot query field 'advancedTasksForEnvironment'"},
+			want:   true,
+		},
+		{
+			name:   "top-level HTTP 400",
+			apiErr: &LagoonAPIError{Message: "HTTP 400: Bad Request"},
+			want:   true,
+		},
+		{
+			name: "nested Cannot query field",
+			apiErr: &LagoonAPIError{
+				Message: "some wrapper error",
+				Errors:  []GraphQLError{{Message: "Cannot query field 'advancedTasksForEnvironment'"}},
+			},
+			want: true,
+		},
+		{
+			name: "nested Unknown argument",
+			apiErr: &LagoonAPIError{
+				Message: "some wrapper error",
+				Errors:  []GraphQLError{{Message: "Unknown argument 'environment' on field 'Query.advancedTasksForEnvironment'"}},
+			},
+			want: true,
+		},
+		{
+			name: "nested mixed — one matches",
+			apiErr: &LagoonAPIError{
+				Message: "multiple errors",
+				Errors: []GraphQLError{
+					{Message: "Something else"},
+					{Message: "Cannot query field 'foo'"},
+				},
+			},
+			want: true,
+		},
+		{
+			name:   "unrelated top-level error",
+			apiErr: &LagoonAPIError{Message: "Internal server error"},
+			want:   false,
+		},
+		{
+			name: "unrelated nested error",
+			apiErr: &LagoonAPIError{
+				Message: "wrapper",
+				Errors:  []GraphQLError{{Message: "Permission denied"}},
+			},
+			want: false,
+		},
+		{
+			name:   "empty message",
+			apiErr: &LagoonAPIError{Message: ""},
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isFieldNotFoundOrLegacyError(tt.apiErr)
+			if got != tt.want {
+				t.Errorf("isFieldNotFoundOrLegacyError() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
