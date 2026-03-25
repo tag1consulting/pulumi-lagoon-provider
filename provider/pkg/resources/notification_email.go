@@ -9,7 +9,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 type NotificationEmail struct{}
@@ -35,8 +34,7 @@ func (a *NotificationEmailArgs) Annotate(an infer.Annotator) {
 }
 
 func (r *NotificationEmail) Create(ctx context.Context, req infer.CreateRequest[NotificationEmailArgs]) (infer.CreateResponse[NotificationEmailState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	if req.DryRun {
 		return infer.CreateResponse[NotificationEmailState]{
@@ -57,8 +55,7 @@ func (r *NotificationEmail) Create(ctx context.Context, req infer.CreateRequest[
 }
 
 func (r *NotificationEmail) Update(ctx context.Context, req infer.UpdateRequest[NotificationEmailArgs, NotificationEmailState]) (infer.UpdateResponse[NotificationEmailState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	patch := map[string]any{}
 	if req.Inputs.EmailAddress != req.State.EmailAddress {
@@ -82,8 +79,7 @@ func (r *NotificationEmail) Update(ctx context.Context, req infer.UpdateRequest[
 }
 
 func (r *NotificationEmail) Delete(ctx context.Context, req infer.DeleteRequest[NotificationEmailState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 	if err := c.DeleteNotificationEmail(ctx, req.State.Name); err != nil {
 		if errors.Is(err, client.ErrNotFound) {
 			return infer.DeleteResponse{}, nil
@@ -94,8 +90,7 @@ func (r *NotificationEmail) Delete(ctx context.Context, req infer.DeleteRequest[
 }
 
 func (r *NotificationEmail) Read(ctx context.Context, req infer.ReadRequest[NotificationEmailArgs, NotificationEmailState]) (infer.ReadResponse[NotificationEmailArgs, NotificationEmailState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	// Prefer state name for lookup, fallback to ID
 	name := req.State.Name

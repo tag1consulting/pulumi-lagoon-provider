@@ -500,3 +500,91 @@ func TestUpdateNotificationMicrosoftTeams(t *testing.T) {
 		t.Errorf("expected updated webhook")
 	}
 }
+
+func TestCheckProjectNotificationExists_NullProject(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{
+			"projectByName": nil,
+		}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.CheckProjectNotificationExists(context.Background(), "nonexistent-project", "slack", "deploy-alerts")
+	if err == nil {
+		t.Fatal("expected error for null projectByName response")
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %T: %v", err, err)
+	}
+}
+
+func TestCreateNotificationSlack_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"addNotificationSlack": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.CreateNotificationSlack(context.Background(), "deploy-alerts", "https://hooks.slack.com/xxx", "#deployments")
+	if err == nil {
+		t.Fatal("expected error for malformed addNotificationSlack response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestGetAllNotifications_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"allNotifications": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetNotificationSlackByName(context.Background(), "deploy-alerts")
+	if err == nil {
+		t.Fatal("expected error for malformed allNotifications response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestUpdateNotificationSlack_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"updateNotificationSlack": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.UpdateNotificationSlack(context.Background(), "deploy-alerts", map[string]any{"webhook": "https://new.com"})
+	if err == nil {
+		t.Fatal("expected error for malformed updateNotificationSlack response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestCheckProjectNotificationExists_UnsupportedType(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{
+			"projectByName": map[string]any{
+				"id":            42,
+				"name":          "my-project",
+				"notifications": []map[string]any{},
+			},
+		}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.CheckProjectNotificationExists(context.Background(), "my-project", "sms", "my-notif")
+	if err == nil {
+		t.Fatal("expected error for unsupported notification type")
+	}
+	if !strings.Contains(err.Error(), "unsupported notification type") {
+		t.Errorf("expected 'unsupported notification type' in error, got: %v", err)
+	}
+}

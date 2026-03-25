@@ -160,13 +160,18 @@ func (c *Client) GetTasksByEnvironment(ctx context.Context, environmentID int) (
 }
 
 // isFieldNotFoundOrLegacyError checks both the top-level message and nested GraphQL errors
-// for "Cannot query field" or "HTTP 400" which indicate the API doesn't support the query.
+// for signals that the API doesn't support advancedTasksForEnvironment. It triggers on:
+//   - "HTTP 400" at the top level (older Lagoon versions that return a plain 400)
+//   - any message (top-level or nested) that mentions "advancedTasksForEnvironment" directly
+//     (covers "Cannot query field 'advancedTasksForEnvironment'" and
+//     "Unknown argument 'environment' on field 'Query.advancedTasksForEnvironment'")
 func isFieldNotFoundOrLegacyError(apiErr *LagoonAPIError) bool {
-	if strings.Contains(apiErr.Message, "Cannot query field") || strings.Contains(apiErr.Message, "HTTP 400") {
+	const field = "advancedTasksForEnvironment"
+	if strings.Contains(apiErr.Message, "HTTP 400") || strings.Contains(apiErr.Message, field) {
 		return true
 	}
 	for _, e := range apiErr.Errors {
-		if strings.Contains(e.Message, "Cannot query field") || strings.Contains(e.Message, "Unknown argument") {
+		if strings.Contains(e.Message, field) {
 			return true
 		}
 	}

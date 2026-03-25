@@ -7,7 +7,7 @@
     },
     "dependencies": {
         "@pulumi/pulumi": "^3.142.0",
-        "@tag1consulting/pulumi-lagoon": "file:../../sdk/nodejs/nodejs"
+        "@tag1consulting/pulumi-lagoon": "file:../../sdk/nodejs"
     },
     "devDependencies": {
         "@types/node": "^18",

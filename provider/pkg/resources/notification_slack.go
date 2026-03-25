@@ -9,7 +9,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 // NotificationSlack manages a Lagoon Slack notification.
@@ -38,8 +37,7 @@ func (a *NotificationSlackArgs) Annotate(an infer.Annotator) {
 }
 
 func (r *NotificationSlack) Create(ctx context.Context, req infer.CreateRequest[NotificationSlackArgs]) (infer.CreateResponse[NotificationSlackState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	if req.DryRun {
 		return infer.CreateResponse[NotificationSlackState]{
@@ -60,8 +58,7 @@ func (r *NotificationSlack) Create(ctx context.Context, req infer.CreateRequest[
 }
 
 func (r *NotificationSlack) Update(ctx context.Context, req infer.UpdateRequest[NotificationSlackArgs, NotificationSlackState]) (infer.UpdateResponse[NotificationSlackState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	patch := map[string]any{}
 	if req.Inputs.Webhook != req.State.Webhook {
@@ -88,8 +85,7 @@ func (r *NotificationSlack) Update(ctx context.Context, req infer.UpdateRequest[
 }
 
 func (r *NotificationSlack) Delete(ctx context.Context, req infer.DeleteRequest[NotificationSlackState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 	if err := c.DeleteNotificationSlack(ctx, req.State.Name); err != nil {
 		if errors.Is(err, client.ErrNotFound) {
 			return infer.DeleteResponse{}, nil
@@ -100,8 +96,7 @@ func (r *NotificationSlack) Delete(ctx context.Context, req infer.DeleteRequest[
 }
 
 func (r *NotificationSlack) Read(ctx context.Context, req infer.ReadRequest[NotificationSlackArgs, NotificationSlackState]) (infer.ReadResponse[NotificationSlackArgs, NotificationSlackState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	// Prefer state name for lookup, fallback to ID
 	name := req.State.Name

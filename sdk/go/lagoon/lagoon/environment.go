@@ -28,7 +28,7 @@ type Environment struct {
 	DeployTitle pulumi.StringPtrOutput `pulumi:"deployTitle"`
 	// Deployment type: 'branch' or 'pullrequest'.
 	DeployType pulumi.StringOutput `pulumi:"deployType"`
-	// Environment type: 'production', 'development', or 'standby'.
+	// Environment type: 'production' or 'development'.
 	EnvironmentType pulumi.StringOutput `pulumi:"environmentType"`
 	// The Lagoon-assigned numeric ID of the environment.
 	LagoonId pulumi.IntOutput `pulumi:"lagoonId"`
@@ -106,7 +106,7 @@ type environmentArgs struct {
 	DeployTitle *string `pulumi:"deployTitle"`
 	// Deployment type: 'branch' or 'pullrequest'.
 	DeployType string `pulumi:"deployType"`
-	// Environment type: 'production', 'development', or 'standby'.
+	// Environment type: 'production' or 'development'.
 	EnvironmentType string `pulumi:"environmentType"`
 	// The environment name (typically the branch name).
 	Name string `pulumi:"name"`
@@ -128,7 +128,7 @@ type EnvironmentArgs struct {
 	DeployTitle pulumi.StringPtrInput
 	// Deployment type: 'branch' or 'pullrequest'.
 	DeployType pulumi.StringInput
-	// Environment type: 'production', 'development', or 'standby'.
+	// Environment type: 'production' or 'development'.
 	EnvironmentType pulumi.StringInput
 	// The environment name (typically the branch name).
 	Name pulumi.StringInput
@@ -255,7 +255,7 @@ func (o EnvironmentOutput) DeployType() pulumi.StringOutput {
 	return o.ApplyT(func(v *Environment) pulumi.StringOutput { return v.DeployType }).(pulumi.StringOutput)
 }
 
-// Environment type: 'production', 'development', or 'standby'.
+// Environment type: 'production' or 'development'.
 func (o EnvironmentOutput) EnvironmentType() pulumi.StringOutput {
 	return o.ApplyT(func(v *Environment) pulumi.StringOutput { return v.EnvironmentType }).(pulumi.StringOutput)
 }

@@ -9,7 +9,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 // ProjectNotification manages the link between a notification and a project.
@@ -42,8 +41,7 @@ func (s *ProjectNotificationState) Annotate(a infer.Annotator) {
 }
 
 func (r *ProjectNotification) Create(ctx context.Context, req infer.CreateRequest[ProjectNotificationArgs]) (infer.CreateResponse[ProjectNotificationState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	notifType := strings.ToUpper(req.Inputs.NotificationType)
 	id := fmt.Sprintf("%s:%s:%s", req.Inputs.ProjectName, req.Inputs.NotificationType, req.Inputs.NotificationName)
@@ -80,8 +78,7 @@ func (r *ProjectNotification) Create(ctx context.Context, req infer.CreateReques
 // No Update — all fields are forceNew, so any change triggers replace.
 
 func (r *ProjectNotification) Delete(ctx context.Context, req infer.DeleteRequest[ProjectNotificationState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	notifType := strings.ToUpper(req.State.NotificationType)
 	if err := c.RemoveNotificationFromProject(ctx, req.State.ProjectName, notifType, req.State.NotificationName); err != nil {
@@ -94,8 +91,7 @@ func (r *ProjectNotification) Delete(ctx context.Context, req infer.DeleteReques
 }
 
 func (r *ProjectNotification) Read(ctx context.Context, req infer.ReadRequest[ProjectNotificationArgs, ProjectNotificationState]) (infer.ReadResponse[ProjectNotificationArgs, ProjectNotificationState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	// Import ID: {project_name}:{notification_type}:{notification_name}
 	parts := strings.SplitN(req.ID, ":", 3)

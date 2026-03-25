@@ -4,4 +4,4 @@
 pulumi>=3.0.0,<4.0.0
 
 # Lagoon provider (native Go SDK)
--e ../../sdk/python/python/
+-e ../../sdk/python/

@@ -19,4 +19,4 @@ PyJWT>=2.0.0
 pytest>=7.0.0
 
 # Lagoon provider (native Go SDK)
--e ../../sdk/python/python/
+-e ../../sdk/python/

@@ -1,0 +1,76 @@
+package resources
+
+import (
+	"context"
+
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
+)
+
+// LagoonClient defines the API operations used by resources.
+// *client.Client satisfies this interface.
+type LagoonClient interface {
+	// Project methods
+	CreateProject(ctx context.Context, input map[string]any) (*client.Project, error)
+	GetProjectByName(ctx context.Context, name string) (*client.Project, error)
+	GetProjectByID(ctx context.Context, id int) (*client.Project, error)
+	UpdateProject(ctx context.Context, id int, input map[string]any) (*client.Project, error)
+	DeleteProject(ctx context.Context, name string) error
+
+	// Environment methods
+	AddOrUpdateEnvironment(ctx context.Context, input map[string]any) (*client.Environment, error)
+	GetEnvironmentByName(ctx context.Context, name string, projectID int) (*client.Environment, error)
+	DeleteEnvironment(ctx context.Context, envName string, projectName string) error
+
+	// Variable methods
+	AddVariable(ctx context.Context, name, value string, projectID int, scope string, environmentID *int) (*client.Variable, error)
+	GetVariable(ctx context.Context, name string, projectID int, environmentID *int) (*client.Variable, error)
+	DeleteVariable(ctx context.Context, name string, projectID int, environmentID *int) error
+
+	// Deploy target methods
+	CreateDeployTarget(ctx context.Context, input map[string]any) (*client.DeployTarget, error)
+	GetDeployTargetByID(ctx context.Context, id int) (*client.DeployTarget, error)
+	GetDeployTargetByName(ctx context.Context, name string) (*client.DeployTarget, error)
+	UpdateDeployTarget(ctx context.Context, id int, input map[string]any) (*client.DeployTarget, error)
+	DeleteDeployTarget(ctx context.Context, name string) error
+
+	// Deploy target config methods
+	CreateDeployTargetConfig(ctx context.Context, input map[string]any) (*client.DeployTargetConfig, error)
+	GetDeployTargetConfigsByProject(ctx context.Context, projectID int) ([]client.DeployTargetConfig, error)
+	GetDeployTargetConfigByID(ctx context.Context, configID, projectID int) (*client.DeployTargetConfig, error)
+	UpdateDeployTargetConfig(ctx context.Context, configID int, input map[string]any) (*client.DeployTargetConfig, error)
+	DeleteDeployTargetConfig(ctx context.Context, configID, projectID int) error
+
+	// Task methods
+	CreateTaskDefinition(ctx context.Context, input map[string]any) (*client.TaskDefinition, error)
+	GetTaskDefinitionByID(ctx context.Context, taskID int) (*client.TaskDefinition, error)
+	DeleteTaskDefinition(ctx context.Context, taskID int) error
+
+	// Notification methods — Slack
+	CreateNotificationSlack(ctx context.Context, name, webhook, channel string) (*client.Notification, error)
+	GetNotificationSlackByName(ctx context.Context, name string) (*client.Notification, error)
+	UpdateNotificationSlack(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
+	DeleteNotificationSlack(ctx context.Context, name string) error
+
+	// Notification methods — RocketChat
+	CreateNotificationRocketChat(ctx context.Context, name, webhook, channel string) (*client.Notification, error)
+	GetNotificationRocketChatByName(ctx context.Context, name string) (*client.Notification, error)
+	UpdateNotificationRocketChat(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
+	DeleteNotificationRocketChat(ctx context.Context, name string) error
+
+	// Notification methods — Email
+	CreateNotificationEmail(ctx context.Context, name, emailAddress string) (*client.Notification, error)
+	GetNotificationEmailByName(ctx context.Context, name string) (*client.Notification, error)
+	UpdateNotificationEmail(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
+	DeleteNotificationEmail(ctx context.Context, name string) error
+
+	// Notification methods — Microsoft Teams
+	CreateNotificationMicrosoftTeams(ctx context.Context, name, webhook string) (*client.Notification, error)
+	GetNotificationMicrosoftTeamsByName(ctx context.Context, name string) (*client.Notification, error)
+	UpdateNotificationMicrosoftTeams(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
+	DeleteNotificationMicrosoftTeams(ctx context.Context, name string) error
+
+	// Project notification association methods
+	AddNotificationToProject(ctx context.Context, projectName, notificationType, notificationName string) error
+	RemoveNotificationFromProject(ctx context.Context, projectName, notificationType, notificationName string) error
+	CheckProjectNotificationExists(ctx context.Context, projectName, notificationType, notificationName string) (*client.ProjectNotificationInfo, error)
+}

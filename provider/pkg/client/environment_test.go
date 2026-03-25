@@ -180,3 +180,77 @@ func TestNormalizeEnvironment_AllFields(t *testing.T) {
 		t.Errorf("expected autoIdle=1, got %v", env.AutoIdle)
 	}
 }
+
+func TestAddOrUpdateEnvironment_APIError(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return nil, errors.New("environment creation failed: invalid project")
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.AddOrUpdateEnvironment(context.Background(), map[string]any{
+		"name":            "main",
+		"project":         999,
+		"deployType":      "BRANCH",
+		"environmentType": "PRODUCTION",
+	})
+	if err == nil {
+		t.Fatal("expected error from AddOrUpdateEnvironment")
+	}
+	if !errors.Is(err, ErrAPI) {
+		t.Errorf("expected ErrAPI, got %T: %v", err, err)
+	}
+}
+
+func TestDeleteEnvironment_APIError(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return nil, errors.New("cannot delete environment: active deployments exist")
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	err := c.DeleteEnvironment(context.Background(), "main", "my-project")
+	if err == nil {
+		t.Fatal("expected error from DeleteEnvironment")
+	}
+	if !errors.Is(err, ErrAPI) {
+		t.Errorf("expected ErrAPI, got %T: %v", err, err)
+	}
+}
+
+func TestAddOrUpdateEnvironment_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"addOrUpdateEnvironment": "bad"}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.AddOrUpdateEnvironment(context.Background(), map[string]any{
+		"name":            "main",
+		"project":         1,
+		"deployType":      "BRANCH",
+		"environmentType": "PRODUCTION",
+	})
+	if err == nil {
+		t.Fatal("expected error for malformed addOrUpdateEnvironment response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}
+
+func TestGetEnvironmentByName_MalformedResponse(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"environmentByName": 42}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetEnvironmentByName(context.Background(), "main", 1)
+	if err == nil {
+		t.Fatal("expected error for malformed environmentByName response")
+	}
+	if !strings.Contains(err.Error(), "unmarshal") {
+		t.Errorf("expected unmarshal error, got: %v", err)
+	}
+}

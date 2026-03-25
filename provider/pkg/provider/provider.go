@@ -47,6 +47,7 @@ func NewProvider(version string) (p.Provider, error) {
 			infer.Resource(&resources.NotificationEmail{}),
 			infer.Resource(&resources.NotificationMicrosoftTeams{}),
 			infer.Resource(&resources.ProjectNotification{}),
+			infer.Resource(&resources.Group{}),
 		).
 		Build()
 }

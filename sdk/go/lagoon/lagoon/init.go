@@ -27,6 +27,8 @@ func (m *module) Construct(ctx *pulumi.Context, name, typ, urn string) (r pulumi
 		r = &DeployTargetConfig{}
 	case "lagoon:lagoon:Environment":
 		r = &Environment{}
+	case "lagoon:lagoon:Group":
+		r = &Group{}
 	case "lagoon:lagoon:NotificationEmail":
 		r = &NotificationEmail{}
 	case "lagoon:lagoon:NotificationMicrosoftTeams":

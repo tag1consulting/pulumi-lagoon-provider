@@ -31,8 +31,7 @@ type DeployTarget struct {
 	// The deploy target name.
 	Name pulumi.StringOutput `pulumi:"name"`
 	// Router pattern for the deploy target.
-	RouterPattern       pulumi.StringPtrOutput `pulumi:"routerPattern"`
-	SharedBastionSecret pulumi.StringPtrOutput `pulumi:"sharedBastionSecret"`
+	RouterPattern pulumi.StringPtrOutput `pulumi:"routerPattern"`
 	// SSH host for builds.
 	SshHost pulumi.StringPtrOutput `pulumi:"sshHost"`
 	// SSH port for builds.
@@ -98,8 +97,7 @@ type deployTargetArgs struct {
 	// The deploy target name.
 	Name string `pulumi:"name"`
 	// Router pattern for the deploy target.
-	RouterPattern       *string `pulumi:"routerPattern"`
-	SharedBastionSecret *string `pulumi:"sharedBastionSecret"`
+	RouterPattern *string `pulumi:"routerPattern"`
 	// SSH host for builds.
 	SshHost *string `pulumi:"sshHost"`
 	// SSH port for builds.
@@ -121,8 +119,7 @@ type DeployTargetArgs struct {
 	// The deploy target name.
 	Name pulumi.StringInput
 	// Router pattern for the deploy target.
-	RouterPattern       pulumi.StringPtrInput
-	SharedBastionSecret pulumi.StringPtrInput
+	RouterPattern pulumi.StringPtrInput
 	// SSH host for builds.
 	SshHost pulumi.StringPtrInput
 	// SSH port for builds.
@@ -257,10 +254,6 @@ func (o DeployTargetOutput) Name() pulumi.StringOutput {
 // Router pattern for the deploy target.
 func (o DeployTargetOutput) RouterPattern() pulumi.StringPtrOutput {
 	return o.ApplyT(func(v *DeployTarget) pulumi.StringPtrOutput { return v.RouterPattern }).(pulumi.StringPtrOutput)
-}
-
-func (o DeployTargetOutput) SharedBastionSecret() pulumi.StringPtrOutput {
-	return o.ApplyT(func(v *DeployTarget) pulumi.StringPtrOutput { return v.SharedBastionSecret }).(pulumi.StringPtrOutput)
 }
 
 // SSH host for builds.

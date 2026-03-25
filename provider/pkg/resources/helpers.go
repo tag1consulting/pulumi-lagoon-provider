@@ -1,5 +1,29 @@
 package resources
 
+import (
+	"context"
+
+	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
+)
+
+// clientContextKey is the context key for injecting a test client.
+type clientContextKey struct{}
+
+// withTestClient returns a context with a mock client injected (for testing only).
+func withTestClient(ctx context.Context, c LagoonClient) context.Context {
+	return context.WithValue(ctx, clientContextKey{}, c)
+}
+
+// clientFor returns the LagoonClient from context (test override) or from the Pulumi config.
+func clientFor(ctx context.Context) LagoonClient {
+	if c, ok := ctx.Value(clientContextKey{}).(LagoonClient); ok {
+		return c
+	}
+	cfg := infer.GetConfig[config.LagoonConfig](ctx)
+	return cfg.NewClient()
+}
+
 // setOptional sets a map key if the optional string pointer is non-nil.
 func setOptional(m map[string]any, key string, val *string) {
 	if val != nil {

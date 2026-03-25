@@ -25,7 +25,7 @@
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
         clean clean-all venv \
-        go-build go-test go-vet go-schema go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-all go-install
+        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-all go-install
 
 # Variables
 VENV_DIR := venv
@@ -401,7 +401,7 @@ clean-all: clean
 # Go Provider (Native)
 #==============================================================================
 
-PROVIDER_VERSION ?= 0.2.0-dev
+PROVIDER_VERSION ?= 0.2.2
 PROVIDER_BIN     := provider/bin/pulumi-resource-lagoon
 GO_BIN           ?= $(if $(GOPATH),$(GOPATH)/bin,$(HOME)/go/bin)
 
@@ -418,16 +418,19 @@ go-vet:
 go-schema: go-build
 	pulumi package get-schema ./$(PROVIDER_BIN) > provider/schema.json
 
+go-sdk-clean:
+	rm -rf sdk/python sdk/nodejs sdk/go
+
 go-sdk-python: go-build
-	pulumi package gen-sdk ./$(PROVIDER_BIN) --language python -o sdk/python
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language python -o sdk
 
 go-sdk-nodejs: go-build
-	pulumi package gen-sdk ./$(PROVIDER_BIN) --language nodejs -o sdk/nodejs
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language nodejs -o sdk
 
 go-sdk-go: go-build
-	pulumi package gen-sdk ./$(PROVIDER_BIN) --language go -o sdk/go
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language go -o sdk
 
-go-sdk-all: go-sdk-python go-sdk-nodejs go-sdk-go
+go-sdk-all: go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go
 
 go-install: go-build
 	mkdir -p $(GO_BIN)

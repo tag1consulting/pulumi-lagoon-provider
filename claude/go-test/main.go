@@ -55,9 +55,38 @@ func main() {
 			return err
 		}
 
+		// Test Variable resource
+		_, err = lagoonres.NewVariable(ctx, "go-test-var", &lagoonres.VariableArgs{
+			ProjectId: project.LagoonId,
+			Name:      pulumi.String("TEST_VAR"),
+			Value:     pulumi.String("hello-v022"),
+			Scope:     pulumi.String("runtime"),
+		}, opts, pulumi.DependsOn([]pulumi.Resource{project}))
+		if err != nil {
+			return err
+		}
+
+		// Test Group resource (new in v0.2.2)
+		group, err := lagoonres.NewGroup(ctx, "go-test-group", &lagoonres.GroupArgs{
+			Name: pulumi.String("v022-test-group"),
+		}, opts)
+		if err != nil {
+			return err
+		}
+
+		// Test subgroup (exercises parentGroupName round-trip fix)
+		_, err = lagoonres.NewGroup(ctx, "go-test-subgroup", &lagoonres.GroupArgs{
+			Name:            pulumi.String("v022-test-subgroup"),
+			ParentGroupName: pulumi.StringPtr("v022-test-group"),
+		}, opts, pulumi.DependsOn([]pulumi.Resource{group}))
+		if err != nil {
+			return err
+		}
+
 		ctx.Export("projectId", project.LagoonId)
 		ctx.Export("projectName", project.Name)
 		ctx.Export("envName", devEnv.Name)
+		ctx.Export("groupId", group.LagoonId)
 
 		return nil
 	})
