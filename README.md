@@ -1,481 +1,281 @@
 # Pulumi Lagoon Provider
 
 [![PyPI version](https://badge.fury.io/py/pulumi-lagoon.svg)](https://pypi.org/project/pulumi-lagoon/)
-[![Tests](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test.yml)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![npm version](https://badge.npmjs.com/v/@tag1consulting/pulumi-lagoon.svg)](https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon)
+[![Go Reference](https://pkg.go.dev/badge/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon.svg)](https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon)
+[![Go Tests](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test-go.yml/badge.svg?branch=main)](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test-go.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-A Pulumi dynamic provider for managing [Lagoon](https://www.lagoon.sh/) resources as infrastructure-as-code.
+A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as infrastructure-as-code.
 
 ## Overview
 
-This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, etc.) using Pulumi, bringing infrastructure-as-code practices to your Lagoon workflows.
+This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, deploy targets, notifications, tasks, etc.) using Pulumi, with native SDKs for Python, TypeScript/JavaScript, and Go.
 
-**Status**: 🧪 Experimental (v0.1.2)
-
-## Features
-
-- **Declarative Configuration**: Manage Lagoon resources alongside your AWS/Kubernetes infrastructure
-- **State Management**: Pulumi tracks resource state and detects drift
-- **Type Safety**: Python type hints for better IDE support
-- **GitOps Ready**: Version control your Lagoon configurations
+**Status**: v0.2.0 — Native Go Provider
 
 ## Supported Resources
 
-### Core Resources (Complete)
-- `LagoonProject` - Manage Lagoon projects
-- `LagoonEnvironment` - Manage environments (branches/PRs)
-- `LagoonVariable` - Manage project and environment variables
-
-### Deploy Target Resources (Complete)
-- `LagoonDeployTarget` - Manage Kubernetes cluster deploy targets
-- `LagoonDeployTargetConfig` - Configure project deployment routing to specific clusters based on branch patterns
-
-### Notification Resources (Complete)
-- `LagoonNotificationSlack` - Manage Slack notifications
-- `LagoonNotificationRocketChat` - Manage RocketChat notifications
-- `LagoonNotificationEmail` - Manage Email notifications
-- `LagoonNotificationMicrosoftTeams` - Manage Microsoft Teams notifications
-- `LagoonProjectNotification` - Link notifications to projects
-
-### Task Resources (Complete)
-- `LagoonTask` - Manage advanced task definitions (on-demand commands and container-based tasks)
-  - **Command tasks**: Execute commands in existing service containers (e.g., `yarn audit`, `drush cr`)
-  - **Image tasks**: Run specialized container images for complex operations (e.g., database backups)
-  - Supports scoping to projects, environments, groups, or system-wide
-  - Configurable permissions (guest, developer, maintainer)
-  - Optional user confirmation prompts and custom arguments
-
-### Planned
-- `LagoonGroup` - Manage user groups and permissions
-
-## Quick Start - Complete Test Environment
-
-Set up a complete local development environment with Kind cluster, Lagoon, and the provider:
-
-```bash
-# Clone the repository
-git clone https://github.com/tag1consulting/pulumi-lagoon-provider.git
-cd pulumi-lagoon-provider
-
-# Option 1: Use the setup script (recommended)
-./scripts/setup-complete.sh
-
-# Option 2: Use Make
-make setup-all
-
-# After setup, deploy the example project
-make example-up
-```
-
-**What gets created:**
-- Kind Kubernetes cluster (`lagoon`)
-- Lagoon Core (API, UI, Keycloak, RabbitMQ, databases)
-- Harbor container registry
-- Ingress controller with TLS
-- Python virtual environment with provider installed
-- Example project ready to deploy
-
-**Setup time:** ~5 minutes for single-cluster, ~15-20 minutes for multi-cluster with full Lagoon stack
+| Resource | Description |
+|----------|-------------|
+| `Project` | Lagoon projects (applications/sites) |
+| `Environment` | Environments (branch/PR deployments) |
+| `Variable` | Project and environment variables |
+| `DeployTarget` | Kubernetes cluster deploy targets |
+| `DeployTargetConfig` | Branch-pattern routing to deploy targets |
+| `NotificationSlack` | Slack deployment notifications |
+| `NotificationRocketChat` | RocketChat deployment notifications |
+| `NotificationEmail` | Email deployment notifications |
+| `NotificationMicrosoftTeams` | Microsoft Teams deployment notifications |
+| `ProjectNotification` | Link notifications to projects |
+| `Task` | Advanced task definitions (command and image types) |
 
 ## Installation
 
-### From PyPI (Recommended)
+### Python
 
 ```bash
 pip install pulumi-lagoon
 ```
 
-### From Source (Development)
+### TypeScript / JavaScript
 
 ```bash
-# Clone the repository
-git clone https://github.com/tag1consulting/pulumi-lagoon-provider.git
-cd pulumi-lagoon-provider
+npm install @tag1consulting/pulumi-lagoon
+# or
+yarn add @tag1consulting/pulumi-lagoon
+```
 
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
+### Go
 
-# Install in development mode
-pip install -e .
+```bash
+go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon
 ```
 
 ## Configuration
 
-**For the local test cluster** (after running setup):
-
 ```bash
-# The example project handles this automatically via the run-pulumi.sh wrapper
-cd examples/simple-project
-./scripts/run-pulumi.sh up
+pulumi config set lagoon:apiUrl https://api.lagoon.example.com/graphql
+pulumi config set --secret lagoon:token YOUR_TOKEN
+# or use a JWT secret for admin token generation:
+pulumi config set --secret lagoon:jwtSecret YOUR_JWT_SECRET
 ```
 
-**For external Lagoon instances**, use environment variables (recommended for dynamic providers):
+Or via environment variables:
 
 ```bash
 export LAGOON_API_URL=https://api.lagoon.example.com/graphql
 export LAGOON_TOKEN=YOUR_TOKEN
 ```
 
-**Note**: Dynamic providers run in a subprocess and cannot access Pulumi config secrets.
-Always use environment variables for `LAGOON_TOKEN`.
-
 ## Usage
+
+### Python
 
 ```python
 import pulumi
 import pulumi_lagoon as lagoon
+from pulumi_lagoon.lagoon import Project, ProjectArgs, Environment, EnvironmentArgs, Variable, VariableArgs
 
-# Create a Lagoon project
-project = lagoon.LagoonProject("my-drupal-site",
-    name="my-drupal-site",
-    git_url="git@github.com:org/repo.git",
-    deploytarget_id=1,
-    production_environment="main",
-    branches="^(main|develop|stage)$",
-    pullrequests="^(PR-.*)",
-)
-
-# Create production environment
-prod_env = lagoon.LagoonEnvironment("production",
-    project_id=project.id,
-    name="main",
-    environment_type="production",
-    deploy_type="branch",
-)
-
-# Add environment variable
-db_config = lagoon.LagoonVariable("database-host",
-    project_id=project.id,
-    environment_id=prod_env.id,
-    name="DATABASE_HOST",
-    value="mysql.production.example.com",
-    scope="runtime",
-)
-
-# Create a Slack notification
-slack_alerts = lagoon.LagoonNotificationSlack("deploy-alerts",
-    lagoon.LagoonNotificationSlackArgs(
-        name="deploy-alerts",
-        webhook="https://hooks.slack.com/services/xxx/yyy/zzz",
-        channel="#deployments",
+project = Project("my-site",
+    ProjectArgs(
+        name="my-drupal-site",
+        git_url="git@github.com:org/repo.git",
+        deploytarget_id=1,
+        production_environment="main",
+        branches="^(main|develop|stage)$",
     )
 )
 
-# Link the notification to the project
-project_notification = lagoon.LagoonProjectNotification("project-slack",
-    lagoon.LagoonProjectNotificationArgs(
-        project_name=project.name,
-        notification_type="slack",
-        notification_name=slack_alerts.name,
-    ),
-    opts=pulumi.ResourceOptions(depends_on=[project, slack_alerts])
-)
-
-# Create an advanced task definition (command type)
-yarn_audit = lagoon.LagoonTask("yarn-audit",
-    lagoon.LagoonTaskArgs(
-        name="run-yarn-audit",
-        type="command",
-        service="node",
-        command="yarn audit",
-        project_id=project.id,
-        permission="developer",
-        description="Run yarn security audit",
+prod_env = Environment("production",
+    EnvironmentArgs(
+        name="main",
+        project_id=project.lagoon_id,
+        deploy_type="branch",
+        deploy_base_ref="main",
+        environment_type="production",
     )
 )
 
-# Export project details
-pulumi.export("project_id", project.id)
+db_config = Variable("db-host",
+    VariableArgs(
+        name="DATABASE_HOST",
+        value="mysql.production.example.com",
+        project_id=project.lagoon_id,
+        environment_id=prod_env.lagoon_id,
+        scope="runtime",
+    )
+)
+
+pulumi.export("project_id", project.lagoon_id)
 pulumi.export("production_url", prod_env.route)
+```
+
+### TypeScript
+
+```typescript
+import * as lagoon from "@tag1consulting/pulumi-lagoon";
+
+const project = new lagoon.lagoon.Project("my-site", {
+    name: "my-drupal-site",
+    gitUrl: "git@github.com:org/repo.git",
+    deploytargetId: 1,
+    productionEnvironment: "main",
+    branches: "^(main|develop|stage)$",
+});
+
+export const projectId = project.lagoonId;
+```
+
+### Go
+
+```go
+import (
+    lagoon "github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon/lagoon"
+)
+
+project, err := lagoon.NewProject(ctx, "my-site", &lagoon.ProjectArgs{
+    Name:                  pulumi.String("my-drupal-site"),
+    GitUrl:                pulumi.String("git@github.com:org/repo.git"),
+    DeploytargetId:        pulumi.Int(1),
+    ProductionEnvironment: pulumi.String("main"),
+})
 ```
 
 ## Examples
 
 See the `examples/` directory for complete examples:
 
-- `simple-project/` - Use the Lagoon provider to create projects/environments/variables via API
-- `single-cluster/` - Deploy complete Lagoon stack to a single Kind cluster
-- `multi-cluster/` - Production-like deployment with separate prod/nonprod Kind clusters
+- `simple-project/` — Create Lagoon projects, environments, variables, and notifications via the API
+- `single-cluster/` — Deploy a complete Lagoon stack to a single Kind cluster
+- `multi-cluster/` — Production-like deployment with separate prod/nonprod Kind clusters
 
 ### Multi-Cluster Example
 
-> **Prerequisites**: Docker, Kind, kubectl, Helm, and Pulumi CLI must be installed. See [Development](#development) for details.
-
-The multi-cluster example demonstrates a production-like Lagoon deployment with:
-
-- **Production cluster** (`lagoon-prod`): Lagoon core services, Harbor registry, and production workloads
-- **Non-production cluster** (`lagoon-nonprod`): Development/staging workloads that connect to prod core
-- **Deploy Target Configs**: Route deployments to the appropriate cluster based on branch patterns
-  - `main` branch → production cluster
-  - `develop`, `feature/*` branches → non-production cluster
-  - Pull requests → non-production cluster
-
 ```bash
-# Deploy the multi-cluster environment
-make multi-cluster-deploy
+# Deploy prod + nonprod Kind clusters with full Lagoon stack
+make multi-cluster-up
 
 # Verify deployment
-make multi-cluster-verify
+make multi-cluster-status
 
-# Access information (URLs, credentials)
-cd examples/multi-cluster && make show-access-info
+# Tear down
+make multi-cluster-down
 ```
-
-The example creates a complete Drupal project with multi-cluster routing configured automatically.
 
 ## Importing Existing Resources
 
-You can import existing Lagoon resources into Pulumi state using `pulumi import`. This is useful when adopting infrastructure-as-code for existing Lagoon projects.
-
-### Import ID Formats
+Use `pulumi import` to bring existing Lagoon resources under Pulumi management:
 
 | Resource | Import ID Format | Example |
 |----------|-----------------|---------|
-| `LagoonProject` | `{numeric_id}` | `pulumi import lagoon:index:Project my-project 123` |
-| `LagoonDeployTarget` | `{numeric_id}` | `pulumi import lagoon:index:DeployTarget my-target 1` |
-| `LagoonEnvironment` | `{project_id}:{env_name}` | `pulumi import lagoon:index:Environment my-env 123:main` |
-| `LagoonVariable` | `{project_id}:{env_id}:{var_name}` | `pulumi import lagoon:index:Variable my-var 123:456:DATABASE_HOST` |
-| `LagoonVariable` (project-level) | `{project_id}::{var_name}` | `pulumi import lagoon:index:Variable my-var 123::API_KEY` |
-| `LagoonDeployTargetConfig` | `{project_id}:{config_id}` | `pulumi import lagoon:index:DeployTargetConfig my-config 123:5` |
-| `LagoonNotificationSlack` | `{name}` | `pulumi import lagoon:index:NotificationSlack my-slack deploy-alerts` |
-| `LagoonNotificationRocketChat` | `{name}` | `pulumi import lagoon:index:NotificationRocketChat my-rc team-chat` |
-| `LagoonNotificationEmail` | `{name}` | `pulumi import lagoon:index:NotificationEmail my-email ops-team` |
-| `LagoonNotificationMicrosoftTeams` | `{name}` | `pulumi import lagoon:index:NotificationMicrosoftTeams my-teams teams-alerts` |
-| `LagoonProjectNotification` | `{project}:{type}:{name}` | `pulumi import lagoon:index:ProjectNotification my-assoc my-project:slack:deploy-alerts` |
-| `LagoonTask` | `{numeric_id}` | `pulumi import lagoon:index:Task my-task 123` |
-
-### Finding Resource IDs
-
-Use the Lagoon CLI to find resource IDs:
-
-```bash
-# List projects and their IDs
-lagoon list projects
-
-# Get project details including environment IDs
-lagoon get project --project my-project
-
-# List variables for a project
-lagoon list variables --project my-project
-```
-
-### Import Examples
+| `lagoon:lagoon:Project` | `{numeric_id}` | `123` |
+| `lagoon:lagoon:DeployTarget` | `{numeric_id}` | `1` |
+| `lagoon:lagoon:Environment` | `{project_id}:{env_name}` | `123:main` |
+| `lagoon:lagoon:Variable` | `{project_id}:{env_id}:{var_name}` | `123:456:DATABASE_HOST` |
+| `lagoon:lagoon:Variable` (project-level) | `{project_id}::{var_name}` | `123::API_KEY` |
+| `lagoon:lagoon:DeployTargetConfig` | `{project_id}:{config_id}` | `123:5` |
+| `lagoon:lagoon:NotificationSlack` | `{name}` | `deploy-alerts` |
+| `lagoon:lagoon:ProjectNotification` | `{project}:{type}:{name}` | `my-project:slack:deploy-alerts` |
+| `lagoon:lagoon:Task` | `{numeric_id}` | `456` |
 
 ```bash
 # Import an existing project (ID 123)
-pulumi import lagoon:index:Project my-site 123
+pulumi import lagoon:lagoon:Project my-site 123
 
-# Import an environment named "main" from project 123
-pulumi import lagoon:index:Environment prod-env 123:main
+# Import an environment
+pulumi import lagoon:lagoon:Environment prod-env 123:main
 
 # Import a project-level variable
-pulumi import lagoon:index:Variable api-key 123::API_KEY
-
-# Import an environment-level variable (project 123, environment 456)
-pulumi import lagoon:index:Variable db-host 123:456:DATABASE_HOST
-
-# Import a deploy target config
-pulumi import lagoon:index:DeployTargetConfig routing-config 123:5
-
-# Import a Slack notification
-pulumi import lagoon:index:NotificationSlack my-slack deploy-alerts
-
-# Import a project notification association
-pulumi import lagoon:index:ProjectNotification my-assoc my-project:slack:deploy-alerts
-
-# Import an advanced task definition
-pulumi import lagoon:index:Task yarn-audit 456
+pulumi import lagoon:lagoon:Variable api-key 123::API_KEY
 ```
 
-After importing, you'll need to add the corresponding resource definition to your Pulumi code.
+Use the [Lagoon CLI](docs/lagoon-cli-setup.md) to find resource IDs:
+
+```bash
+lagoon list projects
+lagoon get project --project my-project
+```
 
 ## Development
 
 ### Prerequisites
-- Python 3.8 or later
+
+- Go 1.22+
 - Pulumi CLI
-- Docker (for local test cluster)
-- kind CLI (for local test cluster)
-- kubectl
+- Docker, Kind, kubectl (for local test clusters)
 
-### Quick Setup
+### Build
 
 ```bash
-# Complete automated setup (creates Kind cluster, installs Lagoon, provider)
-make setup-all
-
-# Or just install the provider for use with existing Lagoon
-make venv provider-install
+cd provider
+CGO_ENABLED=0 go build ./cmd/pulumi-resource-lagoon/
 ```
 
-### Make Targets
+### Test
 
 ```bash
-# Setup
-make setup-all          # Complete setup: venv, provider, Kind cluster, Lagoon, user, deploy target
-make venv               # Create Python virtual environment
-make provider-install   # Install provider in development mode
-make cluster-up         # Create Kind cluster + deploy Lagoon via Pulumi
-make cluster-down       # Destroy Kind cluster and Lagoon resources
-
-# Lagoon Setup (called by setup-all)
-make ensure-lagoon-admin   # Create lagoonadmin user in Keycloak
-make ensure-deploy-target  # Create deploy target in Lagoon + set Pulumi config
-
-# Example Project (simple-project)
-make example-setup      # Initialize example Pulumi stack
-make example-preview    # Preview changes (auto token refresh)
-make example-up         # Deploy example resources (auto token refresh)
-make example-down       # Destroy example resources
-make example-output     # Show stack outputs
-
-# Multi-cluster Example
-make multi-cluster-up       # Create prod + nonprod Kind clusters with full Lagoon stack:
-                            #   - prod cluster: lagoon-core + lagoon-remote + Harbor
-                            #   - nonprod cluster: lagoon-remote only (connects to prod core)
-make multi-cluster-down     # Destroy multi-cluster environment
-make multi-cluster-preview  # Preview multi-cluster changes
-make multi-cluster-status   # Show multi-cluster stack outputs
-make multi-cluster-clusters # List all Kind clusters
-
-# Cleanup
-make clean              # Kill port-forwards, remove temp files
-make clean-all          # Full cleanup: clean + destroy cluster + remove venvs
-
-# Status
-make cluster-status     # Show cluster and Lagoon status
-make help               # Show all available targets
+cd provider
+CGO_ENABLED=0 go test ./... -count=1
 ```
 
-**Note**: All targets that interact with Lagoon automatically handle:
-- Port-forward setup (temporary, cleaned up after)
-- Token refresh (Lagoon OAuth tokens expire after 5 minutes; scripts automatically acquire fresh tokens)
-- Direct Access Grants enablement in Keycloak (required for CLI authentication)
-- User and deploy target creation (if needed)
-
-### Manual Setup
+### Makefile Targets
 
 ```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install in development mode
-pip install -e .
-
-# Run tests
-pytest tests/
+make go-build       # Build the provider binary
+make go-test        # Run all Go tests (198 tests)
+make go-schema      # Regenerate provider schema
+make go-sdk-all     # Regenerate all language SDKs
+make go-sdk-python  # Regenerate Python SDK
+make go-sdk-nodejs  # Regenerate TypeScript SDK
+make go-sdk-go      # Regenerate Go SDK
 ```
 
-### Project Structure
+### Provider Structure
 
 ```
 pulumi-lagoon-provider/
-├── pulumi_lagoon/           # Main provider package
-│   ├── __init__.py         # Package exports
-│   ├── client.py           # Lagoon GraphQL API client
-│   ├── config.py           # Provider configuration
-│   ├── exceptions.py       # Custom exceptions
-│   ├── validators.py       # Input validation
-│   ├── import_utils.py     # Import ID parsing utilities
-│   ├── project.py          # LagoonProject resource
-│   ├── environment.py      # LagoonEnvironment resource
-│   ├── variable.py         # LagoonVariable resource
-│   ├── task.py             # LagoonTask resource
-│   ├── deploytarget.py     # LagoonDeployTarget resource
-│   ├── deploytarget_config.py  # LagoonDeployTargetConfig resource
-│   ├── notification_slack.py   # LagoonNotificationSlack resource
-│   ├── notification_rocketchat.py  # LagoonNotificationRocketChat resource
-│   ├── notification_email.py   # LagoonNotificationEmail resource
-│   ├── notification_microsoftteams.py  # LagoonNotificationMicrosoftTeams resource
-│   └── project_notification.py # LagoonProjectNotification resource
+├── provider/                    # Native Go provider
+│   ├── cmd/pulumi-resource-lagoon/  # Provider binary entrypoint
+│   ├── pkg/client/              # Lagoon GraphQL client
+│   ├── pkg/config/              # Provider configuration
+│   ├── pkg/resources/           # 11 resource implementations
+│   └── schema.json              # Pulumi schema
+├── sdk/                         # Generated multi-language SDKs
+│   ├── python/python/           # Python SDK (PyPI: pulumi-lagoon)
+│   ├── nodejs/nodejs/           # TypeScript SDK (npm: @tag1consulting/pulumi-lagoon)
+│   └── go/go/lagoon/            # Go SDK
 ├── examples/
-│   ├── simple-project/     # API usage example (assumes Lagoon exists)
-│   │   ├── __main__.py     # Creates projects/environments/variables
-│   │   └── scripts/        # Helper scripts
-│   ├── single-cluster/     # Single Kind cluster deployment
-│   │   ├── __main__.py     # Deploys full Lagoon stack
-│   │   └── (symlinks)      # Reuses multi-cluster modules
-│   └── multi-cluster/      # Production-like multi-cluster deployment
-│       ├── __main__.py     # Two-cluster deployment
-│       ├── clusters/       # Kind cluster management
-│       ├── infrastructure/ # Ingress, cert-manager, CoreDNS
-│       ├── lagoon/         # Lagoon core and remote
-│       ├── registry/       # Harbor installation
-│       └── tests/          # Unit tests for multi-cluster config (39 tests)
-├── scripts/                # Shared operational scripts
-├── tests/                  # Unit and integration tests
-├── memory-bank/            # Planning and architecture docs
-├── Makefile                # Top-level automation
-└── README.md              # This file
+│   ├── simple-project/          # Provider usage example
+│   ├── single-cluster/          # Single Kind cluster deployment
+│   └── multi-cluster/           # Production-like multi-cluster deployment
+├── scripts/                     # Shared operational scripts
+├── docs/                        # Additional documentation
+└── memory-bank/                 # Architecture and planning docs
 ```
 
 ## Architecture
 
-This is a **Pulumi dynamic provider** written in Python. It communicates with the Lagoon GraphQL API to perform CRUD operations on resources.
+A **native Go provider** using [`pulumi-go-provider`](https://github.com/pulumi/pulumi-go-provider) v1.3.0 with the `infer` package. The provider communicates with the Lagoon GraphQL API and generates multi-language SDKs from a single schema.
 
-Key components:
-- **Resource Definitions**: User-facing classes (e.g., `LagoonProject`)
-- **Provider Implementations**: CRUD logic for each resource type
-- **GraphQL Client**: Handles API communication
-- **Configuration**: Manages API credentials and settings
-
-For detailed architecture information, see `memory-bank/architecture.md`.
-
-## Roadmap
-
-### Phase 1: MVP (Complete)
-- [x] Project setup and structure
-- [x] GraphQL client implementation
-- [x] Core resources (Project, Environment, Variable)
-- [x] Basic examples with automation scripts
-- [x] Test cluster setup via Pulumi (Kind + Lagoon)
-- [x] Documentation
-
-### Phase 2: Deploy Targets & Multi-Cluster (Complete)
-- [x] Comprehensive error handling
-- [x] Unit tests (300+ tests, 95% coverage)
-- [x] Integration test framework
-- [x] CI/CD pipeline (GitHub Actions)
-- [x] DeployTarget resource for Kubernetes cluster management
-- [x] DeployTargetConfig resource for branch-based deployment routing
-- [x] Multi-cluster example (prod/nonprod separation)
-- [x] Two-phase deployment pattern (infrastructure first, then API-dependent resources)
-- [x] CORS and TLS configuration for browser access with self-signed certificates
-- [x] Comprehensive documentation for browser access setup
-
-### Phase 3: Production Ready (In Progress)
-- [x] PyPI package publishing
-- [x] Notification resources (Slack, RocketChat, Email, Microsoft Teams)
-- [x] Project notification associations
-- [x] Task resources (advanced task definitions)
-- [ ] Additional resources (Group)
-- [ ] Advanced examples
-- [ ] Community feedback integration
-
-### Phase 4: Native Provider (Future)
-- [ ] Go implementation
-- [ ] Multi-language SDK generation (Python, TypeScript, Go)
-- [ ] Enhanced performance
+Key properties:
+- All sensitive fields (`token`, `jwtSecret`, `webhook`, `value`) are marked secret and encrypted in state
+- All 11 resources implement `Diff` with per-field `DetailedDiff` (Update vs UpdateReplace)
+- All resources support `pulumi import`
+- JWT token generation is centralized and configurable (`jwtAudience` config field)
 
 ## Contributing
 
-This project is in active development. Contributions, feedback, and bug reports are welcome!
+Contributions, feedback, and bug reports are welcome!
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+2. Create a feature branch off `main`
+3. Make your changes with tests
+4. Submit a pull request
 
 ## License
 
-Apache License 2.0 - See [LICENSE](LICENSE) for details.
+Apache License 2.0 — See [LICENSE](LICENSE) for details.
 
 ## Resources
 
@@ -485,10 +285,5 @@ Apache License 2.0 - See [LICENSE](LICENSE) for details.
 
 ## Support
 
-For issues and questions:
 - GitHub Issues: [Create an issue](https://github.com/tag1consulting/pulumi-lagoon-provider/issues)
 - Lagoon Community: [RocketChat](https://amazeeio.rocket.chat/)
-
-## Acknowledgments
-
-Built for the Lagoon community by infrastructure engineers who believe in infrastructure-as-code.
