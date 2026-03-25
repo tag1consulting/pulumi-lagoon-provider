@@ -78,7 +78,11 @@ func (r *Group) Read(ctx context.Context, req infer.ReadRequest[GroupArgs, Group
 		return infer.ReadResponse[GroupArgs, GroupState]{}, fmt.Errorf("failed to read group: %w", err)
 	}
 
-	args := GroupArgs{Name: g.Name, ParentGroupName: req.State.ParentGroupName}
+	var parentGroupName *string
+	if g.ParentGroup != nil {
+		parentGroupName = &g.ParentGroup.Name
+	}
+	args := GroupArgs{Name: g.Name, ParentGroupName: parentGroupName}
 	st := GroupState{GroupArgs: args, LagoonID: g.ID}
 
 	return infer.ReadResponse[GroupArgs, GroupState]{

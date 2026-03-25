@@ -5,10 +5,16 @@ import (
 	"fmt"
 )
 
+// GroupParent holds the minimal parent-group data returned by the API.
+type GroupParent struct {
+	Name string `json:"name"`
+}
+
 // Group represents a Lagoon group.
 type Group struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID          int          `json:"id"`
+	Name        string       `json:"name"`
+	ParentGroup *GroupParent `json:"parentGroup"`
 }
 
 // CreateGroup creates a new Lagoon group.

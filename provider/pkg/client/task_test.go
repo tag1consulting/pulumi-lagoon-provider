@@ -597,7 +597,7 @@ func TestIsFieldNotFoundOrLegacyError(t *testing.T) {
 				Message: "multiple errors",
 				Errors: []GraphQLError{
 					{Message: "Something else"},
-					{Message: "Cannot query field 'foo'"},
+					{Message: "Cannot query field 'advancedTasksForEnvironment'"},
 				},
 			},
 			want: true,

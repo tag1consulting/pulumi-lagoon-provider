@@ -401,6 +401,9 @@ mutation AddGroup($input: AddGroupInput!) {
     addGroup(input: $input) {
         id
         name
+        parentGroup {
+            name
+        }
     }
 }`
 
@@ -409,6 +412,9 @@ query AllGroups {
     allGroups {
         id
         name
+        parentGroup {
+            name
+        }
     }
 }`
 
@@ -417,6 +423,9 @@ mutation UpdateGroup($input: UpdateGroupInput!) {
     updateGroup(input: $input) {
         id
         name
+        parentGroup {
+            name
+        }
     }
 }`
 
