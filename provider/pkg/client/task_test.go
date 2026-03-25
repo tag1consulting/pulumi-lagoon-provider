@@ -387,6 +387,10 @@ func TestGetTasksByEnvironment_FallbackToLegacy_HTTP400(t *testing.T) {
 		json.Unmarshal(body, &req)
 
 		if callCount == 1 {
+			// Verify the client sends the new API query first
+			if !strings.Contains(req.Query, "advancedTasksForEnvironment") {
+				t.Fatalf("expected first call to use advancedTasksForEnvironment, got: %s", req.Query)
+			}
 			// First call (new API) — return a GraphQL error with "HTTP 400" in the message
 			resp := map[string]any{
 				"errors": []map[string]any{{"message": "HTTP 400: Bad Request"}},
@@ -394,6 +398,10 @@ func TestGetTasksByEnvironment_FallbackToLegacy_HTTP400(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(resp)
 			return
+		}
+		// Verify the client switched to the legacy query
+		if !strings.Contains(req.Query, "advancedTasksByEnvironment") {
+			t.Fatalf("expected second call to use advancedTasksByEnvironment, got: %s", req.Query)
 		}
 		// Second call (legacy fallback)
 		resp := map[string]any{
@@ -436,8 +444,15 @@ func TestGetTasksByEnvironment_FallbackToLegacy_NestedUnknownArgument(t *testing
 	callCount := 0
 	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
 		callCount++
+		body, _ := io.ReadAll(r.Body)
+		var req graphQLRequest
+		json.Unmarshal(body, &req)
 
 		if callCount == 1 {
+			// Verify the client sends the new API query first
+			if !strings.Contains(req.Query, "advancedTasksForEnvironment") {
+				t.Fatalf("expected first call to use advancedTasksForEnvironment, got: %s", req.Query)
+			}
 			// First call — return nested "Unknown argument" error
 			resp := map[string]any{
 				"errors": []map[string]any{
@@ -447,6 +462,10 @@ func TestGetTasksByEnvironment_FallbackToLegacy_NestedUnknownArgument(t *testing
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(resp)
 			return
+		}
+		// Verify the client switched to the legacy query
+		if !strings.Contains(req.Query, "advancedTasksByEnvironment") {
+			t.Fatalf("expected second call to use advancedTasksByEnvironment, got: %s", req.Query)
 		}
 		// Second call (legacy)
 		resp := map[string]any{
