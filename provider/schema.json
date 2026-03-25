@@ -1,7 +1,7 @@
 {
   "name": "lagoon",
   "displayName": "Lagoon",
-  "version": "0.2.0",
+  "version": "0.2.0-dev",
   "description": "Manage Lagoon hosting platform resources as infrastructure-as-code.",
   "keywords": [
     "lagoon",
@@ -254,11 +254,6 @@
           "type": "string",
           "description": "Router pattern for the deploy target."
         },
-        "sharedBastionSecret": {
-          "type": "string",
-          "description": "Shared bastion secret for the deploy target.",
-          "secret": true
-        },
         "sshHost": {
           "type": "string",
           "description": "SSH host for builds."
@@ -302,11 +297,6 @@
         "routerPattern": {
           "type": "string",
           "description": "Router pattern for the deploy target."
-        },
-        "sharedBastionSecret": {
-          "type": "string",
-          "description": "Shared bastion secret for the deploy target.",
-          "secret": true
         },
         "sshHost": {
           "type": "string",
@@ -418,7 +408,7 @@
         },
         "environmentType": {
           "type": "string",
-          "description": "Environment type: 'production', 'development', or 'standby'."
+          "description": "Environment type: 'production' or 'development'."
         },
         "lagoonId": {
           "type": "integer",
@@ -478,7 +468,7 @@
         },
         "environmentType": {
           "type": "string",
-          "description": "Environment type: 'production', 'development', or 'standby'."
+          "description": "Environment type: 'production' or 'development'."
         },
         "name": {
           "type": "string",
@@ -498,6 +488,40 @@
         "projectId",
         "deployType",
         "environmentType"
+      ]
+    },
+    "lagoon:lagoon:Group": {
+      "description": "Manages a Lagoon group for organizing projects and users.",
+      "properties": {
+        "lagoonId": {
+          "type": "integer",
+          "description": "The Lagoon internal ID of the group."
+        },
+        "name": {
+          "type": "string",
+          "description": "The group name."
+        },
+        "parentGroupName": {
+          "type": "string",
+          "description": "The name of the parent group, for creating subgroups."
+        }
+      },
+      "required": [
+        "name",
+        "lagoonId"
+      ],
+      "inputProperties": {
+        "name": {
+          "type": "string",
+          "description": "The group name."
+        },
+        "parentGroupName": {
+          "type": "string",
+          "description": "The name of the parent group, for creating subgroups."
+        }
+      },
+      "requiredInputs": [
+        "name"
       ]
     },
     "lagoon:lagoon:NotificationEmail": {
