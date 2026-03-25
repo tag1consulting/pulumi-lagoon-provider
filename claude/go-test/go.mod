@@ -90,4 +90,4 @@ require (
 	lukechampine.com/frand v1.4.2 // indirect
 )
 
-replace github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon => ../../sdk/go/go/lagoon
+replace github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon => ../../sdk/go/lagoon
