@@ -111,6 +111,22 @@ if ! command -v lagoon &> /dev/null; then
 fi
 echo "Found lagoon CLI: $(command -v lagoon) ($(lagoon version 2>/dev/null || echo 'version unknown'))"
 
+# Check that this CLI version supports --hostname and --port (added in v0.32+)
+if ! lagoon config add --help 2>&1 | grep -q -- '--hostname'; then
+    echo ""
+    echo "ERROR: The installed lagoon CLI does not support --hostname / --port flags."
+    echo "Please upgrade to v0.32 or later:"
+    OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+    ARCH=$(uname -m)
+    case "$ARCH" in
+        x86_64) ARCH="amd64" ;;
+        aarch64|arm64) ARCH="arm64" ;;
+    esac
+    echo "  curl -L https://github.com/uselagoon/lagoon-cli/releases/latest/download/lagoon-cli-${OS}-${ARCH} -o lagoon"
+    echo "  chmod +x lagoon && sudo mv lagoon /usr/local/bin/"
+    exit 1
+fi
+
 # Check if configuration already exists
 EXISTING_CONFIG=$(lagoon config list 2>/dev/null | grep -w "${CONFIG_NAME}" || true)
 if [ -n "$EXISTING_CONFIG" ] && [ "$FORCE" = false ]; then
