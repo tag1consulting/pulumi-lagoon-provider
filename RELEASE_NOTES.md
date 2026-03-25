@@ -1,3 +1,42 @@
+# Release v0.2.2 (2026-03-25)
+
+Feature release adding the Group resource, SDK path fixes, and significantly expanded test coverage.
+
+## New Features
+
+### Group Resource
+
+New `Group` resource for managing Lagoon groups as infrastructure-as-code:
+
+```python
+from pulumi_lagoon.lagoon import Group
+
+group = Group("my-team",
+    name="my-team",
+)
+```
+
+- `pulumi import lagoon:lagoon:Group my-group my-group-name`
+
+## Bug Fixes
+
+- **SDK path fix**: Corrected doubled SDK directory paths (`sdk/python/python/` → `sdk/python/`, `sdk/nodejs/nodejs/` → `sdk/nodejs/`) caused by `pulumi package gen-sdk`
+- **PyPI README**: Fixed missing project description on PyPI by copying the root README into the Python SDK before building
+- **npm badge**: Fixed broken npm version badge that used the non-existent `badge.npmjs.com` service
+
+## Improvements
+
+- **Test coverage**: Expanded from ~40% to 87.4% (418 tests, up from ~200)
+- **CI**: Added `test-build.yml` workflow to validate the Python SDK builds correctly on every PR
+
+## Installation
+
+```bash
+pip install pulumi-lagoon==0.2.2
+```
+
+---
+
 # Release v0.2.1 (2026-03-25)
 
 Maintenance release with security updates, CI improvements, and Lagoon CLI setup tooling.
