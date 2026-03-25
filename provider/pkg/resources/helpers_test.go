@@ -126,6 +126,54 @@ func TestPtrBoolDiffers(t *testing.T) {
 	}
 }
 
+func TestPtrOrDefault(t *testing.T) {
+	tests := []struct {
+		name string
+		p    *string
+		def  string
+		want string
+	}{
+		{"nil returns default", nil, "fallback", "fallback"},
+		{"non-nil returns value", strPtr("hello"), "fallback", "hello"},
+		{"empty string value", strPtr(""), "fallback", ""},
+		{"empty default with nil", nil, "", ""},
+		{"non-nil overrides empty default", strPtr("val"), "", "val"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ptrOrDefault(tt.p, tt.def)
+			if got != tt.want {
+				t.Errorf("ptrOrDefault() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPtrIntOrDefault(t *testing.T) {
+	tests := []struct {
+		name string
+		p    *int
+		def  int
+		want int
+	}{
+		{"nil returns default", nil, 42, 42},
+		{"non-nil returns value", intPtr(7), 42, 7},
+		{"zero value", intPtr(0), 42, 0},
+		{"nil with zero default", nil, 0, 0},
+		{"negative value", intPtr(-1), 0, -1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ptrIntOrDefault(tt.p, tt.def)
+			if got != tt.want {
+				t.Errorf("ptrIntOrDefault() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
 // helpers for tests
 func strPtr(s string) *string  { return &s }
 func intPtr(i int) *int        { return &i }

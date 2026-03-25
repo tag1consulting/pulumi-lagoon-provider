@@ -9,7 +9,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 // DeployTarget manages a Lagoon Kubernetes deploy target.
@@ -51,8 +50,7 @@ func (a *DeployTargetArgs) Annotate(an infer.Annotator) {
 }
 
 func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[DeployTargetArgs]) (infer.CreateResponse[DeployTargetState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	// Compute effective values for fields that have API-side defaults.
 	// Storing these explicitly in state prevents spurious drift on pulumi refresh.
@@ -121,8 +119,7 @@ func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[Deplo
 }
 
 func (r *DeployTarget) Update(ctx context.Context, req infer.UpdateRequest[DeployTargetArgs, DeployTargetState]) (infer.UpdateResponse[DeployTargetState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	input := map[string]any{
 		"consoleUrl": req.Inputs.ConsoleURL,
@@ -160,8 +157,7 @@ func (r *DeployTarget) Update(ctx context.Context, req infer.UpdateRequest[Deplo
 }
 
 func (r *DeployTarget) Delete(ctx context.Context, req infer.DeleteRequest[DeployTargetState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	if err := c.DeleteDeployTarget(ctx, req.State.Name); err != nil {
 		// Treat "not found" as success — resource is already gone
@@ -174,8 +170,7 @@ func (r *DeployTarget) Delete(ctx context.Context, req infer.DeleteRequest[Deplo
 }
 
 func (r *DeployTarget) Read(ctx context.Context, req infer.ReadRequest[DeployTargetArgs, DeployTargetState]) (infer.ReadResponse[DeployTargetArgs, DeployTargetState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	dtID, err := strconv.Atoi(req.ID)
 	if err != nil {

@@ -164,3 +164,45 @@ func TestIsDuplicateEntry(t *testing.T) {
 		})
 	}
 }
+
+func TestLagoonAPIError_Is_ErrDuplicateEntry(t *testing.T) {
+	// Test errors.Is(apiErr, ErrDuplicateEntry) via the Is() method directly.
+	tests := []struct {
+		name string
+		err  *LagoonAPIError
+		want bool
+	}{
+		{
+			name: "top-level duplicate message",
+			err:  &LagoonAPIError{Message: "Duplicate entry 'foo' for key 'name'"},
+			want: true,
+		},
+		{
+			name: "top-level already exists message",
+			err:  &LagoonAPIError{Message: "Resource already exists"},
+			want: true,
+		},
+		{
+			name: "nested Errors duplicate message",
+			err: &LagoonAPIError{
+				Message: "graphql error",
+				Errors:  []GraphQLError{{Message: "Duplicate entry 'bar'"}},
+			},
+			want: true,
+		},
+		{
+			name: "unrelated API error",
+			err:  &LagoonAPIError{Message: "some other error"},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := errors.Is(tt.err, ErrDuplicateEntry)
+			if got != tt.want {
+				t.Errorf("errors.Is(%v, ErrDuplicateEntry) = %v, want %v", tt.err, got, tt.want)
+			}
+		})
+	}
+}

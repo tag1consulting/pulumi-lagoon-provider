@@ -492,3 +492,47 @@ func TestExecute_MultipleErrors(t *testing.T) {
 		t.Errorf("expected both errors in message, got: %v", err)
 	}
 }
+
+func TestWithMaxRetries_Negative(t *testing.T) {
+	// WithMaxRetries(-1) should clamp to 0 retries — only one attempt total.
+	var attempts int32
+	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&attempts, 1)
+		// Return a 500 to trigger retry logic (LagoonConnectionError is retried)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token", WithMaxRetries(-1))
+	c.baseDelay = 1 * time.Millisecond
+	_, err := c.Execute(context.Background(), "query { test }", nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	// With maxRetries=0, there should be exactly 1 attempt (no retries)
+	if got := atomic.LoadInt32(&attempts); got != 1 {
+		t.Errorf("expected 1 attempt with maxRetries clamped to 0, got %d", got)
+	}
+}
+
+func TestHTTP4xxReturnsAPIError(t *testing.T) {
+	// HTTP 400 should be returned as LagoonAPIError, not LagoonConnectionError.
+	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Request: invalid query syntax"))
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token", WithMaxRetries(0))
+	_, err := c.Execute(context.Background(), "query { bad }", nil)
+	if err == nil {
+		t.Fatal("expected error for HTTP 400")
+	}
+	if !errors.Is(err, ErrAPI) {
+		t.Errorf("expected ErrAPI (LagoonAPIError) for HTTP 400, got %T: %v", err, err)
+	}
+	// Verify it's NOT a connection error
+	if errors.Is(err, ErrConnection) {
+		t.Error("HTTP 400 should NOT be a LagoonConnectionError")
+	}
+}

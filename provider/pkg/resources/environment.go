@@ -10,7 +10,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 // Environment manages a Lagoon environment resource.
@@ -78,8 +77,7 @@ func validateEnvironmentEnums(deployType, envType string) error {
 }
 
 func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[EnvironmentArgs]) (infer.CreateResponse[EnvironmentState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	if err := validateEnvironmentEnums(req.Inputs.DeployType, req.Inputs.EnvironmentType); err != nil {
 		return infer.CreateResponse[EnvironmentState]{}, err
@@ -135,8 +133,7 @@ func (r *Environment) Create(ctx context.Context, req infer.CreateRequest[Enviro
 }
 
 func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[EnvironmentArgs, EnvironmentState]) (infer.UpdateResponse[EnvironmentState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	if err := validateEnvironmentEnums(req.Inputs.DeployType, req.Inputs.EnvironmentType); err != nil {
 		return infer.UpdateResponse[EnvironmentState]{}, err
@@ -195,8 +192,7 @@ func (r *Environment) Update(ctx context.Context, req infer.UpdateRequest[Enviro
 }
 
 func (r *Environment) Delete(ctx context.Context, req infer.DeleteRequest[EnvironmentState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	// Lagoon's deleteEnvironment mutation requires the project name (String!), not the ID.
 	proj, err := c.GetProjectByID(ctx, req.State.ProjectID)
@@ -218,8 +214,7 @@ func (r *Environment) Delete(ctx context.Context, req infer.DeleteRequest[Enviro
 }
 
 func (r *Environment) Read(ctx context.Context, req infer.ReadRequest[EnvironmentArgs, EnvironmentState]) (infer.ReadResponse[EnvironmentArgs, EnvironmentState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	// Parse composite ID: {project_id}:{env_name}
 	parts := strings.SplitN(req.ID, ":", 2)

@@ -10,7 +10,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 // Variable manages a Lagoon environment variable.
@@ -49,8 +48,7 @@ func (s *VariableState) Annotate(a infer.Annotator) {
 }
 
 func (r *Variable) Create(ctx context.Context, req infer.CreateRequest[VariableArgs]) (infer.CreateResponse[VariableState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	if req.DryRun {
 		return infer.CreateResponse[VariableState]{
@@ -74,8 +72,7 @@ func (r *Variable) Create(ctx context.Context, req infer.CreateRequest[VariableA
 }
 
 func (r *Variable) Update(ctx context.Context, req infer.UpdateRequest[VariableArgs, VariableState]) (infer.UpdateResponse[VariableState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	if req.DryRun {
 		return infer.UpdateResponse[VariableState]{
@@ -101,8 +98,7 @@ func (r *Variable) Update(ctx context.Context, req infer.UpdateRequest[VariableA
 }
 
 func (r *Variable) Delete(ctx context.Context, req infer.DeleteRequest[VariableState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	if err := c.DeleteVariable(ctx, req.State.Name, req.State.ProjectID, req.State.EnvironmentID); err != nil {
 		if errors.Is(err, client.ErrNotFound) {
@@ -114,8 +110,7 @@ func (r *Variable) Delete(ctx context.Context, req infer.DeleteRequest[VariableS
 }
 
 func (r *Variable) Read(ctx context.Context, req infer.ReadRequest[VariableArgs, VariableState]) (infer.ReadResponse[VariableArgs, VariableState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	// Parse import ID: {project_id}:{env_id}:{var_name} or {project_id}::{var_name}
 	parts := strings.SplitN(req.ID, ":", 3)

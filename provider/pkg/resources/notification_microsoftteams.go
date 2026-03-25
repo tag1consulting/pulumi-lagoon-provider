@@ -9,7 +9,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 type NotificationMicrosoftTeams struct{}
@@ -35,8 +34,7 @@ func (a *NotificationMicrosoftTeamsArgs) Annotate(an infer.Annotator) {
 }
 
 func (r *NotificationMicrosoftTeams) Create(ctx context.Context, req infer.CreateRequest[NotificationMicrosoftTeamsArgs]) (infer.CreateResponse[NotificationMicrosoftTeamsState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	if req.DryRun {
 		return infer.CreateResponse[NotificationMicrosoftTeamsState]{
@@ -57,8 +55,7 @@ func (r *NotificationMicrosoftTeams) Create(ctx context.Context, req infer.Creat
 }
 
 func (r *NotificationMicrosoftTeams) Update(ctx context.Context, req infer.UpdateRequest[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]) (infer.UpdateResponse[NotificationMicrosoftTeamsState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	client := cfg.NewClient()
+	client := clientFor(ctx)
 
 	patch := map[string]any{}
 	if req.Inputs.Webhook != req.State.Webhook {
@@ -82,8 +79,7 @@ func (r *NotificationMicrosoftTeams) Update(ctx context.Context, req infer.Updat
 }
 
 func (r *NotificationMicrosoftTeams) Delete(ctx context.Context, req infer.DeleteRequest[NotificationMicrosoftTeamsState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 	if err := c.DeleteNotificationMicrosoftTeams(ctx, req.State.Name); err != nil {
 		if errors.Is(err, client.ErrNotFound) {
 			return infer.DeleteResponse{}, nil
@@ -94,8 +90,7 @@ func (r *NotificationMicrosoftTeams) Delete(ctx context.Context, req infer.Delet
 }
 
 func (r *NotificationMicrosoftTeams) Read(ctx context.Context, req infer.ReadRequest[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]) (infer.ReadResponse[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	// Prefer state name for lookup, fallback to ID
 	name := req.State.Name
