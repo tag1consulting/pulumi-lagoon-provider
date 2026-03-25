@@ -20,13 +20,17 @@ group = Group("my-team",
 
 ## Bug Fixes
 
+- **Group ID type**: Lagoon returns UUIDs (strings) for group IDs, not integers. Fixed `Group.ID` and `GroupState.LagoonID` types and updated the schema accordingly.
+- **Group delete idempotency**: `DeleteGroup` now correctly handles "Group not found" errors so that deleting an already-removed group succeeds instead of erroring.
+- **Group parentGroup queries reverted**: The `parentGroup` field is not exposed on Lagoon's `GroupInterface` type. Reverted query additions that caused `Cannot query field "parentGroup"` errors. The `Read` handler preserves `parentGroupName` from Pulumi state instead.
+- **Task fallback predicate tightened**: `isFieldNotFoundOrLegacyError` now only triggers legacy API fallback for `advancedTasksForEnvironment` field errors, preventing false-positive fallbacks on unrelated API errors.
 - **SDK path fix**: Corrected doubled SDK directory paths (`sdk/python/python/` → `sdk/python/`, `sdk/nodejs/nodejs/` → `sdk/nodejs/`) caused by `pulumi package gen-sdk`
 - **PyPI README**: Fixed missing project description on PyPI by copying the root README into the Python SDK before building
 - **npm badge**: Fixed broken npm version badge that used the non-existent `badge.npmjs.com` service
 
 ## Improvements
 
-- **Test coverage**: Expanded from ~40% to 87.4% (418 tests, up from ~200)
+- **Test coverage**: Expanded from ~40% to 87.4% (512 tests, up from ~200)
 - **CI**: Added `test-build.yml` workflow to validate the Python SDK builds correctly on every PR
 
 ## Installation
