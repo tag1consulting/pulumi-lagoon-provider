@@ -1,3 +1,41 @@
+# Release v0.2.1 (2026-03-25)
+
+Maintenance release with security updates, CI improvements, and Lagoon CLI setup tooling.
+
+## Security
+
+- **Dependency updates**: Bumped `github.com/go-git/go-git/v5` from 5.13.1 to 5.16.5 and `github.com/cloudflare/circl` from 1.6.1 to 1.6.3 across all Go modules (provider, SDK, test)
+
+## New Features
+
+### Lagoon CLI Setup Scripts
+
+New automated setup scripts and documentation for configuring the Lagoon CLI against local and multi-cluster deployments:
+
+- `scripts/setup-lagoon-cli.sh` — Configures the Lagoon CLI with SSH and API endpoints, creates an admin user, and verifies connectivity
+- `examples/multi-cluster/scripts/setup-lagoon-cli.sh` — Multi-cluster variant with prod/nonprod support
+- `examples/multi-cluster/scripts/get-lagoon-token.sh` — Retrieves a Lagoon API token via SSH key authentication
+- `docs/lagoon-cli-setup.md` — Full Lagoon CLI setup guide
+- `examples/multi-cluster/LAGOON_CLI_SETUP.md` — Multi-cluster-specific CLI setup guide
+
+## Improvements
+
+- **Notification helpers**: Refactored notification CRUD operations to use shared helper functions, reducing duplication across all notification resource types
+- **CI**: Updated `upload-artifact` and `download-artifact` GitHub Actions to Node.js 24 compatible versions
+
+## Cleanup
+
+- Removed legacy Python v0.1.x build artifacts: `setup.py`, `requirements.txt`, and the old `test.yml` workflow
+- Updated README to reflect v0.2.x native Go provider structure
+
+## Installation
+
+```bash
+pip install pulumi-lagoon==0.2.1
+```
+
+---
+
 # Release v0.2.0 (2026-03-24)
 
 This is a major release that replaces the Python dynamic provider with a native Go provider and generated multi-language SDKs.
