@@ -458,6 +458,61 @@ func TestNotificationMicrosoftTeamsDiff_WebhookUpdate(t *testing.T) {
 	}
 }
 
+// --- Group Diff Tests ---
+
+func TestGroupDiff_NoChanges(t *testing.T) {
+	r := &Group{}
+	olds := GroupState{GroupArgs: GroupArgs{Name: "my-group"}}
+	news := GroupArgs{Name: "my-group"}
+
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[GroupArgs, GroupState]{ID: "1", State: olds, Inputs: news})
+	if err != nil {
+		t.Fatalf("Diff failed: %v", err)
+	}
+	if resp.HasChanges {
+		t.Error("expected no changes")
+	}
+}
+
+func TestGroupDiff_NameForceNew(t *testing.T) {
+	r := &Group{}
+	olds := GroupState{GroupArgs: GroupArgs{Name: "old-group"}}
+	news := GroupArgs{Name: "new-group"}
+
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[GroupArgs, GroupState]{ID: "1", State: olds, Inputs: news})
+	if err != nil {
+		t.Fatalf("Diff failed: %v", err)
+	}
+	if !resp.HasChanges {
+		t.Error("expected changes")
+	}
+	if d, ok := resp.DetailedDiff["name"]; !ok || d.Kind != p.UpdateReplace {
+		t.Error("expected name to be UpdateReplace")
+	}
+}
+
+func TestGroupDiff_ParentGroupNameChange(t *testing.T) {
+	r := &Group{}
+	parent := "parent-a"
+	newParent := "parent-b"
+	olds := GroupState{GroupArgs: GroupArgs{Name: "my-group", ParentGroupName: &parent}}
+	news := GroupArgs{Name: "my-group", ParentGroupName: &newParent}
+
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[GroupArgs, GroupState]{ID: "1", State: olds, Inputs: news})
+	if err != nil {
+		t.Fatalf("Diff failed: %v", err)
+	}
+	if !resp.HasChanges {
+		t.Error("expected changes")
+	}
+	if d, ok := resp.DetailedDiff["parentGroupName"]; !ok || d.Kind != p.Update {
+		t.Error("expected parentGroupName to be Update (not replace)")
+	}
+	if _, ok := resp.DetailedDiff["name"]; ok {
+		t.Error("expected name to not be in diff")
+	}
+}
+
 // --- ProjectNotification Diff Tests ---
 
 func TestProjectNotificationDiff_NoChanges(t *testing.T) {
