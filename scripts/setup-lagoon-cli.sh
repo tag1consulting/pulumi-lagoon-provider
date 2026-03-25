@@ -17,6 +17,15 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
+# multi-nonprod has no core services (no Keycloak, no API) — fail fast with a clear message
+if [ "${LAGOON_PRESET:-}" = "multi-nonprod" ]; then
+    echo "ERROR: LAGOON_PRESET=multi-nonprod is not supported for CLI setup."
+    echo "The non-production cluster has no Keycloak or API services."
+    echo "Use the production cluster instead:"
+    echo "  LAGOON_PRESET=multi-prod ./scripts/setup-lagoon-cli.sh"
+    exit 1
+fi
+
 # Defaults
 CONFIG_NAME="${LAGOON_CONFIG_NAME:-local-test}"
 FORCE=false
@@ -116,7 +125,18 @@ if ! curl -s --connect-timeout 2 "http://localhost:8080/" >/dev/null 2>&1; then
     echo "Keycloak is not reachable at http://localhost:8080."
     echo "Starting port-forwards..."
     "$SCRIPT_DIR/setup-port-forwards.sh"
-    sleep 2
+    # Poll until Keycloak is reachable (up to 30s)
+    TIMEOUT=30
+    ELAPSED=0
+    until curl -s --connect-timeout 2 "http://localhost:8080/" >/dev/null 2>&1; do
+        if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+            echo "ERROR: Keycloak did not become reachable within ${TIMEOUT}s."
+            echo "Check port-forward status: kubectl --context \"$KUBE_CONTEXT\" get pods -n \"$LAGOON_NAMESPACE\" | grep keycloak"
+            exit 1
+        fi
+        sleep 2
+        ELAPSED=$((ELAPSED + 2))
+    done
 fi
 
 # Get OAuth token

@@ -84,8 +84,7 @@ LAGOON_PRESET=multi-prod ./scripts/setup-port-forwards.sh
 export LAGOON_TOKEN=$(./scripts/get-token.sh)
 
 # Or with explicit credentials
-LAGOON_USERNAME=lagoonadmin LAGOON_PASSWORD=lagoonadmin \
-  LAGOON_TOKEN=$(./scripts/get-token.sh)
+LAGOON_TOKEN=$(LAGOON_USERNAME=lagoonadmin LAGOON_PASSWORD=lagoonadmin ./scripts/get-token.sh)
 ```
 
 ### Step 3: Configure the CLI
@@ -189,8 +188,11 @@ After adding your SSH key, connect to Lagoon environments via SSH:
 pulumi stack output lagoon_api_url  # API URL (for reference)
 
 # SSH into an environment (format: <environment>.<project>@<ssh-host> -p <ssh-port>)
-# The SSH service is exposed as a NodePort — find the port:
-kubectl --context kind-lagoon -n lagoon-core get svc | grep -i ssh
+# The SSH service is exposed as a NodePort — find the port.
+# Use the KUBE_CONTEXT and LAGOON_NAMESPACE that match your preset:
+#   single-cluster:  KUBE_CONTEXT=kind-lagoon    LAGOON_NAMESPACE=lagoon-core
+#   multi-cluster:   KUBE_CONTEXT=kind-lagoon-prod  LAGOON_NAMESPACE=lagoon-core
+kubectl --context "$KUBE_CONTEXT" -n "$LAGOON_NAMESPACE" get svc | grep -i ssh
 
 # Connect (example — actual port will differ)
 ssh -p <nodeport> main.my-project@localhost
