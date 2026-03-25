@@ -1,7 +1,7 @@
 # Pulumi Lagoon Provider
 
 [![PyPI version](https://badge.fury.io/py/pulumi-lagoon.svg)](https://pypi.org/project/pulumi-lagoon/)
-[![npm version](https://badge.npmjs.com/v/@tag1consulting/pulumi-lagoon.svg)](https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon)
+[![npm version](https://img.shields.io/npm/v/@tag1consulting/pulumi-lagoon.svg)](https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon)
 [![Go Reference](https://pkg.go.dev/badge/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon.svg)](https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon)
 [![Go Tests](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test-go.yml/badge.svg?branch=main)](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test-go.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)

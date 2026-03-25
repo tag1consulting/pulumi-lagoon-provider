@@ -16,10 +16,10 @@ jobs:
     name: Build distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -41,21 +41,24 @@ jobs:
           fi
           sed -i "s/^  version = .*/  version = \"$VERSION\"/" pyproject.toml
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" pulumi_lagoon/pulumi-plugin.json
-        working-directory: sdk/python/python
+        working-directory: sdk/python
+
+      - name: Copy README for PyPI description
+        run: cp README.md sdk/python/README.md
 
       - name: Build package
         run: python -m build
-        working-directory: sdk/python/python
+        working-directory: sdk/python
 
       - name: Check package
         run: twine check dist/*
-        working-directory: sdk/python/python
+        working-directory: sdk/python
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: dist
-          path: sdk/python/python/dist/
+          path: sdk/python/dist/
 
   test-install:
     name: Test installation
@@ -66,7 +69,7 @@ jobs:
         python-version: ['3.9', '3.11', '3.12']
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
