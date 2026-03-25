@@ -46,6 +46,7 @@ case "${LAGOON_PRESET:-}" in
         KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-lagoon}"
         KEYCLOAK_SVC="${KEYCLOAK_SVC:-lagoon-core-keycloak}"
         API_SVC="${API_SVC:-lagoon-core-api}"
+        SSH_SVC="${SSH_SVC:-lagoon-core-ssh}"
         KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-lagoon-core-keycloak}"
         CORE_SECRETS="${CORE_SECRETS:-lagoon-core-secrets}"
         BROKER_SECRET="${BROKER_SECRET:-lagoon-core-broker}"
@@ -60,6 +61,7 @@ case "${LAGOON_PRESET:-}" in
         KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-lagoon-prod}"
         KEYCLOAK_SVC="${KEYCLOAK_SVC:-prod-core-keycloak}"
         API_SVC="${API_SVC:-prod-core-api}"
+        SSH_SVC="${SSH_SVC:-prod-core-ssh}"
         KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-prod-core-keycloak}"
         CORE_SECRETS="${CORE_SECRETS:-prod-core-secrets}"
         BROKER_SECRET="${BROKER_SECRET:-prod-core-broker}"
@@ -74,6 +76,7 @@ case "${LAGOON_PRESET:-}" in
         # Note: nonprod doesn't have core services, only remote
         KEYCLOAK_SVC="${KEYCLOAK_SVC:-}"
         API_SVC="${API_SVC:-}"
+        SSH_SVC="${SSH_SVC:-}"
         KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-}"
         BROKER_SECRET="${BROKER_SECRET:-}"
         REMOTE_SECRET="${REMOTE_SECRET:-nonprod-lagoon-remote-lagoon-build-deploy}"
@@ -88,7 +91,7 @@ esac
 
 # Export all variables
 export KUBE_CONTEXT LAGOON_NAMESPACE KIND_CLUSTER_NAME
-export KEYCLOAK_SVC API_SVC KEYCLOAK_SECRET CORE_SECRETS BROKER_SECRET
+export KEYCLOAK_SVC API_SVC SSH_SVC KEYCLOAK_SECRET CORE_SECRETS BROKER_SECRET
 export REMOTE_SECRET REMOTE_DEPLOYMENT
 
 # Colors for output
@@ -150,6 +153,7 @@ print_config() {
     echo "  KIND_CLUSTER_NAME: $KIND_CLUSTER_NAME"
     echo "  KEYCLOAK_SVC:      $KEYCLOAK_SVC"
     echo "  API_SVC:           $API_SVC"
+    echo "  SSH_SVC:           $SSH_SVC"
     echo "  KEYCLOAK_SECRET:   $KEYCLOAK_SECRET"
     echo "  CORE_SECRETS:      $CORE_SECRETS"
     echo "  BROKER_SECRET:     $BROKER_SECRET"
