@@ -34,9 +34,9 @@ Migration from Python dynamic provider (v0.1.2) to native Go provider using `pul
 - GitHub Actions workflow (`test-go.yml`)
 
 ### Phase 4: SDK Generation - COMPLETE
-- Python SDK: `sdk/python/python/pulumi_lagoon/`
-- TypeScript SDK: `sdk/nodejs/nodejs/`
-- Go SDK: `sdk/go/go/lagoon/`
+- Python SDK: `sdk/python/pulumi_lagoon/`
+- TypeScript SDK: `sdk/nodejs/`
+- Go SDK: `sdk/go/lagoon/`
 - GoReleaser config (`.goreleaser.yml`) for cross-platform builds
 - Makefile targets: `make go-build`, `make go-test`, `make go-schema`, `make go-sdk-all`
 

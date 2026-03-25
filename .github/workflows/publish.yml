@@ -41,21 +41,21 @@ jobs:
           fi
           sed -i "s/^  version = .*/  version = \"$VERSION\"/" pyproject.toml
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" pulumi_lagoon/pulumi-plugin.json
-        working-directory: sdk/python/python
+        working-directory: sdk/python
 
       - name: Build package
         run: python -m build
-        working-directory: sdk/python/python
+        working-directory: sdk/python
 
       - name: Check package
         run: twine check dist/*
-        working-directory: sdk/python/python
+        working-directory: sdk/python
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: dist
-          path: sdk/python/python/dist/
+          path: sdk/python/dist/
 
   test-install:
     name: Test installation

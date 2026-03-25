@@ -1,5 +1,5 @@
 # Tool configuration for the legacy Python dynamic provider (pulumi_lagoon/).
-# The v0.2.0 native Go provider SDK is in sdk/python/python/pyproject.toml.
+# The v0.2.0 native Go provider SDK is in sdk/python/pyproject.toml.
 
 [tool.ruff]
 line-length = 100
