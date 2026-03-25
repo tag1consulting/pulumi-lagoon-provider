@@ -34,6 +34,9 @@ FORCE=false
 API_URL="${LAGOON_API_URL:-http://localhost:7080/graphql}"
 UI_URL="${LAGOON_UI_URL:-http://localhost:8080}"
 
+# SSH endpoint — discovered from the cluster NodePort; override via environment
+SSH_HOST="${LAGOON_SSH_HOST:-localhost}"
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         -n|--name)
@@ -61,6 +64,8 @@ while [[ $# -gt 0 ]]; do
             echo "  LAGOON_UI_URL      UI endpoint (default: http://localhost:8080)"
             echo "  LAGOON_USERNAME    Keycloak username (default: lagoonadmin)"
             echo "  LAGOON_PASSWORD    Keycloak password (fetched from cluster if not set)"
+            echo "  LAGOON_SSH_HOST    SSH hostname (default: localhost)"
+            echo "  LAGOON_SSH_PORT    SSH port (default: auto-discovered from NodePort)"
             echo ""
             echo "Examples:"
             echo "  $0                              # Single-cluster with defaults"
@@ -149,17 +154,27 @@ TOKEN=$("$SCRIPT_DIR/get-token.sh") || {
 }
 echo "Token obtained successfully."
 
+# Discover SSH NodePort from the cluster (required by lagoon config add)
+if [ -z "${LAGOON_SSH_PORT:-}" ] && [ -n "$SSH_SVC" ]; then
+    SSH_PORT=$(kubectl --context "$KUBE_CONTEXT" -n "$LAGOON_NAMESPACE" \
+        get svc "$SSH_SVC" -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || true)
+fi
+SSH_PORT="${LAGOON_SSH_PORT:-${SSH_PORT:-22}}"
+
 # Configure lagoon CLI
 echo ""
 echo "Running lagoon config add..."
-echo "  Name:    ${CONFIG_NAME}"
-echo "  GraphQL: ${API_URL}"
-echo "  UI:      ${UI_URL}"
+echo "  Name:     ${CONFIG_NAME}"
+echo "  GraphQL:  ${API_URL}"
+echo "  UI:       ${UI_URL}"
+echo "  SSH:      ${SSH_HOST}:${SSH_PORT}"
 
 lagoon config add \
     --lagoon "${CONFIG_NAME}" \
     --graphql "${API_URL}" \
     --ui "${UI_URL}" \
+    --hostname "${SSH_HOST}" \
+    --port "${SSH_PORT}" \
     --token "${TOKEN}"
 
 # Set as default
