@@ -43,6 +43,9 @@ jobs:
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" pulumi_lagoon/pulumi-plugin.json
         working-directory: sdk/python
 
+      - name: Copy README for PyPI description
+        run: cp README.md sdk/python/README.md
+
       - name: Build package
         run: python -m build
         working-directory: sdk/python
