@@ -346,3 +346,38 @@ func TestDeployTargetRead_APIError(t *testing.T) {
 		t.Fatal("expected error when read API fails")
 	}
 }
+
+func TestDeployTargetCreate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		createDeployTargetFn: func(_ context.Context, _ map[string]any) (*client.DeployTarget, error) {
+			return nil, &client.LagoonAPIError{Message: "permission denied"}
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTarget{}
+	_, err := r.Create(ctx, infer.CreateRequest[DeployTargetArgs]{
+		Inputs: DeployTargetArgs{Name: "mycluster", ConsoleURL: "https://k8s.example.com"},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDeployTargetCreate_DuplicateAdopt_LookupFails(t *testing.T) {
+	mock := &mockLagoonClient{
+		createDeployTargetFn: func(_ context.Context, _ map[string]any) (*client.DeployTarget, error) {
+			return nil, &client.LagoonAPIError{Message: "Duplicate entry 'mycluster' for key 'name'"}
+		},
+		getDeployTargetByNameFn: func(_ context.Context, _ string) (*client.DeployTarget, error) {
+			return nil, fmt.Errorf("network error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTarget{}
+	_, err := r.Create(ctx, infer.CreateRequest[DeployTargetArgs]{
+		Inputs: DeployTargetArgs{Name: "mycluster", ConsoleURL: "https://k8s.example.com"},
+	})
+	if err == nil {
+		t.Fatal("expected error when lookup fails")
+	}
+}

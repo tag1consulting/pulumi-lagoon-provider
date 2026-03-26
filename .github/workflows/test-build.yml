@@ -12,10 +12,10 @@ jobs:
     name: Build distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -45,12 +45,12 @@ jobs:
     name: Build Node.js distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm ci
@@ -59,6 +59,16 @@ jobs:
       - name: Build (compile TypeScript)
         run: npm run build
         working-directory: sdk/nodejs
+
+      - name: Upload Node.js artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-nodejs
+          path: |
+            sdk/nodejs/bin/
+            sdk/nodejs/package.json
+            sdk/nodejs/README.md
+            sdk/nodejs/LICENSE
 
   test-install:
     name: Test installation
@@ -69,7 +79,7 @@ jobs:
         python-version: ['3.9', '3.11', '3.12']
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -85,4 +95,50 @@ jobs:
       - name: Test import
         run: |
           python -c "import pulumi_lagoon; print('Successfully imported pulumi_lagoon')"
-          python -c "from pulumi_lagoon.lagoon import Project, Environment, Variable; print('All resources importable')"
+          python -c "from pulumi_lagoon.lagoon import (Project, Environment, Variable, DeployTarget, DeployTargetConfig, Group, Task, NotificationSlack, NotificationRocketChat, NotificationEmail, NotificationMicrosoftTeams, ProjectNotification); print('All 12 resource types importable')"
+
+  test-install-nodejs:
+    name: Test Node.js installation
+    needs: build-nodejs
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['22', '24']
+    steps:
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-nodejs
+          path: sdk/nodejs/
+
+      - name: Pack and install
+        run: |
+          TGZ=$(npm pack)
+          mkdir -p /tmp/test-install
+          cd /tmp/test-install
+          npm install $GITHUB_WORKSPACE/sdk/nodejs/$TGZ
+        working-directory: sdk/nodejs
+
+      - name: Test require
+        run: node -e "const lagoon = require('@tag1consulting/pulumi-lagoon'); console.log('Successfully loaded:', Object.keys(lagoon).length, 'exports');"
+        working-directory: /tmp/test-install
+
+  test-go-sdk:
+    name: Verify Go SDK compiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build and vet Go SDK
+        run: go build ./... && go vet ./...
+        working-directory: sdk/go/lagoon

@@ -208,6 +208,89 @@ func TestNotificationSlackRead_FallbackToID(t *testing.T) {
 
 // ==================== RocketChat ====================
 
+func TestNotificationRocketChatCreate_DryRun(t *testing.T) {
+	called := false
+	mock := &mockLagoonClient{
+		createNotificationRocketChatFn: func(_ context.Context, _, _, _ string) (*client.Notification, error) {
+			called = true
+			return nil, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationRocketChat{}
+	resp, err := r.Create(ctx, infer.CreateRequest[NotificationRocketChatArgs]{
+		Inputs: NotificationRocketChatArgs{Name: "rc-notif", Webhook: "https://rc.example.com/hook", Channel: "#general"},
+		DryRun: true,
+	})
+	if err != nil {
+		t.Fatalf("Create DryRun failed: %v", err)
+	}
+	if called {
+		t.Error("API should not be called during DryRun")
+	}
+	if resp.ID != "preview-id" {
+		t.Errorf("expected 'preview-id', got %q", resp.ID)
+	}
+}
+
+func TestNotificationRocketChatRead_FallbackToID(t *testing.T) {
+	mock := &mockLagoonClient{
+		getNotificationRocketChatByNameFn: func(_ context.Context, name string) (*client.Notification, error) {
+			if name != "import-name" {
+				t.Errorf("expected fallback to ID 'import-name', got %q", name)
+			}
+			return &client.Notification{ID: 11, Name: name, Webhook: "https://rc.example.com/hook", Channel: "#general"}, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationRocketChat{}
+	_, err := r.Read(ctx, infer.ReadRequest[NotificationRocketChatArgs, NotificationRocketChatState]{
+		ID: "import-name",
+		// Empty state — simulates import
+	})
+	if err != nil {
+		t.Fatalf("Read with fallback failed: %v", err)
+	}
+}
+
+func TestNotificationRocketChatUpdate_NoPatch(t *testing.T) {
+	called := false
+	mock := &mockLagoonClient{
+		updateNotificationRocketChatFn: func(_ context.Context, _ string, _ map[string]any) (*client.Notification, error) {
+			called = true
+			return nil, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationRocketChat{}
+	_, err := r.Update(ctx, infer.UpdateRequest[NotificationRocketChatArgs, NotificationRocketChatState]{
+		Inputs: NotificationRocketChatArgs{Name: "rc-notif", Webhook: "https://rc.example.com/same", Channel: "#general"},
+		State:  NotificationRocketChatState{NotificationRocketChatArgs: NotificationRocketChatArgs{Name: "rc-notif", Webhook: "https://rc.example.com/same", Channel: "#general"}, LagoonID: 11},
+	})
+	if err != nil {
+		t.Fatalf("Update NoPatch failed: %v", err)
+	}
+	if called {
+		t.Error("API should not be called when nothing changed")
+	}
+}
+
+func TestNotificationRocketChatDelete_NotFound(t *testing.T) {
+	mock := &mockLagoonClient{
+		deleteNotificationRocketChatFn: func(_ context.Context, _ string) error {
+			return &client.LagoonNotFoundError{ResourceType: "NotificationRocketChat", Identifier: "rc-notif"}
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationRocketChat{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[NotificationRocketChatState]{
+		State: NotificationRocketChatState{NotificationRocketChatArgs: NotificationRocketChatArgs{Name: "rc-notif"}, LagoonID: 11},
+	})
+	if err != nil {
+		t.Fatalf("Delete NotFound should succeed: %v", err)
+	}
+}
+
 func TestNotificationRocketChatCreate_HappyPath(t *testing.T) {
 	mock := &mockLagoonClient{
 		createNotificationRocketChatFn: func(_ context.Context, name, webhook, channel string) (*client.Notification, error) {
@@ -301,6 +384,89 @@ func TestNotificationRocketChatUpdate_HappyPath(t *testing.T) {
 }
 
 // ==================== Email ====================
+
+func TestNotificationEmailCreate_DryRun(t *testing.T) {
+	called := false
+	mock := &mockLagoonClient{
+		createNotificationEmailFn: func(_ context.Context, _, _ string) (*client.Notification, error) {
+			called = true
+			return nil, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationEmail{}
+	resp, err := r.Create(ctx, infer.CreateRequest[NotificationEmailArgs]{
+		Inputs: NotificationEmailArgs{Name: "email-notif", EmailAddress: "admin@example.com"},
+		DryRun: true,
+	})
+	if err != nil {
+		t.Fatalf("Create DryRun failed: %v", err)
+	}
+	if called {
+		t.Error("API should not be called during DryRun")
+	}
+	if resp.ID != "preview-id" {
+		t.Errorf("expected 'preview-id', got %q", resp.ID)
+	}
+}
+
+func TestNotificationEmailRead_FallbackToID(t *testing.T) {
+	mock := &mockLagoonClient{
+		getNotificationEmailByNameFn: func(_ context.Context, name string) (*client.Notification, error) {
+			if name != "import-name" {
+				t.Errorf("expected fallback to ID 'import-name', got %q", name)
+			}
+			return &client.Notification{ID: 12, Name: name, EmailAddress: "admin@example.com"}, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationEmail{}
+	_, err := r.Read(ctx, infer.ReadRequest[NotificationEmailArgs, NotificationEmailState]{
+		ID: "import-name",
+		// Empty state — simulates import
+	})
+	if err != nil {
+		t.Fatalf("Read with fallback failed: %v", err)
+	}
+}
+
+func TestNotificationEmailUpdate_NoPatch(t *testing.T) {
+	called := false
+	mock := &mockLagoonClient{
+		updateNotificationEmailFn: func(_ context.Context, _ string, _ map[string]any) (*client.Notification, error) {
+			called = true
+			return nil, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationEmail{}
+	_, err := r.Update(ctx, infer.UpdateRequest[NotificationEmailArgs, NotificationEmailState]{
+		Inputs: NotificationEmailArgs{Name: "email-notif", EmailAddress: "same@example.com"},
+		State:  NotificationEmailState{NotificationEmailArgs: NotificationEmailArgs{Name: "email-notif", EmailAddress: "same@example.com"}, LagoonID: 12},
+	})
+	if err != nil {
+		t.Fatalf("Update NoPatch failed: %v", err)
+	}
+	if called {
+		t.Error("API should not be called when nothing changed")
+	}
+}
+
+func TestNotificationEmailDelete_NotFound(t *testing.T) {
+	mock := &mockLagoonClient{
+		deleteNotificationEmailFn: func(_ context.Context, _ string) error {
+			return &client.LagoonNotFoundError{ResourceType: "NotificationEmail", Identifier: "email-notif"}
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationEmail{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[NotificationEmailState]{
+		State: NotificationEmailState{NotificationEmailArgs: NotificationEmailArgs{Name: "email-notif"}, LagoonID: 12},
+	})
+	if err != nil {
+		t.Fatalf("Delete NotFound should succeed: %v", err)
+	}
+}
 
 func TestNotificationEmailCreate_HappyPath(t *testing.T) {
 	mock := &mockLagoonClient{
@@ -398,6 +564,89 @@ func TestNotificationEmailUpdate_HappyPath(t *testing.T) {
 }
 
 // ==================== Microsoft Teams ====================
+
+func TestNotificationMicrosoftTeamsCreate_DryRun(t *testing.T) {
+	called := false
+	mock := &mockLagoonClient{
+		createNotificationMicrosoftTeamsFn: func(_ context.Context, _, _ string) (*client.Notification, error) {
+			called = true
+			return nil, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationMicrosoftTeams{}
+	resp, err := r.Create(ctx, infer.CreateRequest[NotificationMicrosoftTeamsArgs]{
+		Inputs: NotificationMicrosoftTeamsArgs{Name: "teams-notif", Webhook: "https://teams.example.com/hook"},
+		DryRun: true,
+	})
+	if err != nil {
+		t.Fatalf("Create DryRun failed: %v", err)
+	}
+	if called {
+		t.Error("API should not be called during DryRun")
+	}
+	if resp.ID != "preview-id" {
+		t.Errorf("expected 'preview-id', got %q", resp.ID)
+	}
+}
+
+func TestNotificationMicrosoftTeamsRead_FallbackToID(t *testing.T) {
+	mock := &mockLagoonClient{
+		getNotificationMicrosoftTeamsByNameFn: func(_ context.Context, name string) (*client.Notification, error) {
+			if name != "import-name" {
+				t.Errorf("expected fallback to ID 'import-name', got %q", name)
+			}
+			return &client.Notification{ID: 13, Name: name, Webhook: "https://teams.example.com/hook"}, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationMicrosoftTeams{}
+	_, err := r.Read(ctx, infer.ReadRequest[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]{
+		ID: "import-name",
+		// Empty state — simulates import
+	})
+	if err != nil {
+		t.Fatalf("Read with fallback failed: %v", err)
+	}
+}
+
+func TestNotificationMicrosoftTeamsUpdate_NoPatch(t *testing.T) {
+	called := false
+	mock := &mockLagoonClient{
+		updateNotificationMicrosoftTeamsFn: func(_ context.Context, _ string, _ map[string]any) (*client.Notification, error) {
+			called = true
+			return nil, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationMicrosoftTeams{}
+	_, err := r.Update(ctx, infer.UpdateRequest[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]{
+		Inputs: NotificationMicrosoftTeamsArgs{Name: "teams-notif", Webhook: "https://teams.example.com/same"},
+		State:  NotificationMicrosoftTeamsState{NotificationMicrosoftTeamsArgs: NotificationMicrosoftTeamsArgs{Name: "teams-notif", Webhook: "https://teams.example.com/same"}, LagoonID: 13},
+	})
+	if err != nil {
+		t.Fatalf("Update NoPatch failed: %v", err)
+	}
+	if called {
+		t.Error("API should not be called when nothing changed")
+	}
+}
+
+func TestNotificationMicrosoftTeamsDelete_NotFound(t *testing.T) {
+	mock := &mockLagoonClient{
+		deleteNotificationMicrosoftTeamsFn: func(_ context.Context, _ string) error {
+			return &client.LagoonNotFoundError{ResourceType: "NotificationMicrosoftTeams", Identifier: "teams-notif"}
+		},
+	}
+	ctx := testCtx(mock)
+	r := &NotificationMicrosoftTeams{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[NotificationMicrosoftTeamsState]{
+		State: NotificationMicrosoftTeamsState{NotificationMicrosoftTeamsArgs: NotificationMicrosoftTeamsArgs{Name: "teams-notif"}, LagoonID: 13},
+	})
+	if err != nil {
+		t.Fatalf("Delete NotFound should succeed: %v", err)
+	}
+}
 
 func TestNotificationMicrosoftTeamsCreate_HappyPath(t *testing.T) {
 	mock := &mockLagoonClient{

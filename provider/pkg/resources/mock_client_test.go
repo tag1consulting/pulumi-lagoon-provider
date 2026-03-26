@@ -73,6 +73,12 @@ type mockLagoonClient struct {
 	addNotificationToProjectFn           func(ctx context.Context, projectName, notificationType, notificationName string) error
 	removeNotificationFromProjectFn      func(ctx context.Context, projectName, notificationType, notificationName string) error
 	checkProjectNotificationExistsFn     func(ctx context.Context, projectName, notificationType, notificationName string) (*client.ProjectNotificationInfo, error)
+
+	// Group
+	createGroupFn     func(ctx context.Context, name string, parentGroupName *string) (*client.Group, error)
+	getGroupByNameFn  func(ctx context.Context, name string) (*client.Group, error)
+	updateGroupFn     func(ctx context.Context, name string, patch map[string]any) (*client.Group, error)
+	deleteGroupFn     func(ctx context.Context, name string) error
 }
 
 // --- Project ---
@@ -396,6 +402,36 @@ func (m *mockLagoonClient) CheckProjectNotificationExists(ctx context.Context, p
 		return m.checkProjectNotificationExistsFn(ctx, projectName, notificationType, notificationName)
 	}
 	return &client.ProjectNotificationInfo{ProjectID: 1, Exists: true}, nil
+}
+
+// --- Group ---
+
+func (m *mockLagoonClient) CreateGroup(ctx context.Context, name string, parentGroupName *string) (*client.Group, error) {
+	if m.createGroupFn != nil {
+		return m.createGroupFn(ctx, name, parentGroupName)
+	}
+	return &client.Group{ID: "uuid-1", Name: name}, nil
+}
+
+func (m *mockLagoonClient) GetGroupByName(ctx context.Context, name string) (*client.Group, error) {
+	if m.getGroupByNameFn != nil {
+		return m.getGroupByNameFn(ctx, name)
+	}
+	return &client.Group{ID: "uuid-1", Name: name}, nil
+}
+
+func (m *mockLagoonClient) UpdateGroup(ctx context.Context, name string, patch map[string]any) (*client.Group, error) {
+	if m.updateGroupFn != nil {
+		return m.updateGroupFn(ctx, name, patch)
+	}
+	return &client.Group{ID: "uuid-1", Name: name}, nil
+}
+
+func (m *mockLagoonClient) DeleteGroup(ctx context.Context, name string) error {
+	if m.deleteGroupFn != nil {
+		return m.deleteGroupFn(ctx, name)
+	}
+	return nil
 }
 
 // testCtx creates a context with the given mock client injected.
