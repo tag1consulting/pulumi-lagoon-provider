@@ -26,7 +26,6 @@ class DeployTargetArgs:
                  cloud_region: Optional[pulumi.Input[_builtins.str]] = None,
                  disabled: Optional[pulumi.Input[_builtins.bool]] = None,
                  router_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 shared_bastion_secret: Optional[pulumi.Input[_builtins.str]] = None,
                  ssh_host: Optional[pulumi.Input[_builtins.str]] = None,
                  ssh_port: Optional[pulumi.Input[_builtins.str]] = None):
         """
@@ -54,8 +53,6 @@ class DeployTargetArgs:
             pulumi.set(__self__, "disabled", disabled)
         if router_pattern is not None:
             pulumi.set(__self__, "router_pattern", router_pattern)
-        if shared_bastion_secret is not None:
-            pulumi.set(__self__, "shared_bastion_secret", shared_bastion_secret)
         if ssh_host is not None:
             pulumi.set(__self__, "ssh_host", ssh_host)
         if ssh_port is not None:
@@ -146,15 +143,6 @@ class DeployTargetArgs:
         pulumi.set(self, "router_pattern", value)
 
     @_builtins.property
-    @pulumi.getter(name="sharedBastionSecret")
-    def shared_bastion_secret(self) -> Optional[pulumi.Input[_builtins.str]]:
-        return pulumi.get(self, "shared_bastion_secret")
-
-    @shared_bastion_secret.setter
-    def shared_bastion_secret(self, value: Optional[pulumi.Input[_builtins.str]]):
-        pulumi.set(self, "shared_bastion_secret", value)
-
-    @_builtins.property
     @pulumi.getter(name="sshHost")
     def ssh_host(self) -> Optional[pulumi.Input[_builtins.str]]:
         """
@@ -192,7 +180,6 @@ class DeployTarget(pulumi.CustomResource):
                  disabled: Optional[pulumi.Input[_builtins.bool]] = None,
                  name: Optional[pulumi.Input[_builtins.str]] = None,
                  router_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 shared_bastion_secret: Optional[pulumi.Input[_builtins.str]] = None,
                  ssh_host: Optional[pulumi.Input[_builtins.str]] = None,
                  ssh_port: Optional[pulumi.Input[_builtins.str]] = None,
                  __props__=None):
@@ -244,7 +231,6 @@ class DeployTarget(pulumi.CustomResource):
                  disabled: Optional[pulumi.Input[_builtins.bool]] = None,
                  name: Optional[pulumi.Input[_builtins.str]] = None,
                  router_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 shared_bastion_secret: Optional[pulumi.Input[_builtins.str]] = None,
                  ssh_host: Optional[pulumi.Input[_builtins.str]] = None,
                  ssh_port: Optional[pulumi.Input[_builtins.str]] = None,
                  __props__=None):
@@ -267,7 +253,6 @@ class DeployTarget(pulumi.CustomResource):
                 raise TypeError("Missing required property 'name'")
             __props__.__dict__["name"] = name
             __props__.__dict__["router_pattern"] = router_pattern
-            __props__.__dict__["shared_bastion_secret"] = shared_bastion_secret
             __props__.__dict__["ssh_host"] = ssh_host
             __props__.__dict__["ssh_port"] = ssh_port
             __props__.__dict__["created"] = None
@@ -303,7 +288,6 @@ class DeployTarget(pulumi.CustomResource):
         __props__.__dict__["lagoon_id"] = None
         __props__.__dict__["name"] = None
         __props__.__dict__["router_pattern"] = None
-        __props__.__dict__["shared_bastion_secret"] = None
         __props__.__dict__["ssh_host"] = None
         __props__.__dict__["ssh_port"] = None
         return DeployTarget(resource_name, opts=opts, __props__=__props__)
@@ -373,11 +357,6 @@ class DeployTarget(pulumi.CustomResource):
         Router pattern for the deploy target.
         """
         return pulumi.get(self, "router_pattern")
-
-    @_builtins.property
-    @pulumi.getter(name="sharedBastionSecret")
-    def shared_bastion_secret(self) -> pulumi.Output[Optional[_builtins.str]]:
-        return pulumi.get(self, "shared_bastion_secret")
 
     @_builtins.property
     @pulumi.getter(name="sshHost")

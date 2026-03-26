@@ -64,7 +64,6 @@ export class DeployTarget extends pulumi.CustomResource {
      * Router pattern for the deploy target.
      */
     declare public readonly routerPattern: pulumi.Output<string | undefined>;
-    declare public readonly sharedBastionSecret: pulumi.Output<string | undefined>;
     /**
      * SSH host for builds.
      */
@@ -98,7 +97,6 @@ export class DeployTarget extends pulumi.CustomResource {
             resourceInputs["disabled"] = args?.disabled;
             resourceInputs["name"] = args?.name;
             resourceInputs["routerPattern"] = args?.routerPattern;
-            resourceInputs["sharedBastionSecret"] = args?.sharedBastionSecret;
             resourceInputs["sshHost"] = args?.sshHost;
             resourceInputs["sshPort"] = args?.sshPort;
             resourceInputs["created"] = undefined /*out*/;
@@ -113,7 +111,6 @@ export class DeployTarget extends pulumi.CustomResource {
             resourceInputs["lagoonId"] = undefined /*out*/;
             resourceInputs["name"] = undefined /*out*/;
             resourceInputs["routerPattern"] = undefined /*out*/;
-            resourceInputs["sharedBastionSecret"] = undefined /*out*/;
             resourceInputs["sshHost"] = undefined /*out*/;
             resourceInputs["sshPort"] = undefined /*out*/;
         }
@@ -154,7 +151,6 @@ export interface DeployTargetArgs {
      * Router pattern for the deploy target.
      */
     routerPattern?: pulumi.Input<string>;
-    sharedBastionSecret?: pulumi.Input<string>;
     /**
      * SSH host for builds.
      */

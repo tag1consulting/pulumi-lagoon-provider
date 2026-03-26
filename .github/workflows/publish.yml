@@ -44,7 +44,7 @@ jobs:
         working-directory: sdk/python
 
       - name: Copy README for PyPI description
-        run: cp README.md sdk/python/README.md
+        run: cp sdk/python/README.pypi.md sdk/python/README.md
 
       - name: Build package
         run: python -m build

@@ -1,0 +1,12 @@
+# Ruff configuration for pulumi-lagoon-provider
+# Generated SDK files use patterns (e.g. __self__, id shadowing builtin,
+# unsorted __all__) that are intentional and produced by pulumi-language-python.
+# Exclude them from linting to avoid noise on regeneration.
+
+[lint.per-file-ignores]
+"sdk/python/**/*.py" = [
+    "A002",    # argument `id` shadows builtin
+    "RUF022",  # __all__ is not sorted
+    "N804",    # first argument of class method should be named cls (not __self__)
+    "N805",    # first argument of method should be named self (not __self__)
+]

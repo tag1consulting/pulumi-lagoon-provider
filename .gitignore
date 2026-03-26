@@ -32,6 +32,7 @@ env/
 # Go provider build artifacts
 provider/bin/
 provider/pulumi-resource-lagoon
+.sdk-gen-tmp/
 
 # Pulumi
 .pulumi/

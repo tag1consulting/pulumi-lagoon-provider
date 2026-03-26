@@ -32,6 +32,7 @@ _utilities.register(
    "lagoon:lagoon:DeployTarget": "DeployTarget",
    "lagoon:lagoon:DeployTargetConfig": "DeployTargetConfig",
    "lagoon:lagoon:Environment": "Environment",
+   "lagoon:lagoon:Group": "Group",
    "lagoon:lagoon:NotificationEmail": "NotificationEmail",
    "lagoon:lagoon:NotificationMicrosoftTeams": "NotificationMicrosoftTeams",
    "lagoon:lagoon:NotificationRocketChat": "NotificationRocketChat",

@@ -1,0 +1,6 @@
+name: "CodeQL config"
+
+paths-ignore:
+  - sdk/python
+  - sdk/nodejs
+  - sdk/go

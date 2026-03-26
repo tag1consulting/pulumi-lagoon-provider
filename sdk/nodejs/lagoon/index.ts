@@ -20,6 +20,11 @@ export type Environment = import("./environment").Environment;
 export const Environment: typeof import("./environment").Environment = null as any;
 utilities.lazyLoad(exports, ["Environment"], () => require("./environment"));
 
+export { GroupArgs } from "./group";
+export type Group = import("./group").Group;
+export const Group: typeof import("./group").Group = null as any;
+utilities.lazyLoad(exports, ["Group"], () => require("./group"));
+
 export { NotificationEmailArgs } from "./notificationEmail";
 export type NotificationEmail = import("./notificationEmail").NotificationEmail;
 export const NotificationEmail: typeof import("./notificationEmail").NotificationEmail = null as any;
@@ -71,6 +76,8 @@ const _module = {
                 return new DeployTargetConfig(name, <any>undefined, { urn })
             case "lagoon:lagoon:Environment":
                 return new Environment(name, <any>undefined, { urn })
+            case "lagoon:lagoon:Group":
+                return new Group(name, <any>undefined, { urn })
             case "lagoon:lagoon:NotificationEmail":
                 return new NotificationEmail(name, <any>undefined, { urn })
             case "lagoon:lagoon:NotificationMicrosoftTeams":

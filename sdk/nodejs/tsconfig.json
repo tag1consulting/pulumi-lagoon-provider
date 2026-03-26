@@ -19,6 +19,7 @@
         "lagoon/deployTarget.ts",
         "lagoon/deployTargetConfig.ts",
         "lagoon/environment.ts",
+        "lagoon/group.ts",
         "lagoon/index.ts",
         "lagoon/notificationEmail.ts",
         "lagoon/notificationMicrosoftTeams.ts",
