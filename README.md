@@ -1,6 +1,6 @@
 # Pulumi Lagoon Provider
 
-[![PyPI version](https://badge.fury.io/py/pulumi-lagoon.svg)](https://pypi.org/project/pulumi-lagoon/)
+[![PyPI version](https://img.shields.io/pypi/v/pulumi-lagoon.svg)](https://pypi.org/project/pulumi-lagoon/)
 [![npm version](https://img.shields.io/npm/v/@tag1consulting/pulumi-lagoon.svg)](https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon)
 [![Go Reference](https://pkg.go.dev/badge/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon.svg)](https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon)
 [![Go Tests](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test-go.yml/badge.svg?branch=main)](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test-go.yml)
@@ -12,7 +12,7 @@ A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as inf
 
 This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, deploy targets, notifications, tasks, etc.) using Pulumi, with native SDKs for Python, TypeScript/JavaScript, and Go.
 
-**Status**: v0.2.2 — Native Go Provider
+**Status**: v0.2.4 — Native Go Provider
 
 ## Supported Resources
 

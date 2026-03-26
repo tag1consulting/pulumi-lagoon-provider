@@ -73,12 +73,14 @@ This triggers the `publish.yml` workflow which:
 - Builds the Python SDK wheel
 - Tests installation on Python 3.9, 3.11, 3.12
 - Publishes to PyPI (`pulumi-lagoon`)
+- Builds and publishes the TypeScript SDK to npm (`@tag1consulting/pulumi-lagoon`) — requires `NPM_TOKEN` secret in a GitHub `npm` environment
 
 ### 4. Post-Release Verification
 
 - [ ] PyPI: `pip install pulumi-lagoon==0.X.Y` works
-- [ ] npm: `npm install @tag1consulting/pulumi-lagoon@0.X.Y` works (if npm publish is set up)
-- [ ] Go: `go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.X.Y` resolves
+- [ ] npm: `npm view @tag1consulting/pulumi-lagoon version` shows `0.X.Y`
+- [ ] Go: `GOPROXY=https://proxy.golang.org go list -m github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.X.Y` resolves
+- [ ] pkg.go.dev: `https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.X.Y` shows documentation (may take ~5 min)
 - [ ] GitHub release page shows correct notes
 
 ## Known Gotchas
@@ -113,6 +115,28 @@ The tab-indented recipe line starts with `\t`, so the anchored pattern never mat
 `sdk/nodejs/package.json` has both `.version` (top-level) and `.pulumi.version` (nested).
 Both must be updated in `release-prep`. The `jq` expression uses:
 `.version = $v | .pulumi.version = $v`
+
+### Go SDK LICENSE file required for pkg.go.dev (discovered in #69)
+pkg.go.dev uses `licensecheck` to scan the module zip. The Go module proxy creates zip
+archives scoped to the module subdirectory (`sdk/go/lagoon/`). The repo root `LICENSE`
+is **outside that boundary** and invisible to the checker — even though Apache 2.0 is
+on the approved list, pkg.go.dev shows "Documentation not displayed due to license
+restrictions" without it.
+
+Fix: `sdk/go/lagoon/LICENSE` must exist. The `go-sdk-go` Makefile target automates this:
+```makefile
+rsync -a --delete --exclude='go.mod' --exclude='go.sum' --exclude='LICENSE' ...
+cp LICENSE sdk/go/lagoon/LICENSE
+```
+The `--exclude='LICENSE'` prevents rsync from deleting the file during regeneration.
+
+### npm publishing requires GitHub environment setup
+The `publish-npm` job in `publish.yml` requires:
+1. A GitHub environment named `npm` in the repository settings
+2. An `NPM_TOKEN` secret in that environment (npm automation token for `@tag1consulting`)
+3. The first publish uses `--access public` (required for scoped packages)
+
+Without this setup, the publish step will fail silently on release.
 
 ### Token expiry during live testing
 Keycloak OAuth tokens expire in 5 minutes. For live testing, use JWT admin tokens
