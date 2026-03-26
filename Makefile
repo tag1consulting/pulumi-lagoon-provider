@@ -477,7 +477,7 @@ release-prep: check-release-version
 	sed -i 's/"version": ".*"/"version": "$(VERSION)"/' provider/schema.json
 	$(MAKE) PROVIDER_VERSION=$(VERSION) go-build go-sdk-python go-sdk-nodejs go-sdk-go
 	sed -i 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml
-	sed -i '0,/"version": ".*"/s//"version": "$(VERSION)"/' sdk/nodejs/package.json
+	jq --indent 4 --arg v "$(VERSION)" '.version = $$v' sdk/nodejs/package.json > sdk/nodejs/package.json.tmp && mv sdk/nodejs/package.json.tmp sdk/nodejs/package.json
 	@echo "=== Running tests ==="
 	cd provider && CGO_ENABLED=0 go test ./... -count=1
 	@echo ""
