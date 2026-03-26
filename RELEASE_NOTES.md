@@ -1,3 +1,24 @@
+# Release v0.2.6 (2026-03-26)
+
+Maintenance release switching npm publishing to OIDC trusted publishing, upgrading the Node.js toolchain, and fixing the PyPI badge in the Python SDK README.
+
+## Improvements
+
+- **npm OIDC publishing**: Replaced token-based npm publishing (`NPM_TOKEN` secret) with npm's OIDC trusted publishing (GA since July 2025), matching the existing PyPI pattern. No secrets required — GitHub Actions exchanges an OIDC token directly with npmjs.com. Adds `--provenance` for SLSA attestation and a verified publisher badge on npmjs.com.
+- **Node.js toolchain upgrade**: Dropped Node.js 18 (EOL April 2025) and 20 (maintenance EOL); build and publish now use Node.js 24 (Active LTS); test matrix is `['22', '24']`.
+- **`npm ci` in CI**: Switched from `npm install` to `npm ci` in all CI jobs for reproducible, lock-file-pinned installs.
+- **PyPI badge**: Fixed stale `badge.fury.io` badge in `sdk/python/README.pypi.md`; now uses `shields.io` dynamic badge matching the root README.
+
+## Installation
+
+```bash
+pip install pulumi-lagoon==0.2.6
+npm install @tag1consulting/pulumi-lagoon@0.2.6
+go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.2.6
+```
+
+---
+
 # Release v0.2.5 (2026-03-26)
 
 Patch release fixing the Node.js SDK so `@tag1consulting/pulumi-lagoon` can be installed and required correctly.
