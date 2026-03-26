@@ -1,6 +1,6 @@
 # Pulumi Lagoon Provider — Python SDK
 
-[![PyPI version](https://badge.fury.io/py/pulumi-lagoon.svg)](https://pypi.org/project/pulumi-lagoon/)
+[![PyPI version](https://img.shields.io/pypi/v/pulumi-lagoon.svg)](https://pypi.org/project/pulumi-lagoon/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/tag1consulting/pulumi-lagoon-provider/blob/main/LICENSE)
 
 A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as infrastructure-as-code.
