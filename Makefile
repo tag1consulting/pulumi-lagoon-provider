@@ -25,7 +25,7 @@
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
         clean clean-all venv \
-        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-all go-install
+        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-all go-install release-prep
 
 # Variables
 VENV_DIR := venv
@@ -421,17 +421,62 @@ go-schema: go-build
 go-sdk-clean:
 	rm -rf sdk/python sdk/nodejs sdk/go
 
+# SDK generation uses a temp directory to avoid deleting hand-maintained files
+# (README.pypi.md, pyproject.toml license fix, package-lock.json, go.mod/go.sum).
+# Generated files are rsynced over, then the temp directory is removed.
+SDK_TMP := .sdk-gen-tmp
+
 go-sdk-python: go-build
-	pulumi package gen-sdk ./$(PROVIDER_BIN) --language python -o sdk
+	rm -rf $(SDK_TMP)
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language python -o $(SDK_TMP)
+	rsync -a --ignore-existing $(SDK_TMP)/python/ sdk/python/
+	rsync -a $(SDK_TMP)/python/pulumi_lagoon/ sdk/python/pulumi_lagoon/
+	rm -rf $(SDK_TMP)
 
 go-sdk-nodejs: go-build
-	pulumi package gen-sdk ./$(PROVIDER_BIN) --language nodejs -o sdk
+	rm -rf $(SDK_TMP)
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language nodejs -o $(SDK_TMP)
+	rsync -a --ignore-existing $(SDK_TMP)/nodejs/ sdk/nodejs/
+	rsync -a $(SDK_TMP)/nodejs/lagoon/ sdk/nodejs/lagoon/
+	rsync -a $(SDK_TMP)/nodejs/types/ sdk/nodejs/types/
+	rsync -a $(SDK_TMP)/nodejs/config/ sdk/nodejs/config/
+	@for f in index.ts provider.ts utilities.ts tsconfig.json; do \
+		if [ -f "$(SDK_TMP)/nodejs/$$f" ]; then cp "$(SDK_TMP)/nodejs/$$f" "sdk/nodejs/$$f"; fi; \
+	done
+	rm -rf $(SDK_TMP)
 
 go-sdk-go: go-build
-	pulumi package gen-sdk ./$(PROVIDER_BIN) --language go -o sdk
+	rm -rf $(SDK_TMP)
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language go -o $(SDK_TMP)
+	rsync -a --exclude='go.mod' --exclude='go.sum' $(SDK_TMP)/go/ sdk/go/
+	rm -rf $(SDK_TMP)
 
 go-sdk-all: go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go
 
 go-install: go-build
 	mkdir -p $(GO_BIN)
 	cp $(PROVIDER_BIN) $(GO_BIN)/
+
+# Release prep: rebuild provider, regenerate all SDKs, bump versions, run tests.
+# Usage: make release-prep VERSION=0.3.0
+release-prep: go-build go-sdk-python go-sdk-nodejs go-sdk-go
+ifndef VERSION
+	$(error VERSION is required. Usage: make release-prep VERSION=0.3.0)
+endif
+	@echo "=== Setting version $(VERSION) ==="
+	sed -i 's/var Version = .*/var Version = "$(VERSION)"/' provider/cmd/pulumi-resource-lagoon/main.go
+	sed -i 's/PROVIDER_VERSION ?= .*/PROVIDER_VERSION ?= $(VERSION)/' Makefile
+	sed -i 's/"version": ".*"/"version": "$(VERSION)"/' provider/schema.json
+	sed -i 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml
+	sed -i 's/"version": ".*"/"version": "$(VERSION)"/' sdk/python/pulumi_lagoon/pulumi-plugin.json
+	sed -i '0,/"version": ".*"/s//"version": "$(VERSION)"/' sdk/nodejs/package.json
+	@echo "=== Running tests ==="
+	cd provider && CGO_ENABLED=0 go test ./... -count=1
+	@echo ""
+	@echo "=== Release prep complete for v$(VERSION) ==="
+	@echo "Remaining steps:"
+	@echo "  1. Update RELEASE_NOTES.md"
+	@echo "  2. Commit, push, and open PR to main"
+	@echo "  3. After merge: git tag -a v$(VERSION) && git push origin v$(VERSION)"
+	@echo "  4. Create GitHub release (triggers PyPI publish)"
+	@echo "  5. Tag Go module: git tag -a sdk/go/lagoon/v$(VERSION) v$(VERSION)^{} && git push origin sdk/go/lagoon/v$(VERSION)"
