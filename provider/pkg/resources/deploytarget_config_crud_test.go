@@ -324,3 +324,38 @@ func TestDeployTargetConfigUpdate_APIError(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestDeployTargetConfigCreate_APIError(t *testing.T) {
+	mock := &mockLagoonClient{
+		createDeployTargetConfigFn: func(_ context.Context, _ map[string]any) (*client.DeployTargetConfig, error) {
+			return nil, &client.LagoonAPIError{Message: "permission denied"}
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTargetConfig{}
+	_, err := r.Create(ctx, infer.CreateRequest[DeployTargetConfigArgs]{
+		Inputs: DeployTargetConfigArgs{ProjectID: 1, DeployTargetID: 7},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDeployTargetConfigCreate_DuplicateAdopt_ListFails(t *testing.T) {
+	mock := &mockLagoonClient{
+		createDeployTargetConfigFn: func(_ context.Context, _ map[string]any) (*client.DeployTargetConfig, error) {
+			return nil, &client.LagoonAPIError{Message: "Duplicate entry"}
+		},
+		getDeployTargetConfigsByProjectFn: func(_ context.Context, _ int) ([]client.DeployTargetConfig, error) {
+			return nil, fmt.Errorf("network error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTargetConfig{}
+	_, err := r.Create(ctx, infer.CreateRequest[DeployTargetConfigArgs]{
+		Inputs: DeployTargetConfigArgs{ProjectID: 1, DeployTargetID: 7},
+	})
+	if err == nil {
+		t.Fatal("expected error when list configs fails")
+	}
+}

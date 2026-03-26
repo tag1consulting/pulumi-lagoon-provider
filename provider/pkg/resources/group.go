@@ -8,7 +8,6 @@ import (
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
-	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/config"
 )
 
 // Group manages a Lagoon group.
@@ -39,8 +38,7 @@ func (s *GroupState) Annotate(an infer.Annotator) {
 }
 
 func (r *Group) Create(ctx context.Context, req infer.CreateRequest[GroupArgs]) (infer.CreateResponse[GroupState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	if req.DryRun {
 		return infer.CreateResponse[GroupState]{
@@ -61,8 +59,7 @@ func (r *Group) Create(ctx context.Context, req infer.CreateRequest[GroupArgs]) 
 }
 
 func (r *Group) Read(ctx context.Context, req infer.ReadRequest[GroupArgs, GroupState]) (infer.ReadResponse[GroupArgs, GroupState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	name := req.State.Name
 	if name == "" {
@@ -90,8 +87,7 @@ func (r *Group) Read(ctx context.Context, req infer.ReadRequest[GroupArgs, Group
 }
 
 func (r *Group) Update(ctx context.Context, req infer.UpdateRequest[GroupArgs, GroupState]) (infer.UpdateResponse[GroupState], error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	patch := map[string]any{}
 	if ptrDiffers(req.Inputs.ParentGroupName, req.State.ParentGroupName) {
@@ -117,8 +113,7 @@ func (r *Group) Update(ctx context.Context, req infer.UpdateRequest[GroupArgs, G
 }
 
 func (r *Group) Delete(ctx context.Context, req infer.DeleteRequest[GroupState]) (infer.DeleteResponse, error) {
-	cfg := infer.GetConfig[config.LagoonConfig](ctx)
-	c := cfg.NewClient()
+	c := clientFor(ctx)
 
 	if err := c.DeleteGroup(ctx, req.State.Name); err != nil {
 		if errors.Is(err, client.ErrNotFound) {

@@ -73,4 +73,10 @@ type LagoonClient interface {
 	AddNotificationToProject(ctx context.Context, projectName, notificationType, notificationName string) error
 	RemoveNotificationFromProject(ctx context.Context, projectName, notificationType, notificationName string) error
 	CheckProjectNotificationExists(ctx context.Context, projectName, notificationType, notificationName string) (*client.ProjectNotificationInfo, error)
+
+	// Group methods
+	CreateGroup(ctx context.Context, name string, parentGroupName *string) (*client.Group, error)
+	GetGroupByName(ctx context.Context, name string) (*client.Group, error)
+	UpdateGroup(ctx context.Context, name string, patch map[string]any) (*client.Group, error)
+	DeleteGroup(ctx context.Context, name string) error
 }
