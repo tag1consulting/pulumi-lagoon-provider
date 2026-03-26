@@ -4,94 +4,65 @@ This file provides guidance to Claude Code when working with the Pulumi Lagoon P
 
 ## Project Overview
 
-**pulumi-lagoon-provider** is a Pulumi dynamic provider for managing Lagoon resources (projects, environments, variables, etc.) as infrastructure-as-code.
+**pulumi-lagoon-provider** is a Pulumi native provider for managing Lagoon resources (projects, environments, variables, etc.) as infrastructure-as-code.
 
 This provider allows you to declaratively manage Lagoon hosting platform resources using Pulumi, enabling infrastructure-as-code workflows for Lagoon project management.
 
 ## Project Status
 
-**Status**: v0.2.2 Released (Native Go Provider)
+**Status**: v0.2.6 Released (Native Go Provider)
 
 The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), and Go (`github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon`). v0.2.x ships the native Go provider with generated multi-language SDKs, replacing the Python dynamic provider.
 
 ## Architecture
 
-### Phase 1: Dynamic Provider (Complete — superseded by Phase 2)
-- Python-based Pulumi dynamic provider
-- Direct GraphQL API integration with Lagoon
-- Supports resources: Projects, Environments, Variables, Deploy Targets, Deploy Target Configs, Tasks, and Notifications (Slack, RocketChat, Email, Microsoft Teams)
-
-### Phase 2: Native Provider (Current)
+### Native Go Provider (Current)
 - Go-based native provider using `pulumi-go-provider` v1.3.0 (`infer` package)
 - Generated SDKs for Python, TypeScript, and Go from a single schema
 - Published to PyPI (`pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), and Go module
-- 512 unit tests; comprehensive resource CRUD lifecycle
+- 198+ unit tests in `provider/`; comprehensive resource CRUD lifecycle
+
+> **Historical note**: v0.1.x was a Python dynamic provider, fully superseded in v0.2.0. The legacy code was removed in v0.2.6 (issue #77).
 
 ## Development Environment
 
 ### Prerequisites
-- Python 3.9+
+- Go 1.21+
 - Pulumi CLI installed
 - Access to a Lagoon instance with API credentials
 - GraphQL API endpoint and authentication token
 
 ### Setup Commands
 ```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
+# Build the provider binary
+make go-build
 
-# Install dependencies
-pip install -r requirements.txt
+# Run Go unit tests
+make go-test
 
-# Install in development mode
-pip install -e .
+# Regenerate Python SDK after schema changes
+make go-sdk-python
 ```
 
 ## Project Structure
 
 ```
 pulumi-lagoon-provider/
-├── pulumi_lagoon/           # Main provider package
-│   ├── __init__.py         # Package exports and __version__
-│   ├── client.py           # Lagoon GraphQL API client
-│   ├── config.py           # Provider configuration
-│   ├── exceptions.py       # Centralized exception hierarchy
-│   ├── validators.py       # Input validation (~470 lines)
-│   ├── import_utils.py     # Import ID parsing for pulumi import
-│   ├── project.py          # LagoonProject resource
-│   ├── environment.py      # LagoonEnvironment resource
-│   ├── variable.py         # LagoonVariable resource
-│   ├── deploytarget.py     # LagoonDeployTarget resource
-│   ├── deploytarget_config.py  # LagoonDeployTargetConfig resource
-│   ├── task.py             # LagoonTask resource
-│   ├── notification_slack.py   # LagoonNotificationSlack resource
-│   ├── notification_rocketchat.py  # LagoonNotificationRocketChat resource
-│   ├── notification_email.py   # LagoonNotificationEmail resource
-│   ├── notification_microsoftteams.py  # LagoonNotificationMicrosoftTeams resource
-│   └── project_notification.py # LagoonProjectNotification resource
+├── provider/                # Native Go provider (authoritative source)
+│   ├── cmd/pulumi-resource-lagoon/main.go  # Provider entry point
+│   ├── pkg/client/         # Lagoon GraphQL API client (Go)
+│   ├── pkg/config/         # Provider configuration
+│   ├── pkg/provider/       # Pulumi provider implementation
+│   ├── pkg/resources/      # Resource CRUD implementations
+│   ├── schema.json         # Pulumi schema definition
+│   └── go.mod              # Go module definition
 │
-├── tests/
-│   ├── unit/               # 513 unit tests across 16 files
-│   │   ├── test_client.py
-│   │   ├── test_config.py
-│   │   ├── test_project.py
-│   │   ├── test_environment.py
-│   │   ├── test_variable.py
-│   │   ├── test_deploytarget.py
-│   │   ├── test_deploytarget_config.py
-│   │   ├── test_task.py
-│   │   ├── test_validators.py
-│   │   ├── test_import_utils.py
-│   │   ├── test_notification_slack.py
-│   │   ├── test_notification_rocketchat.py
-│   │   ├── test_notification_email.py
-│   │   ├── test_notification_microsoftteams.py
-│   │   └── test_project_notification.py
-│   └── integration/        # Integration tests (require live Lagoon)
-│       └── test_resources.py
+├── sdk/                    # Generated multi-language SDKs
+│   ├── python/             # Generated Python SDK (published to PyPI)
+│   ├── nodejs/             # Generated TypeScript/Node.js SDK (published to npm)
+│   └── go/                 # Generated Go SDK
 │
-├── scripts/                 # SHARED operational scripts
+├── scripts/                # SHARED operational scripts
 │   ├── common.sh           # Common functions and configuration
 │   ├── run-pulumi.sh       # Wrapper with auto token refresh
 │   ├── get-token.sh        # Get OAuth token
@@ -102,7 +73,7 @@ pulumi-lagoon-provider/
 │   └── ...                 # Other operational scripts
 │
 ├── examples/
-│   ├── simple-project/     # Provider usage example (uses pulumi_lagoon)
+│   ├── simple-project/     # Provider usage example (uses sdk/python/)
 │   │   ├── __main__.py     # Creates Lagoon projects/envs/vars via API
 │   │   └── scripts/        # Helper scripts
 │   │
@@ -122,12 +93,9 @@ pulumi-lagoon-provider/
 ├── docs/                   # Additional documentation
 │   └── notifications.md    # Notification resource documentation
 ├── memory-bank/            # Documentation and planning
-├── pyproject.toml         # Modern Python build configuration (primary)
-├── setup.py               # Legacy package configuration
-├── requirements.txt       # Python dependencies
-├── RELEASE_NOTES.md       # Version changelog
-├── Makefile               # Development workflow automation
-└── README.md             # Project documentation
+├── RELEASE_NOTES.md        # Version changelog
+├── Makefile                # Development workflow automation
+└── README.md               # Project documentation
 ```
 
 ## Shared Scripts
@@ -275,16 +243,16 @@ query AllProjects {
 
 ## Testing Strategy
 
-1. **Unit Tests**: Test individual resource providers
-2. **Integration Tests**: Test against a real Lagoon instance (requires test environment)
-3. **Example Validation**: Ensure examples work correctly
+1. **Go Unit Tests**: `make go-test` — tests in `provider/pkg/` with a mock GraphQL server
+2. **Integration Tests**: Require a live Lagoon instance; run manually against the example stack
+3. **SDK Build Test**: CI builds all SDKs and verifies `import pulumi_lagoon` succeeds
 
 ## Development Workflow
 
-1. Make changes to provider code
-2. Install in development mode: `pip install -e .`
-3. Test with example projects in `examples/`
-4. Run tests: `pytest tests/`
+1. Make changes to Go provider code in `provider/`
+2. Build and test: `make go-build && make go-test`
+3. Regenerate SDKs if schema changed: `make go-sdk-all`
+4. Test with example projects in `examples/`
 5. Update documentation as needed
 
 ## Configuration
@@ -317,13 +285,14 @@ export LAGOON_TOKEN=<your-token>
 - [x] Comprehensive documentation
 - [x] Published to PyPI
 
-### Long-term (Phase 3) - In Progress
+### Long-term (Phase 3) - Complete
 - [x] Notification resources (Slack, RocketChat, Email, Microsoft Teams)
 - [x] Project notification associations
 - [x] Task resources (advanced task definitions)
 - [x] Native Go provider
 - [x] Multi-language SDK generation (Python, TypeScript, Go)
 - [x] Additional resources (Groups)
+- [x] Remove legacy Python dynamic provider code
 - [ ] Community adoption
 
 ## Contributing
@@ -332,6 +301,6 @@ This is currently an early-stage project. Once the core functionality is working
 
 ## References
 
-- [Pulumi Dynamic Providers](https://www.pulumi.com/docs/intro/concepts/resources/dynamic-providers/)
+- [Pulumi Native Providers](https://www.pulumi.com/docs/iac/concepts/resources/providers/)
 - [Lagoon Documentation](https://docs.lagoon.sh/)
 - [Lagoon GraphQL API](https://api.lagoon.sh/graphql)

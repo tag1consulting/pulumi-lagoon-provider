@@ -2,15 +2,11 @@
 
 **Last Updated**: 2026-03-24
 
-## Two Provider Implementations
+## Provider Implementation
 
-### 1. Python Dynamic Provider (v0.1.2, production)
-- Branch: `main`
-- Published on PyPI as `pulumi-lagoon`
-- Uses Pulumi dynamic provider interface
-- 11 resources, 513 unit tests
+The v0.1.x Python dynamic provider was superseded by the native Go provider in v0.2.0. The legacy source code was removed in v0.2.6 (issue #77).
 
-### 2. Native Go Provider (v0.2.0 — released)
+### Native Go Provider (v0.2.0+ — current)
 - Merged via PR #37 → `develop` → `main`
 - Uses `pulumi-go-provider` v1.3.0 with `infer` package (request/response builder pattern)
 - 11 resources, 198+ unit tests

@@ -17,15 +17,15 @@ The notification workflow in Lagoon involves two steps:
 
 ## Notification Resources
 
-### LagoonNotificationSlack
+### NotificationSlack
 
 Creates a Slack notification configuration.
 
 ```python
-import pulumi_lagoon as lagoon
+from pulumi_lagoon.lagoon import NotificationSlack, NotificationSlackArgs
 
-slack_alerts = lagoon.LagoonNotificationSlack("deploy-alerts",
-    lagoon.LagoonNotificationSlackArgs(
+slack_alerts = NotificationSlack("deploy-alerts",
+    NotificationSlackArgs(
         name="deploy-alerts",
         webhook="https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXX",
         channel="#deployments",
@@ -46,15 +46,15 @@ slack_alerts = lagoon.LagoonNotificationSlack("deploy-alerts",
 - `webhook` - The webhook URL
 - `channel` - The channel name
 
-### LagoonNotificationRocketChat
+### NotificationRocketChat
 
 Creates a RocketChat notification configuration.
 
 ```python
-import pulumi_lagoon as lagoon
+from pulumi_lagoon.lagoon import NotificationRocketChat, NotificationRocketChatArgs
 
-rocketchat_alerts = lagoon.LagoonNotificationRocketChat("team-chat",
-    lagoon.LagoonNotificationRocketChatArgs(
+rocketchat_alerts = NotificationRocketChat("team-chat",
+    NotificationRocketChatArgs(
         name="team-chat",
         webhook="https://rocketchat.example.com/hooks/xxxxx/yyyyy",
         channel="#alerts",
@@ -69,15 +69,15 @@ rocketchat_alerts = lagoon.LagoonNotificationRocketChat("team-chat",
 | `webhook` | `str` | Yes | RocketChat webhook URL (must be HTTPS) |
 | `channel` | `str` | Yes | RocketChat channel |
 
-### LagoonNotificationEmail
+### NotificationEmail
 
 Creates an Email notification configuration.
 
 ```python
-import pulumi_lagoon as lagoon
+from pulumi_lagoon.lagoon import NotificationEmail, NotificationEmailArgs
 
-email_ops = lagoon.LagoonNotificationEmail("ops-team",
-    lagoon.LagoonNotificationEmailArgs(
+email_ops = NotificationEmail("ops-team",
+    NotificationEmailArgs(
         name="ops-team",
         email_address="ops@example.com",
     )
@@ -90,15 +90,15 @@ email_ops = lagoon.LagoonNotificationEmail("ops-team",
 | `name` | `str` | Yes | Unique name for the notification |
 | `email_address` | `str` | Yes | Email address to receive notifications |
 
-### LagoonNotificationMicrosoftTeams
+### NotificationMicrosoftTeams
 
 Creates a Microsoft Teams notification configuration.
 
 ```python
-import pulumi_lagoon as lagoon
+from pulumi_lagoon.lagoon import NotificationMicrosoftTeams, NotificationMicrosoftTeamsArgs
 
-teams_alerts = lagoon.LagoonNotificationMicrosoftTeams("teams-alerts",
-    lagoon.LagoonNotificationMicrosoftTeamsArgs(
+teams_alerts = NotificationMicrosoftTeams("teams-alerts",
+    NotificationMicrosoftTeamsArgs(
         name="teams-alerts",
         webhook="https://outlook.office.com/webhook/xxxxx/IncomingWebhook/yyyyy",
     )
@@ -111,17 +111,21 @@ teams_alerts = lagoon.LagoonNotificationMicrosoftTeams("teams-alerts",
 | `name` | `str` | Yes | Unique name for the notification |
 | `webhook` | `str` | Yes | Microsoft Teams webhook URL (must be HTTPS) |
 
-### LagoonProjectNotification
+### ProjectNotification
 
 Links a notification to a project. This enables the project to receive notifications.
 
 ```python
 import pulumi
-import pulumi_lagoon as lagoon
+from pulumi_lagoon.lagoon import (
+    NotificationSlack, NotificationSlackArgs,
+    Project, ProjectArgs,
+    ProjectNotification, ProjectNotificationArgs,
+)
 
 # Create a project
-project = lagoon.LagoonProject("my-site",
-    lagoon.LagoonProjectArgs(
+project = Project("my-site",
+    ProjectArgs(
         name="my-site",
         git_url="git@github.com:example/my-site.git",
         deploytarget_id=1,
@@ -129,8 +133,8 @@ project = lagoon.LagoonProject("my-site",
 )
 
 # Create a Slack notification
-slack_alerts = lagoon.LagoonNotificationSlack("deploy-alerts",
-    lagoon.LagoonNotificationSlackArgs(
+slack_alerts = NotificationSlack("deploy-alerts",
+    NotificationSlackArgs(
         name="deploy-alerts",
         webhook="https://hooks.slack.com/services/xxx/yyy/zzz",
         channel="#deployments",
@@ -138,8 +142,8 @@ slack_alerts = lagoon.LagoonNotificationSlack("deploy-alerts",
 )
 
 # Link the notification to the project
-project_notification = lagoon.LagoonProjectNotification("project-slack",
-    lagoon.LagoonProjectNotificationArgs(
+project_notification = ProjectNotification("project-slack",
+    ProjectNotificationArgs(
         project_name=project.name,
         notification_type="slack",
         notification_name=slack_alerts.name,
@@ -167,11 +171,17 @@ Here's a complete example showing how to set up multiple notifications for a pro
 
 ```python
 import pulumi
-import pulumi_lagoon as lagoon
+from pulumi_lagoon.lagoon import (
+    NotificationEmail, NotificationEmailArgs,
+    NotificationMicrosoftTeams, NotificationMicrosoftTeamsArgs,
+    NotificationSlack, NotificationSlackArgs,
+    Project, ProjectArgs,
+    ProjectNotification, ProjectNotificationArgs,
+)
 
 # Create the project
-project = lagoon.LagoonProject("my-drupal-site",
-    lagoon.LagoonProjectArgs(
+project = Project("my-drupal-site",
+    ProjectArgs(
         name="my-drupal-site",
         git_url="git@github.com:example/my-drupal-site.git",
         deploytarget_id=1,
@@ -183,8 +193,8 @@ project = lagoon.LagoonProject("my-drupal-site",
 # === Create Notifications ===
 
 # Slack for deployment notifications
-slack_deploys = lagoon.LagoonNotificationSlack("slack-deploys",
-    lagoon.LagoonNotificationSlackArgs(
+slack_deploys = NotificationSlack("slack-deploys",
+    NotificationSlackArgs(
         name="drupal-deploys",
         webhook="https://hooks.slack.com/services/xxx/yyy/zzz",
         channel="#drupal-deployments",
@@ -192,16 +202,16 @@ slack_deploys = lagoon.LagoonNotificationSlack("slack-deploys",
 )
 
 # Email for critical alerts
-email_alerts = lagoon.LagoonNotificationEmail("email-alerts",
-    lagoon.LagoonNotificationEmailArgs(
+email_alerts = NotificationEmail("email-alerts",
+    NotificationEmailArgs(
         name="critical-alerts",
         email_address="alerts@example.com",
     )
 )
 
 # Microsoft Teams for the dev team
-teams_dev = lagoon.LagoonNotificationMicrosoftTeams("teams-dev",
-    lagoon.LagoonNotificationMicrosoftTeamsArgs(
+teams_dev = NotificationMicrosoftTeams("teams-dev",
+    NotificationMicrosoftTeamsArgs(
         name="dev-team-alerts",
         webhook="https://outlook.office.com/webhook/xxx/IncomingWebhook/yyy",
     )
@@ -209,8 +219,8 @@ teams_dev = lagoon.LagoonNotificationMicrosoftTeams("teams-dev",
 
 # === Link Notifications to Project ===
 
-project_slack = lagoon.LagoonProjectNotification("project-slack",
-    lagoon.LagoonProjectNotificationArgs(
+project_slack = ProjectNotification("project-slack",
+    ProjectNotificationArgs(
         project_name=project.name,
         notification_type="slack",
         notification_name=slack_deploys.name,
@@ -218,8 +228,8 @@ project_slack = lagoon.LagoonProjectNotification("project-slack",
     opts=pulumi.ResourceOptions(depends_on=[project, slack_deploys])
 )
 
-project_email = lagoon.LagoonProjectNotification("project-email",
-    lagoon.LagoonProjectNotificationArgs(
+project_email = ProjectNotification("project-email",
+    ProjectNotificationArgs(
         project_name=project.name,
         notification_type="email",
         notification_name=email_alerts.name,
@@ -227,8 +237,8 @@ project_email = lagoon.LagoonProjectNotification("project-email",
     opts=pulumi.ResourceOptions(depends_on=[project, email_alerts])
 )
 
-project_teams = lagoon.LagoonProjectNotification("project-teams",
-    lagoon.LagoonProjectNotificationArgs(
+project_teams = ProjectNotification("project-teams",
+    ProjectNotificationArgs(
         project_name=project.name,
         notification_type="microsoftteams",
         notification_name=teams_dev.name,
@@ -248,11 +258,15 @@ A single notification can be linked to multiple projects:
 
 ```python
 import pulumi
-import pulumi_lagoon as lagoon
+from pulumi_lagoon.lagoon import (
+    NotificationSlack, NotificationSlackArgs,
+    Project, ProjectArgs,
+    ProjectNotification, ProjectNotificationArgs,
+)
 
 # Create a shared Slack notification
-shared_slack = lagoon.LagoonNotificationSlack("shared-slack",
-    lagoon.LagoonNotificationSlackArgs(
+shared_slack = NotificationSlack("shared-slack",
+    NotificationSlackArgs(
         name="team-deploys",
         webhook="https://hooks.slack.com/services/xxx/yyy/zzz",
         channel="#all-deployments",
@@ -260,14 +274,14 @@ shared_slack = lagoon.LagoonNotificationSlack("shared-slack",
 )
 
 # Create multiple projects
-project_a = lagoon.LagoonProject("project-a", ...)
-project_b = lagoon.LagoonProject("project-b", ...)
-project_c = lagoon.LagoonProject("project-c", ...)
+project_a = Project("project-a", ProjectArgs(...))
+project_b = Project("project-b", ProjectArgs(...))
+project_c = Project("project-c", ProjectArgs(...))
 
 # Link the same notification to all projects
 for idx, project in enumerate([project_a, project_b, project_c]):
-    lagoon.LagoonProjectNotification(f"notification-{idx}",
-        lagoon.LagoonProjectNotificationArgs(
+    ProjectNotification(f"notification-{idx}",
+        ProjectNotificationArgs(
             project_name=project.name,
             notification_type="slack",
             notification_name=shared_slack.name,
@@ -282,11 +296,11 @@ for idx, project in enumerate([project_a, project_b, project_c]):
 
 | Resource | Format | Example |
 |----------|--------|---------|
-| `LagoonNotificationSlack` | `{name}` | `deploy-alerts` |
-| `LagoonNotificationRocketChat` | `{name}` | `team-chat` |
-| `LagoonNotificationEmail` | `{name}` | `ops-team` |
-| `LagoonNotificationMicrosoftTeams` | `{name}` | `teams-alerts` |
-| `LagoonProjectNotification` | `{project}:{type}:{name}` | `my-project:slack:deploy-alerts` |
+| `NotificationSlack` | `{name}` | `deploy-alerts` |
+| `NotificationRocketChat` | `{name}` | `team-chat` |
+| `NotificationEmail` | `{name}` | `ops-team` |
+| `NotificationMicrosoftTeams` | `{name}` | `teams-alerts` |
+| `ProjectNotification` | `{project}:{type}:{name}` | `my-project:slack:deploy-alerts` |
 
 ### Import Examples
 
@@ -304,9 +318,12 @@ pulumi import lagoon:index:ProjectNotification my-assoc my-project:slack:deploy-
 After importing, add the corresponding resource definition to your Pulumi code:
 
 ```python
+import pulumi
+from pulumi_lagoon.lagoon import NotificationSlack, NotificationSlackArgs
+
 # After importing "deploy-alerts"
-slack_alerts = lagoon.LagoonNotificationSlack("my-slack",
-    lagoon.LagoonNotificationSlackArgs(
+slack_alerts = NotificationSlack("my-slack",
+    NotificationSlackArgs(
         name="deploy-alerts",
         webhook="https://hooks.slack.com/services/xxx/yyy/zzz",
         channel="#deployments",
@@ -330,7 +347,7 @@ slack_alerts = lagoon.LagoonNotificationSlack("my-slack",
 - Must be a valid email format (user@domain.tld)
 
 ### Notification Types
-Valid values for `notification_type` in `LagoonProjectNotification`:
+Valid values for `notification_type` in `ProjectNotification`:
 - `slack`
 - `rocketchat`
 - `email`
