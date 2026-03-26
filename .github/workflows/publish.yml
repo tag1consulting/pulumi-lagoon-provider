@@ -226,7 +226,14 @@ jobs:
           path: sdk/nodejs/
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: |
+          PKG=$(jq -r '.name' package.json)
+          VERSION=$(jq -r '.version' package.json)
+          if npm view "${PKG}@${VERSION}" version 2>/dev/null | grep -qF "${VERSION}"; then
+            echo "${PKG}@${VERSION} already exists on npm, skipping publish."
+          else
+            npm publish --access public
+          fi
         working-directory: sdk/nodejs
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
