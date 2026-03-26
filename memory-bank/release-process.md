@@ -10,19 +10,23 @@ One command handles version bumps, SDK regeneration, and tests:
 make release-prep VERSION=0.X.Y
 ```
 
-This target:
-1. Rebuilds the provider binary
-2. Regenerates all SDKs (Python, Node.js, Go) — uses a temp directory so
-   hand-maintained files (README.pypi.md, package-lock.json, go.mod/go.sum,
-   pyproject.toml license fix) are preserved
-3. Bumps version strings in all six files:
+This target (in order):
+1. Bumps version strings in three source-of-truth files **first**, so the
+   provider binary and SDKs carry the new version from the start:
    - `provider/cmd/pulumi-resource-lagoon/main.go` (`var Version`)
    - `Makefile` (`PROVIDER_VERSION`)
    - `provider/schema.json` (`version` field)
+2. Rebuilds the provider binary with the new version embedded via ldflags
+3. Regenerates all SDKs (Python, Node.js, Go) — uses a temp directory so
+   hand-maintained files (README.pypi.md, package-lock.json, go.mod/go.sum,
+   pyproject.toml) are preserved; rsync uses `--delete` on generated subdirs
+   so stale files are removed
+4. Updates package manifest version strings:
    - `sdk/python/pyproject.toml` (`version`)
-   - `sdk/python/pulumi_lagoon/pulumi-plugin.json` (`version`)
    - `sdk/nodejs/package.json` (first `version` field)
-4. Runs the full test suite
+   - Note: `sdk/python/pulumi_lagoon/pulumi-plugin.json` is now updated
+     automatically by the SDK regeneration (no separate sed step)
+5. Runs the full test suite
 
 After `release-prep` completes, still do manually:
 - Update `RELEASE_NOTES.md`
