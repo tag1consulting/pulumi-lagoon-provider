@@ -401,7 +401,7 @@ clean-all: clean
 # Go Provider (Native)
 #==============================================================================
 
-PROVIDER_VERSION ?= 0.2.2
+PROVIDER_VERSION ?= 0.2.3
 PROVIDER_BIN     := provider/bin/pulumi-resource-lagoon
 GO_BIN           ?= $(if $(GOPATH),$(GOPATH)/bin,$(HOME)/go/bin)
 
@@ -473,7 +473,7 @@ endif
 release-prep: check-release-version
 	@echo "=== Setting version $(VERSION) ==="
 	sed -i 's/var Version = .*/var Version = "$(VERSION)"/' provider/cmd/pulumi-resource-lagoon/main.go
-	sed -i 's/PROVIDER_VERSION ?= .*/PROVIDER_VERSION ?= $(VERSION)/' Makefile
+	sed -i 's/PROVIDER_VERSION ?= 0.2.3
 	sed -i 's/"version": ".*"/"version": "$(VERSION)"/' provider/schema.json
 	$(MAKE) PROVIDER_VERSION=$(VERSION) go-build go-sdk-python go-sdk-nodejs go-sdk-go
 	sed -i 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml
