@@ -443,6 +443,7 @@ go-sdk-nodejs: go-build
 	@for f in index.ts provider.ts utilities.ts tsconfig.json; do \
 		if [ -f "$(SDK_TMP)/nodejs/$$f" ]; then cp "$(SDK_TMP)/nodejs/$$f" "sdk/nodejs/$$f"; fi; \
 	done
+	cp LICENSE sdk/nodejs/LICENSE
 	rm -rf $(SDK_TMP)
 
 go-sdk-go: go-build

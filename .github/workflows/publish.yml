@@ -129,6 +129,7 @@ jobs:
             sdk/nodejs/bin/
             sdk/nodejs/package.json
             sdk/nodejs/README.md
+            sdk/nodejs/LICENSE
 
   test-install-nodejs:
     name: Test Node.js installation
