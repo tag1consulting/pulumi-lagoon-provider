@@ -3,9 +3,15 @@
 # *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import builtins as _builtins
+import warnings
+import sys
 import pulumi
 import pulumi.runtime
-from typing import Optional, overload
+from typing import Any, Mapping, Optional, Sequence, Union, overload
+if sys.version_info >= (3, 11):
+    from typing import NotRequired, TypedDict, TypeAlias
+else:
+    from typing_extensions import NotRequired, TypedDict, TypeAlias
 from .. import _utilities
 
 __all__ = ['GroupArgs', 'Group']
@@ -68,7 +74,7 @@ class Group(pulumi.CustomResource):
         :param pulumi.Input[_builtins.str] name: The group name.
         :param pulumi.Input[_builtins.str] parent_group_name: The name of the parent group, for creating subgroups.
         """
-        pass
+        ...
     @overload
     def __init__(__self__,
                  resource_name: str,
@@ -82,7 +88,7 @@ class Group(pulumi.CustomResource):
         :param GroupArgs args: The arguments to use to populate this resource's properties.
         :param pulumi.ResourceOptions opts: Options for the resource.
         """
-        pass
+        ...
     def __init__(__self__, resource_name: str, *args, **kwargs):
         resource_args, opts = _utilities.get_resource_args_opts(GroupArgs, pulumi.ResourceOptions, *args, **kwargs)
         if resource_args is not None:

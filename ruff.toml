@@ -6,6 +6,7 @@
 [lint.per-file-ignores]
 "sdk/python/**/*.py" = [
     "A002",    # argument `id` shadows builtin
+    "F401",    # unused imports (generator produces imports for all typing constructs)
     "RUF022",  # __all__ is not sorted
     "N804",    # first argument of class method should be named cls (not __self__)
     "N805",    # first argument of method should be named self (not __self__)

@@ -102,6 +102,18 @@ The publish workflow copies `sdk/python/README.pypi.md` (Python-specific) to
 `sdk/python/README.md` at build time. Keep `README.pypi.md` updated when adding
 new resources or changing configuration.
 
+### `release-prep` self-modifies the Makefile (discovered in #68)
+The `sed -i 's/PROVIDER_VERSION ?= .*/PROVIDER_VERSION ?= $(VERSION)/' Makefile` command
+modifies the Makefile in place — including the sed command line itself, because
+`PROVIDER_VERSION ?= .*` matches the sed command line. The `^` anchor fixes this:
+`sed -i 's/^PROVIDER_VERSION ?= .*/PROVIDER_VERSION ?= $(VERSION)/' Makefile`
+The tab-indented recipe line starts with `\t`, so the anchored pattern never matches it.
+
+### Node.js SDK has two version fields
+`sdk/nodejs/package.json` has both `.version` (top-level) and `.pulumi.version` (nested).
+Both must be updated in `release-prep`. The `jq` expression uses:
+`.version = $v | .pulumi.version = $v`
+
 ### Token expiry during live testing
 Keycloak OAuth tokens expire in 5 minutes. For live testing, use JWT admin tokens
 generated from the `JWTSECRET` (1-hour expiry). The `run-pulumi.sh` script handles

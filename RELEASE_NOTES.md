@@ -1,3 +1,30 @@
+# Release v0.2.3 (2026-03-26)
+
+Maintenance release with CI improvements, tooling fixes, and developer experience improvements.
+
+## Bug Fixes
+
+- **Makefile SDK sync**: Added `--delete` to rsync commands for generated SDK subdirectories so stale files are removed when resources are removed from the schema
+- **`release-prep` version propagation**: Restructured to bump version strings first, then build — provider binary and all SDKs now carry the new version from the start
+- **`release-prep` portability**: Replaced GNU-specific `sed '0,/pattern/s//'` with `jq` for updating `sdk/nodejs/package.json` version; works on both Linux and macOS
+- **`release-prep` self-modification bug**: Added `^` anchor to the `PROVIDER_VERSION` sed pattern so the command no longer matches and corrupts itself when the Makefile is updated in place
+- **`release-prep` Node.js SDK version drift**: The `jq` version update now sets both `.version` and `.pulumi.version` in `sdk/nodejs/package.json` to keep both fields in sync
+
+## Improvements
+
+- **CodeRabbit configuration**: Added `.coderabbit.yaml` enabling sequence diagrams, high-level summaries, related issues/PRs, code review effort estimation, and architectural tone in reviews
+- **Ruff configuration**: Added `ruff.toml` with per-file-ignores for generated SDK Python files to eliminate false-positive lint noise on regeneration
+- **CodeQL configuration**: Added `.github/codeql/codeql-config.yml` to exclude generated SDK directories from CodeQL analysis
+- **CODEOWNERS**: Simplified to `@gchaix` only; CodeRabbit reviews via its own configuration rather than as a required code owner
+
+## Installation
+
+```bash
+pip install pulumi-lagoon==0.2.3
+```
+
+---
+
 # Release v0.2.2 (2026-03-25)
 
 Feature release adding the Group resource, SDK path fixes, and significantly expanded test coverage.
