@@ -238,3 +238,46 @@ jobs:
             npm publish --access public --provenance
           fi
         working-directory: sdk/nodejs
+
+  warm-go-proxy:
+    name: Warm Go module proxy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - name: Extract version from release tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([-+][a-zA-Z0-9._-]+)?$'; then
+            echo "ERROR: tag '${GITHUB_REF_NAME}' does not look like a semver version" >&2
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Warm Go module proxy
+        env:
+          GO_MODULE: github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon
+          GO_PROXY: https://proxy.golang.org
+        run: |
+          echo "Warming proxy for ${GO_MODULE}@v${VERSION}"
+          for endpoint in .info .mod .zip; do
+            url="${GO_PROXY}/${GO_MODULE}/@v/v${VERSION}${endpoint}"
+            echo -n "  GET ${url} ... "
+            success=false
+            for attempt in 1 2 3; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' "${url}")
+              if [ "${code}" = "200" ]; then
+                echo "200 OK"
+                success=true
+                break
+              fi
+              echo -n "(${code}, retry ${attempt}/3) "
+              sleep 10
+            done
+            if [ "${success}" != "true" ]; then
+              echo "FAILED (last status: ${code})"
+              echo "::error::Go module proxy did not return 200 for ${url}"
+              echo "Ensure the tag sdk/go/lagoon/v${VERSION} was pushed before creating the release."
+              exit 1
+            fi
+          done
+          echo "Go module proxy warm-up complete."

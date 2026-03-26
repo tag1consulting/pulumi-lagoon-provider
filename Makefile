@@ -25,7 +25,7 @@
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
         clean clean-all venv \
-        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-all go-install check-release-version release-prep
+        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-all go-install check-release-version release-prep go-proxy-warmup
 
 # Variables
 VENV_DIR := venv
@@ -491,6 +491,39 @@ release-prep: check-release-version
 	@echo "Remaining steps:"
 	@echo "  1. Update RELEASE_NOTES.md"
 	@echo "  2. Commit, push, and open PR to main"
-	@echo "  3. After merge: git tag -a v$(VERSION) && git push origin v$(VERSION)"
-	@echo "  4. Create GitHub release (triggers PyPI publish)"
-	@echo "  5. Tag Go module: git tag -a sdk/go/lagoon/v$(VERSION) v$(VERSION)^{} && git push origin sdk/go/lagoon/v$(VERSION)"
+	@echo "  3. After merge: git tag v$(VERSION) && git push origin v$(VERSION)"
+	@echo "  4. Tag Go module: git tag sdk/go/lagoon/v$(VERSION) v$(VERSION)^{} && git push origin sdk/go/lagoon/v$(VERSION)"
+	@echo "  5. Create GitHub release (triggers publish.yml: PyPI, npm, Go proxy warm-up)"
+	@echo "  6. Verify: make go-proxy-warmup VERSION=$(VERSION)  (or check CI)"
+
+# Warm the Go module proxy so the SDK is immediately available via go get and
+# appears on pkg.go.dev.  The sdk/go/lagoon/vVERSION tag must already exist
+# on the remote before running this.
+# Usage: make go-proxy-warmup VERSION=0.3.0
+GO_MODULE := github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon
+GO_PROXY  := https://proxy.golang.org
+
+go-proxy-warmup: check-release-version
+	@echo "=== Warming Go module proxy for $(GO_MODULE)@v$(VERSION) ==="
+	@for endpoint in .info .mod .zip; do \
+		url="$(GO_PROXY)/$(GO_MODULE)/@v/v$(VERSION)$$endpoint"; \
+		echo -n "  GET $$url ... "; \
+		status=0; \
+		for attempt in 1 2 3; do \
+			code=$$(curl -s -o /dev/null -w '%{http_code}' "$$url"); \
+			if [ "$$code" = "200" ]; then \
+				echo "200 OK"; \
+				status=1; \
+				break; \
+			fi; \
+			echo -n "($$code, retry $$attempt/3) "; \
+			sleep 10; \
+		done; \
+		if [ "$$status" = "0" ]; then \
+			echo "FAILED"; \
+			echo "ERROR: proxy returned non-200 for $$url" >&2; \
+			echo "Ensure the tag sdk/go/lagoon/v$(VERSION) has been pushed." >&2; \
+			exit 1; \
+		fi; \
+	done
+	@echo "=== Go module proxy warm-up complete ==="
