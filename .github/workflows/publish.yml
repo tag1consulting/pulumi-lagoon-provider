@@ -96,7 +96,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Set version from release tag
@@ -211,11 +211,14 @@ jobs:
     environment:
       name: npm
       url: https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Download artifacts
@@ -225,7 +228,5 @@ jobs:
           path: sdk/nodejs/
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --access public --provenance
         working-directory: sdk/nodejs
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
