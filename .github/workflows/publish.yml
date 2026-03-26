@@ -96,7 +96,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Set version from release tag
@@ -114,7 +114,7 @@ jobs:
         working-directory: sdk/nodejs
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
         working-directory: sdk/nodejs
 
       - name: Build (compile TypeScript)
@@ -137,7 +137,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: ['18', '20', '22']
+        node-version: ['22', '24']
     steps:
       - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -212,11 +212,14 @@ jobs:
     environment:
       name: npm
       url: https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Download artifacts
@@ -232,8 +235,6 @@ jobs:
           if npm view "${PKG}@${VERSION}" version 2>/dev/null | grep -qF "${VERSION}"; then
             echo "${PKG}@${VERSION} already exists on npm, skipping publish."
           else
-            npm publish --access public
+            npm publish --access public --provenance
           fi
         working-directory: sdk/nodejs
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
