@@ -85,7 +85,7 @@ jobs:
       - name: Test import
         run: |
           python -c "import pulumi_lagoon; print('Successfully imported pulumi_lagoon')"
-          python -c "from pulumi_lagoon.lagoon import Project, Environment, Variable; print('All resources importable')"
+          python -c "from pulumi_lagoon.lagoon import (Project, Environment, Variable, DeployTarget, DeployTargetConfig, Group, Task, NotificationSlack, NotificationRocketChat, NotificationEmail, NotificationMicrosoftTeams, ProjectNotification); print('All 12 resource types importable')"
 
   build-nodejs:
     name: Build Node.js distribution
