@@ -12,7 +12,7 @@ A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as inf
 
 This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, deploy targets, notifications, tasks, etc.) using Pulumi, with native SDKs for Python, TypeScript/JavaScript, and Go.
 
-**Status**: v0.2.0 — Native Go Provider
+**Status**: v0.2.2 — Native Go Provider
 
 ## Supported Resources
 
@@ -29,6 +29,7 @@ This provider enables you to manage Lagoon hosting platform resources (projects,
 | `NotificationMicrosoftTeams` | Microsoft Teams deployment notifications |
 | `ProjectNotification` | Link notifications to projects |
 | `Task` | Advanced task definitions (command and image types) |
+| `Group` | Groups for organizing projects and users |
 
 ## Installation
 
@@ -178,6 +179,7 @@ Use `pulumi import` to bring existing Lagoon resources under Pulumi management:
 | `lagoon:lagoon:NotificationSlack` | `{name}` | `deploy-alerts` |
 | `lagoon:lagoon:ProjectNotification` | `{project}:{type}:{name}` | `my-project:slack:deploy-alerts` |
 | `lagoon:lagoon:Task` | `{numeric_id}` | `456` |
+| `lagoon:lagoon:Group` | `{name}` | `my-team` |
 
 ```bash
 # Import an existing project (ID 123)
@@ -223,7 +225,7 @@ CGO_ENABLED=0 go test ./... -count=1
 
 ```bash
 make go-build       # Build the provider binary
-make go-test        # Run all Go tests (198 tests)
+make go-test        # Run all Go tests (512 tests)
 make go-schema      # Regenerate provider schema
 make go-sdk-all     # Regenerate all language SDKs
 make go-sdk-python  # Regenerate Python SDK
@@ -239,12 +241,12 @@ pulumi-lagoon-provider/
 │   ├── cmd/pulumi-resource-lagoon/  # Provider binary entrypoint
 │   ├── pkg/client/              # Lagoon GraphQL client
 │   ├── pkg/config/              # Provider configuration
-│   ├── pkg/resources/           # 11 resource implementations
+│   ├── pkg/resources/           # 12 resource implementations
 │   └── schema.json              # Pulumi schema
 ├── sdk/                         # Generated multi-language SDKs
-│   ├── python/python/           # Python SDK (PyPI: pulumi-lagoon)
-│   ├── nodejs/nodejs/           # TypeScript SDK (npm: @tag1consulting/pulumi-lagoon)
-│   └── go/go/lagoon/            # Go SDK
+│   ├── python/                  # Python SDK (PyPI: pulumi-lagoon)
+│   ├── nodejs/                  # TypeScript SDK (npm: @tag1consulting/pulumi-lagoon)
+│   └── go/lagoon/               # Go SDK
 ├── examples/
 │   ├── simple-project/          # Provider usage example
 │   ├── single-cluster/          # Single Kind cluster deployment

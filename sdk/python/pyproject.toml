@@ -6,8 +6,7 @@
   readme = "README.md"
   requires-python = ">=3.9"
   version = "0.2.2"
-  [project.license]
-    text = "Apache-2.0"
+  license = "Apache-2.0"
   [project.urls]
     Homepage = "https://github.com/tag1consulting/pulumi-lagoon-provider"
     Repository = "https://github.com/tag1consulting/pulumi-lagoon-provider"
