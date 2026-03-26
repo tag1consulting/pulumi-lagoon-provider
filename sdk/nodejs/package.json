@@ -10,6 +10,10 @@
     "homepage": "https://github.com/tag1consulting/pulumi-lagoon-provider",
     "repository": "https://github.com/tag1consulting/pulumi-lagoon-provider",
     "license": "Apache-2.0",
+    "main": "bin/index.js",
+    "files": [
+        "bin/"
+    ],
     "scripts": {
         "build": "tsc"
     },

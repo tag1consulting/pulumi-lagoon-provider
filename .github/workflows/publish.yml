@@ -125,7 +125,41 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: dist-nodejs
+          path: |
+            sdk/nodejs/bin/
+            sdk/nodejs/package.json
+            sdk/nodejs/README.md
+
+  test-install-nodejs:
+    name: Test Node.js installation
+    needs: build-nodejs
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18', '20', '22']
+    steps:
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist-nodejs
           path: sdk/nodejs/
+
+      - name: Pack and install
+        run: |
+          TGZ=$(npm pack)
+          mkdir -p /tmp/test-install
+          cd /tmp/test-install
+          npm install $GITHUB_WORKSPACE/sdk/nodejs/$TGZ
+        working-directory: sdk/nodejs
+
+      - name: Test require
+        run: node -e "require('@tag1consulting/pulumi-lagoon'); console.log('Successfully loaded @tag1consulting/pulumi-lagoon')"
+        working-directory: /tmp/test-install
 
   publish-testpypi:
     name: Publish to TestPyPI
@@ -171,7 +205,7 @@ jobs:
 
   publish-npm:
     name: Publish to npm
-    needs: build-nodejs
+    needs: [build-nodejs, test-install-nodejs]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
     environment:
