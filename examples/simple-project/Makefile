@@ -92,12 +92,8 @@ clean:
 	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
 	@echo "Done."
 
-# Install provider in development mode
+# Install the Go SDK Python package in development mode
 install:
-	@echo "Installing provider in development mode..."
-	@if [ -f ../../venv/bin/activate ]; then \
-		. ../../venv/bin/activate && pip install -e ../..; \
-	else \
-		echo "Virtual environment not found at ../../venv"; \
-		echo "Create it with: python3 -m venv ../../venv && source ../../venv/bin/activate && pip install -e ../.."; \
-	fi
+	@echo "Installing Lagoon provider SDK in development mode..."
+	@pip install -e ../../sdk/python/ -q
+	@echo "SDK installed."

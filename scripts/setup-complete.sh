@@ -186,8 +186,8 @@ install_provider() {
     cd "$ROOT_DIR"
     # shellcheck source=/dev/null
     source "$VENV_DIR/bin/activate"
-    pip install -e . -q
-    log_info "Provider installed in development mode"
+    pip install -e sdk/python/ -q
+    log_info "Provider SDK installed in development mode"
 }
 
 setup_cluster() {
