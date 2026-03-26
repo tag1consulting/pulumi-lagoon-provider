@@ -2,20 +2,32 @@
 
 **Last Updated**: 2026-03-26
 
-## Pre-Release Checklist
+## Pre-Release: `make release-prep`
 
-1. All PRs merged to `main`
-2. Version bumped in all files:
+One command handles version bumps, SDK regeneration, and tests:
+
+```bash
+make release-prep VERSION=0.X.Y
+```
+
+This target:
+1. Rebuilds the provider binary
+2. Regenerates all SDKs (Python, Node.js, Go) — uses a temp directory so
+   hand-maintained files (README.pypi.md, package-lock.json, go.mod/go.sum,
+   pyproject.toml license fix) are preserved
+3. Bumps version strings in all six files:
    - `provider/cmd/pulumi-resource-lagoon/main.go` (`var Version`)
    - `Makefile` (`PROVIDER_VERSION`)
    - `provider/schema.json` (`version` field)
    - `sdk/python/pyproject.toml` (`version`)
    - `sdk/python/pulumi_lagoon/pulumi-plugin.json` (`version`)
-   - `sdk/nodejs/package.json` (`version` and `pulumi.version`)
-3. `RELEASE_NOTES.md` updated
-4. SDKs regenerated (`make go-sdk-all`) and `go.mod`/`go.sum` restored after generation
-5. Unit tests pass (`cd provider && go test ./...`)
-6. Live testing against kind-lagoon cluster (pulumi up / refresh / destroy cycle)
+   - `sdk/nodejs/package.json` (first `version` field)
+4. Runs the full test suite
+
+After `release-prep` completes, still do manually:
+- Update `RELEASE_NOTES.md`
+- Live testing against kind-lagoon cluster (pulumi up / refresh / destroy)
+- Commit, push, and open PR to main
 
 ## Release Steps
 
@@ -73,9 +85,13 @@ matches tags by stripping the module's subdirectory prefix, so it looks for
 `sdk/go/lagoon/v0.X.Y`, NOT `v0.X.Y`. If you only push the repo-level tag,
 the proxy returns 404 and users get pseudo-versions.
 
-### SDK regeneration wipes go.mod
-`pulumi package gen-sdk` overwrites `sdk/go/lagoon/go.mod` and `sdk/go/lagoon/go.sum`.
-After regeneration, restore them: `git checkout HEAD -- sdk/go/lagoon/go.mod sdk/go/lagoon/go.sum`
+### SDK regeneration and hand-maintained files
+`pulumi package gen-sdk` replaces the entire SDK output directory. The Makefile
+targets (`go-sdk-python`, `go-sdk-nodejs`, `go-sdk-go`) generate into a temp
+directory (`.sdk-gen-tmp/`) and rsync over, so hand-maintained files are preserved.
+If you run `pulumi package gen-sdk` directly, you'll lose `go.mod`, `go.sum`,
+`README.pypi.md`, `package-lock.json`, and the pyproject.toml license fix.
+Always use the Makefile targets.
 
 ### PyPI README
 The publish workflow copies `sdk/python/README.pypi.md` (Python-specific) to
