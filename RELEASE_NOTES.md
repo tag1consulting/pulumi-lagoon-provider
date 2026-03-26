@@ -7,6 +7,8 @@ Maintenance release with CI improvements, tooling fixes, and developer experienc
 - **Makefile SDK sync**: Added `--delete` to rsync commands for generated SDK subdirectories so stale files are removed when resources are removed from the schema
 - **`release-prep` version propagation**: Restructured to bump version strings first, then build — provider binary and all SDKs now carry the new version from the start
 - **`release-prep` portability**: Replaced GNU-specific `sed '0,/pattern/s//'` with `jq` for updating `sdk/nodejs/package.json` version; works on both Linux and macOS
+- **`release-prep` self-modification bug**: Added `^` anchor to the `PROVIDER_VERSION` sed pattern so the command no longer matches and corrupts itself when the Makefile is updated in place
+- **`release-prep` Node.js SDK version drift**: The `jq` version update now sets both `.version` and `.pulumi.version` in `sdk/nodejs/package.json` to keep both fields in sync
 
 ## Improvements
 

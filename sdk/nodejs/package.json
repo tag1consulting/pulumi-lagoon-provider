@@ -23,7 +23,7 @@
     "pulumi": {
         "resource": true,
         "name": "lagoon",
-        "version": "0.2.2",
+        "version": "0.2.3",
         "server": "https://github.com/tag1consulting/pulumi-lagoon-provider/releases/download/v${VERSION}"
     }
 }
