@@ -1,6 +1,6 @@
 {
     "name": "@tag1consulting/pulumi-lagoon",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "keywords": [
         "lagoon",
         "hosting",
@@ -23,7 +23,7 @@
     "pulumi": {
         "resource": true,
         "name": "lagoon",
-        "version": "0.2.3",
+        "version": "0.2.4",
         "server": "https://github.com/tag1consulting/pulumi-lagoon-provider/releases/download/v${VERSION}"
     }
 }

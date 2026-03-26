@@ -401,7 +401,7 @@ clean-all: clean
 # Go Provider (Native)
 #==============================================================================
 
-PROVIDER_VERSION ?= 0.2.3
+PROVIDER_VERSION ?= 0.2.4
 PROVIDER_BIN     := provider/bin/pulumi-resource-lagoon
 GO_BIN           ?= $(if $(GOPATH),$(GOPATH)/bin,$(HOME)/go/bin)
 
@@ -448,7 +448,8 @@ go-sdk-nodejs: go-build
 go-sdk-go: go-build
 	rm -rf $(SDK_TMP)
 	pulumi package gen-sdk ./$(PROVIDER_BIN) --language go -o $(SDK_TMP)
-	rsync -a --delete --exclude='go.mod' --exclude='go.sum' $(SDK_TMP)/go/ sdk/go/
+	rsync -a --delete --exclude='go.mod' --exclude='go.sum' --exclude='LICENSE' $(SDK_TMP)/go/ sdk/go/
+	cp LICENSE sdk/go/lagoon/LICENSE
 	rm -rf $(SDK_TMP)
 
 # go-sdk-all regenerates all SDKs without a clean; use go-sdk-clean first for a

@@ -1,3 +1,28 @@
+# Release v0.2.4 (2026-03-26)
+
+Maintenance release fixing pkg.go.dev license display, PyPI badge accuracy, README version text, and adding automated npm publishing for the TypeScript SDK.
+
+## Bug Fixes
+
+- **Go SDK LICENSE**: Added `LICENSE` file to `sdk/go/lagoon/` directory so pkg.go.dev can detect the Apache 2.0 license and display documentation. The Go module proxy creates zip archives scoped to the module subdirectory; the repo root `LICENSE` was outside that boundary and invisible to the license checker.
+- **PyPI badge**: Switched from `badge.fury.io` to `shields.io` for the PyPI version badge to avoid CloudFront CDN caching that showed stale version `0.1.2`
+- **README version text**: Updated status line from `v0.2.2` to `v0.2.4`
+- **Makefile go-sdk-go**: Added `cp LICENSE sdk/go/lagoon/LICENSE` to automate the LICENSE copy on every SDK regeneration; added `--exclude='LICENSE'` to rsync so the file is not deleted when the SDK is regenerated
+
+## New Features
+
+- **npm publishing**: Added `build-nodejs` and `publish-npm` jobs to `.github/workflows/publish.yml`. The TypeScript SDK (`@tag1consulting/pulumi-lagoon`) is now automatically published to npm on each GitHub Release. Requires a `NPM_TOKEN` secret in a GitHub `npm` environment.
+
+## Installation
+
+```bash
+pip install pulumi-lagoon==0.2.4
+npm install @tag1consulting/pulumi-lagoon@0.2.4
+go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.2.4
+```
+
+---
+
 # Release v0.2.3 (2026-03-26)
 
 Maintenance release with CI improvements, tooling fixes, and developer experience improvements.
