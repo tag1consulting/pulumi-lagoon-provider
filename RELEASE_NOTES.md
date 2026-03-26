@@ -1,3 +1,22 @@
+# Release v0.2.5 (2026-03-26)
+
+Patch release fixing the Node.js SDK so `@tag1consulting/pulumi-lagoon` can be installed and required correctly.
+
+## Bug Fixes
+
+- **Node.js SDK `require` path**: `bin/utilities.js` called `require('./package.json')` which resolves to `bin/package.json` — a file that doesn't exist after `npm install`. Fixed to `require('../package.json')` so it correctly finds the package root. This caused the `test-install-nodejs` smoke test to fail in v0.2.4, blocking npm publishing entirely.
+- **Makefile `go-sdk-nodejs`**: Added `sed` fixup so future SDK regenerations automatically patch the generated `utilities.ts` path, preventing regression.
+
+## Installation
+
+```bash
+pip install pulumi-lagoon==0.2.5
+npm install @tag1consulting/pulumi-lagoon@0.2.5
+go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.2.5
+```
+
+---
+
 # Release v0.2.4 (2026-03-26)
 
 Maintenance release fixing pkg.go.dev license display, PyPI badge accuracy, README version text, and adding automated npm publishing for the TypeScript SDK.
