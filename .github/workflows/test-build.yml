@@ -41,6 +41,25 @@ jobs:
           name: dist
           path: sdk/python/dist/
 
+  build-nodejs:
+    name: Build Node.js distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: sdk/nodejs
+
+      - name: Build (compile TypeScript)
+        run: npm run build
+        working-directory: sdk/nodejs
+
   test-install:
     name: Test installation
     needs: build
