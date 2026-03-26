@@ -38,30 +38,26 @@ After `release-prep` completes, still do manually:
 ### 1. Tag the release on main
 
 ```bash
-git tag -a v0.X.Y -m "Release v0.X.Y"
+git tag v0.X.Y
 git push origin v0.X.Y
 ```
 
 ### 2. Create the Go module subdirectory tag
 
-**IMPORTANT**: The Go module proxy requires a subdirectory-prefixed tag for nested
-modules. Without this, `go get` cannot resolve the SDK at a tagged version and
-falls back to pseudo-versions.
+**IMPORTANT**: Push this tag **before** creating the GitHub release so the
+`warm-go-proxy` CI job finds it when the release event fires.
+
+The Go module proxy requires a subdirectory-prefixed tag for nested modules.
+Without this, `go get` cannot resolve the SDK at a tagged version and falls
+back to pseudo-versions.
 
 ```bash
-git tag -a "sdk/go/lagoon/v0.X.Y" "v0.X.Y^{}" -m "Go SDK v0.X.Y"
+git tag "sdk/go/lagoon/v0.X.Y" "v0.X.Y^{}"
 git push origin "sdk/go/lagoon/v0.X.Y"
 ```
 
 Note: Use `v0.X.Y^{}` (not `v0.X.Y`) to dereference the annotated tag and point
 to the underlying commit. Otherwise Git creates a nested tag-of-a-tag.
-
-Verify it resolves on the Go proxy:
-
-```bash
-GOPROXY=https://proxy.golang.org go list -m \
-  github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.X.Y
-```
 
 ### 3. Create the GitHub Release
 
@@ -70,17 +66,16 @@ gh release create v0.X.Y --title "v0.X.Y" --notes-file RELEASE_NOTES_EXCERPT.md
 ```
 
 This triggers the `publish.yml` workflow which:
-- Builds the Python SDK wheel
-- Tests installation on Python 3.9, 3.11, 3.12
-- Publishes to PyPI (`pulumi-lagoon`)
-- Builds and publishes the TypeScript SDK to npm (`@tag1consulting/pulumi-lagoon`) — requires `NPM_TOKEN` secret in a GitHub `npm` environment
+- Builds the Python SDK wheel; tests on Python 3.9, 3.11, 3.12; publishes to PyPI via OIDC
+- Builds the TypeScript SDK; tests on Node.js 22, 24; publishes to npm via OIDC
+- Warms the Go module proxy (`warm-go-proxy` job)
 
 ### 4. Post-Release Verification
 
 - [ ] PyPI: `pip install pulumi-lagoon==0.X.Y` works
 - [ ] npm: `npm view @tag1consulting/pulumi-lagoon version` shows `0.X.Y`
-- [ ] Go: `GOPROXY=https://proxy.golang.org go list -m github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.X.Y` resolves
-- [ ] pkg.go.dev: `https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.X.Y` shows documentation (may take ~5 min)
+- [ ] Go proxy: `make go-proxy-warmup VERSION=0.X.Y` returns 200 OK for all endpoints (automated via CI, run manually as fallback)
+- [ ] pkg.go.dev: `https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.X.Y` shows documentation (may take up to an hour after proxy warm-up)
 - [ ] GitHub release page shows correct notes
 
 ## Known Gotchas
@@ -130,13 +125,20 @@ cp LICENSE sdk/go/lagoon/LICENSE
 ```
 The `--exclude='LICENSE'` prevents rsync from deleting the file during regeneration.
 
-### npm publishing requires GitHub environment setup
-The `publish-npm` job in `publish.yml` requires:
+### npm publishing requires GitHub environment setup (OIDC)
+The `publish-npm` job in `publish.yml` uses OIDC trusted publishing (no `NPM_TOKEN`
+secret). It requires:
 1. A GitHub environment named `npm` in the repository settings
-2. An `NPM_TOKEN` secret in that environment (npm automation token for `@tag1consulting`)
+2. npm trusted publishing configured at npmjs.com for `@tag1consulting/pulumi-lagoon`
+   (Granular Access Token → OIDC, linked to this repository and environment)
 3. The first publish uses `--access public` (required for scoped packages)
 
-Without this setup, the publish step will fail silently on release.
+### Go proxy warm-up timing
+The `warm-go-proxy` CI job fires when the GitHub release is published. It assumes
+the `sdk/go/lagoon/v0.X.Y` tag already exists at that point. **Always push both
+tags before creating the GitHub release** — if the Go tag is missing, the job
+fails with a clear error message. Run `make go-proxy-warmup VERSION=0.X.Y`
+manually after pushing the tag to recover.
 
 ### Token expiry during live testing
 Keycloak OAuth tokens expire in 5 minutes. For live testing, use JWT admin tokens
