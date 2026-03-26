@@ -9,6 +9,7 @@ import typing
 from .deploy_target import *
 from .deploy_target_config import *
 from .environment import *
+from .group import *
 from .notification_email import *
 from .notification_microsoft_teams import *
 from .notification_rocket_chat import *

@@ -32,7 +32,7 @@ class EnvironmentArgs:
         The set of arguments for constructing a Environment resource.
 
         :param pulumi.Input[_builtins.str] deploy_type: Deployment type: 'branch' or 'pullrequest'.
-        :param pulumi.Input[_builtins.str] environment_type: Environment type: 'production', 'development', or 'standby'.
+        :param pulumi.Input[_builtins.str] environment_type: Environment type: 'production' or 'development'.
         :param pulumi.Input[_builtins.str] name: The environment name (typically the branch name).
         :param pulumi.Input[_builtins.int] project_id: The parent project ID.
         :param pulumi.Input[_builtins.int] auto_idle: Whether to auto-idle this environment (1=yes, 0=no).
@@ -72,7 +72,7 @@ class EnvironmentArgs:
     @pulumi.getter(name="environmentType")
     def environment_type(self) -> pulumi.Input[_builtins.str]:
         """
-        Environment type: 'production', 'development', or 'standby'.
+        Environment type: 'production' or 'development'.
         """
         return pulumi.get(self, "environment_type")
 
@@ -192,7 +192,7 @@ class Environment(pulumi.CustomResource):
         :param pulumi.Input[_builtins.str] deploy_head_ref: The head ref for pull request deployments.
         :param pulumi.Input[_builtins.str] deploy_title: Title for pull request deployments.
         :param pulumi.Input[_builtins.str] deploy_type: Deployment type: 'branch' or 'pullrequest'.
-        :param pulumi.Input[_builtins.str] environment_type: Environment type: 'production', 'development', or 'standby'.
+        :param pulumi.Input[_builtins.str] environment_type: Environment type: 'production' or 'development'.
         :param pulumi.Input[_builtins.str] name: The environment name (typically the branch name).
         :param pulumi.Input[_builtins.str] openshift_project_name: Override namespace name on the cluster.
         :param pulumi.Input[_builtins.int] project_id: The parent project ID.
@@ -350,7 +350,7 @@ class Environment(pulumi.CustomResource):
     @pulumi.getter(name="environmentType")
     def environment_type(self) -> pulumi.Output[_builtins.str]:
         """
-        Environment type: 'production', 'development', or 'standby'.
+        Environment type: 'production' or 'development'.
         """
         return pulumi.get(self, "environment_type")
 

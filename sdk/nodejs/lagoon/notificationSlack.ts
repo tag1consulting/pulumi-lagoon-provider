@@ -70,7 +70,7 @@ export class NotificationSlack extends pulumi.CustomResource {
             }
             resourceInputs["channel"] = args?.channel;
             resourceInputs["name"] = args?.name;
-            resourceInputs["webhook"] = args?.webhook !== undefined ? pulumi.secret(args.webhook) : undefined;
+            resourceInputs["webhook"] = args?.webhook ? pulumi.secret(args.webhook) : undefined;
             resourceInputs["lagoonId"] = undefined /*out*/;
         } else {
             resourceInputs["channel"] = undefined /*out*/;

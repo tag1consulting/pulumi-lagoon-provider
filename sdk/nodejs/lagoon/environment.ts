@@ -59,7 +59,7 @@ export class Environment extends pulumi.CustomResource {
      */
     declare public readonly deployType: pulumi.Output<string>;
     /**
-     * Environment type: 'production', 'development', or 'standby'.
+     * Environment type: 'production' or 'development'.
      */
     declare public readonly environmentType: pulumi.Output<string>;
     /**
@@ -168,7 +168,7 @@ export interface EnvironmentArgs {
      */
     deployType: pulumi.Input<string>;
     /**
-     * Environment type: 'production', 'development', or 'standby'.
+     * Environment type: 'production' or 'development'.
      */
     environmentType: pulumi.Input<string>;
     /**
