@@ -274,12 +274,9 @@ Key properties:
 
 ## Contributing
 
-Contributions, feedback, and bug reports are welcome!
+Contributions, feedback, and bug reports are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding guidelines, and the pull request process.
 
-1. Fork the repository
-2. Create a feature branch off `main`
-3. Make your changes with tests
-4. Submit a pull request
+This project follows a [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold these standards.
 
 ## License
 
