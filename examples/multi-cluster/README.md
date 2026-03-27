@@ -10,7 +10,7 @@ This example deploys a complete Lagoon infrastructure across two Kind clusters:
 - Kind (Kubernetes in Docker)
 - kubectl
 - Pulumi CLI
-- Python 3.8+
+- Python 3.9+
 
 ## Quick Start
 
