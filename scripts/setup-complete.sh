@@ -136,7 +136,10 @@ check_prerequisites() {
     fi
 
     if ! command -v python3 &> /dev/null; then
-        missing+=("python3")
+        missing+=("python3>=3.9")
+    elif ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)' 2>/dev/null; then
+        py_ver="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")' 2>/dev/null || echo "unknown")"
+        missing+=("python3>=3.9 (found ${py_ver})")
     fi
 
     if [ ${#missing[@]} -gt 0 ]; then
