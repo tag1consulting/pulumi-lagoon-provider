@@ -7,9 +7,9 @@
 # Configuration via environment variables:
 #
 # Cluster Configuration:
-#   KUBE_CONTEXT         - Kubernetes context (default: kind-lagoon-test)
+#   KUBE_CONTEXT         - Kubernetes context (default: kind-lagoon)
 #   LAGOON_NAMESPACE     - Namespace for Lagoon core (default: lagoon)
-#   KIND_CLUSTER_NAME    - Kind cluster name for docker inspect (default: lagoon-test)
+#   KIND_CLUSTER_NAME    - Kind cluster name for docker inspect (default: lagoon)
 #
 # Service Names (vary between single-cluster and multi-cluster):
 #   KEYCLOAK_SVC         - Keycloak service name (default: lagoon-core-keycloak)
