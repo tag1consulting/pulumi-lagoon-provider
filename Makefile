@@ -370,7 +370,7 @@ clean-all: clean
 # Go Provider (Native)
 #==============================================================================
 
-PROVIDER_VERSION ?= 0.2.6
+PROVIDER_VERSION ?= 0.2.7
 PROVIDER_BIN     := provider/bin/pulumi-resource-lagoon
 GO_BIN           ?= $(if $(GOPATH),$(GOPATH)/bin,$(HOME)/go/bin)
 

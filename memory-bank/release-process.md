@@ -1,6 +1,28 @@
 # Release Process — Pulumi Lagoon Provider
 
-**Last Updated**: 2026-03-26
+**Last Updated**: 2026-03-27
+
+## Claude Code Automation
+
+Two Claude Code tools assist with releases:
+
+### `/release` skill
+
+Invoke with `/release` in Claude Code. Walks through the complete release interactively:
+- Prompts for the target version
+- Runs the `release-validator` agent as a pre-flight check
+- Creates a worktree, runs `make release-prep`, updates the changelog
+- Guides through PR, both git tags, and GitHub release creation
+- Provides a post-release verification checklist
+
+### `release-validator` agent
+
+Pre-flight checklist runner. Used automatically by `/release`, or invoke manually:
+> "Run the release-validator for v0.X.Y"
+
+Checks: version consistency across all SDK manifests, test passage, go vet, changelog entry, clean working tree, and CI status on main. Reports PASS/FAIL per check with remediation steps.
+
+---
 
 ## Pre-Release: `make release-prep`
 
