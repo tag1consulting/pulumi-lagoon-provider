@@ -1,3 +1,40 @@
+# Release v0.2.7 (2026-03-27)
+
+Maintenance release removing the legacy Python dynamic provider, expanding CI test coverage, and fixing documentation accuracy across the single-cluster and multi-cluster examples.
+
+## Breaking Changes
+
+None. The legacy Python dynamic provider code was already superseded by the native Go provider in v0.2.0 and is now fully removed. Users on v0.2.x are unaffected.
+
+## Improvements
+
+- **Remove legacy Python dynamic provider** (#82, closes #77): Deleted the old `provider/` Python source, legacy Makefile targets, and all references to the dynamic provider. The native Go provider has been the authoritative implementation since v0.2.0; this removes dead code and reduces confusion for new contributors.
+- **Expanded CI test coverage** (#80): Added smoke tests for Node.js pack+install, Go SDK vet, and all 12 Python SDK imports. Tests now cover all three SDK languages end-to-end in CI.
+- **Go module proxy warm-up** (#79): Added `warm-go-proxy` CI job that fires on GitHub release creation, ensuring the Go module proxy is primed for `go get` immediately after release.
+- **Makefile `ensure-venv` helper** (#84): Extracted virtualenv bootstrap into a reusable `ensure-venv` target to reduce duplication across install-related targets.
+- **Release tooling**: Fixed `release-prep` sed anchor to prevent Makefile self-modification (#81); added `CLAUDE.md` and `RELEASE_NOTES.md` to version bump automation (#93).
+
+## Bug Fixes
+
+- **Go SDK LICENSE for pkg.go.dev** (#85): Automated `LICENSE` copy to `sdk/go/lagoon/` during SDK regeneration so pkg.go.dev can detect Apache 2.0 and display documentation.
+- **Multi-cluster docs** (#97, #101): Fixed incorrect Keycloak secret name; corrected description of scripts (not symlinks); added `config/` README; added jq to documented prerequisites (#91).
+- **Single-cluster setup** (#95, #96): Fixed virtualenv path mismatch in Makefile; fixed `setup-complete.sh` cluster name default; added PyJWT dependency; added provider build prerequisite step to example READMEs.
+- **Version reference updates** (#89, #98): Updated Go 1.22→1.26 and Python 3.8→3.9 version references throughout documentation.
+
+## Documentation
+
+- `memory-bank/release-process.md`: Added Claude Code automation section documenting the `/release` skill and `release-validator` agent.
+
+## Installation
+
+```bash
+pip install pulumi-lagoon==0.2.7
+npm install @tag1consulting/pulumi-lagoon@0.2.7
+go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.2.7
+```
+
+---
+
 # Release v0.2.6 (2026-03-26)
 
 Maintenance release switching npm publishing to OIDC trusted publishing, upgrading the Node.js toolchain, and fixing the PyPI badge in the Python SDK README.
