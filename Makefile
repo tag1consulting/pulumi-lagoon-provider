@@ -400,6 +400,7 @@ go-sdk-python: go-build
 	pulumi package gen-sdk ./$(PROVIDER_BIN) --language python -o $(SDK_TMP)
 	rsync -a --ignore-existing $(SDK_TMP)/python/ sdk/python/
 	rsync -a --delete $(SDK_TMP)/python/pulumi_lagoon/ sdk/python/pulumi_lagoon/
+	cp LICENSE sdk/python/LICENSE
 	rm -rf $(SDK_TMP)
 
 go-sdk-nodejs: go-build
