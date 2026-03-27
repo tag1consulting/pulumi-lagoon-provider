@@ -424,7 +424,7 @@ examples/multi-cluster/
 ├── infrastructure/          # Ingress, cert-manager, CoreDNS
 ├── registry/                # Harbor installation
 ├── lagoon/                  # Lagoon core and remote installation
-└── scripts/                 # Symlinks to ../../scripts/ (shared repository scripts)
+└── scripts/                 # Operational scripts for cluster management and authentication
 ```
 
 ## Technical Details
