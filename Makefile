@@ -452,7 +452,7 @@ release-prep: check-release-version
 	sed -i 's/"version": ".*"/"version": "$(VERSION)"/' provider/schema.json
 	sed -i 's/^\*\*Status\*\*: v[0-9]\+\.[0-9]\+\.[0-9]\+/\*\*Status\*\*: v$(VERSION)/' README.md
 	sed -i 's/^\*\*Status\*\*: v[0-9]\+\.[0-9]\+\.[0-9]\+/\*\*Status\*\*: v$(VERSION)/' CLAUDE.md
-	sed -i '1i # Release v$(VERSION) ($(shell date +%Y-%m-%d))\n\nTODO: Write release notes before committing.\n\n---\n' RELEASE_NOTES.md
+	printf '# Release v$(VERSION) (%s)\n\nTODO: Write release notes before committing.\n\n---\n\n' "$$(date +%Y-%m-%d)" > /tmp/rn_header.md && cat RELEASE_NOTES.md >> /tmp/rn_header.md && mv /tmp/rn_header.md RELEASE_NOTES.md
 	$(MAKE) PROVIDER_VERSION=$(VERSION) go-build go-sdk-python go-sdk-nodejs go-sdk-go
 	sed -i 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml
 	jq --indent 4 --arg v "$(VERSION)" '.version = $$v | .pulumi.version = $$v' sdk/nodejs/package.json > sdk/nodejs/package.json.tmp && mv sdk/nodejs/package.json.tmp sdk/nodejs/package.json
