@@ -12,5 +12,8 @@ pulumi-tls>=5.0.0,<6.0.0
 # For YAML processing (Kind config generation)
 pyyaml>=6.0.0
 
+# For JWT token generation (used by scripts/run-pulumi.sh)
+PyJWT>=2.0.0
+
 # Lagoon provider (native Go SDK)
 -e ../../sdk/python/

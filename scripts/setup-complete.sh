@@ -34,7 +34,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Configuration
-CLUSTER_NAME="${CLUSTER_NAME:-lagoon-test}"
+CLUSTER_NAME="${CLUSTER_NAME:-lagoon}"
 VENV_DIR="${VENV_DIR:-$ROOT_DIR/venv}"
 TEST_CLUSTER_DIR="$ROOT_DIR/test-cluster"
 EXAMPLE_DIR="$ROOT_DIR/examples/simple-project"
@@ -92,7 +92,7 @@ Options:
   --help            Show this help message
 
 Environment Variables:
-  CLUSTER_NAME      Kind cluster name (default: lagoon-test)
+  CLUSTER_NAME      Kind cluster name (default: lagoon)
   VENV_DIR          Python virtual environment path (default: ./venv)
 
 Prerequisites:
