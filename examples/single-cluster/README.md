@@ -26,11 +26,8 @@ This example deploys a complete Lagoon stack to a single Kind cluster. It's a si
 # From repository root
 cd examples/single-cluster
 
-# Initialize Pulumi stack
-pulumi stack init dev
-
-# Deploy
-pulumi up
+# Setup and deploy (creates venv, initializes stack, deploys)
+make deploy
 ```
 
 ## Configuration

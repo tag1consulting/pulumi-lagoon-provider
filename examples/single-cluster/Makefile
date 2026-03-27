@@ -24,8 +24,8 @@ help:
 	@echo "  make fix-migration-lock - Fix API migration lock (CrashLoopBackOff)"
 	@echo "  make show-access-info   - Show browser access info and credentials"
 
-# Use shared venv from repository root
-VENV := ../../venv
+# Local virtual environment (must match Pulumi.yaml virtualenv setting)
+VENV := venv
 PYTHON := $(VENV)/bin/python
 PULUMI := pulumi
 
@@ -36,7 +36,7 @@ setup:
 	@if [ ! -d "$(VENV)" ]; then \
 		echo "Creating virtual environment..."; \
 		python3 -m venv $(VENV); \
-		$(VENV)/bin/pip install -r ../multi-cluster/requirements.txt; \
+		$(VENV)/bin/pip install -r requirements.txt; \
 	fi
 	@$(PULUMI) stack init dev 2>/dev/null || echo "Stack already exists"
 
