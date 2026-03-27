@@ -22,12 +22,12 @@ The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1cons
 - Published to PyPI (`pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), and Go module
 - 198+ unit tests in `provider/`; comprehensive resource CRUD lifecycle
 
-> **Historical note**: v0.1.x was a Python dynamic provider, fully superseded in v0.2.0. The legacy code was removed in v0.2.6 (issue #77).
+> **Historical note**: v0.1.x was a Python dynamic provider, fully superseded in v0.2.0. The legacy code was removed in v0.2.7 (issue #77).
 
 ## Development Environment
 
 ### Prerequisites
-- Go 1.21+
+- Go 1.22+
 - Pulumi CLI installed
 - Access to a Lagoon instance with API credentials
 - GraphQL API endpoint and authentication token
