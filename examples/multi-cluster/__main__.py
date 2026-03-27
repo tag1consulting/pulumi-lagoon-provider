@@ -413,9 +413,8 @@ if lagoon_core is not None and lagoon_secrets is not None:
 # Phase 7: Ensure Database Migrations
 # =============================================================================
 
-# Lagoon v2.30.0 has a bug where Knex migrations aren't run by the init container.
-# This check ensures the base schema tables exist before we try to use the API
-# for deploy target management.
+# NOTE: Lagoon v2.30.0 had a bug where Knex migrations weren't run by the init container.
+# This was fixed in v2.31.0. This check is kept as a safety net for backward compatibility.
 knex_migrations = None
 if lagoon_core is not None:
     pulumi.log.info("Ensuring Lagoon database migrations are applied...")

@@ -20,11 +20,12 @@ VERSIONS = {
     "cert_manager": "v1.14.4",
     "harbor": "1.14.2",
     # Lagoon versions for backward compatibility testing:
+    # - v2.31.0: lagoon_core="1.60.0", lagoon_remote="0.104.1"
     # - v2.30.0: lagoon_core="1.59.0", lagoon_remote="0.103.0"
     # - v2.28.0: lagoon_core="1.56.0", lagoon_remote="0.96.0"
     # - v2.24.1: lagoon_core="1.52.0", lagoon_remote="0.90.0"
-    "lagoon_core": "1.59.0",  # v2.30.0
-    "lagoon_remote": "0.103.0",
+    "lagoon_core": "1.60.0",  # v2.31.0
+    "lagoon_remote": "0.104.1",
 }
 
 # Kind node image - use a version compatible with WSL2/cgroup v2

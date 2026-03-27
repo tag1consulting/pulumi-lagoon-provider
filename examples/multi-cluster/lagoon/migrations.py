@@ -1,10 +1,12 @@
 """Lagoon database migrations management.
 
-Lagoon v2.30.0 has a bug where the init container only runs migrations from
+Lagoon v2.30.0 had a bug where the init container only ran migrations from
 dist/migrations/lagoon/migrations/ (1 file) instead of the Knex migrations
 in database/migrations/ (44 files that create base tables like openshift).
+This bug was fixed in v2.31.0.
 
-This module provides functions to check and run Knex migrations.
+This module provides functions to check and run Knex migrations as a safety
+net for backward compatibility with older versions.
 """
 
 import os

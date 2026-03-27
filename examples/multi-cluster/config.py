@@ -21,8 +21,8 @@ VERSIONS = {
     "ingress_nginx": "4.10.1",
     "cert_manager": "v1.14.4",
     "harbor": "1.14.2",
-    "lagoon_core": "1.59.0",
-    "lagoon_remote": "0.103.0",
+    "lagoon_core": "1.60.0",  # v2.31.0
+    "lagoon_remote": "0.104.1",
 }
 
 # Kind node image - use a version compatible with WSL2/cgroup v2
