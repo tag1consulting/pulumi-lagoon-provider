@@ -23,7 +23,7 @@
 #   - kind CLI installed (https://kind.sigs.k8s.io/)
 #   - kubectl installed
 #   - pulumi CLI installed
-#   - Python 3.8+
+#   - Python 3.9+
 #
 # Total time: ~15-20 minutes for full setup
 
@@ -100,7 +100,7 @@ Prerequisites:
   - kind CLI installed (https://kind.sigs.k8s.io/)
   - kubectl installed
   - pulumi CLI installed
-  - Python 3.8+
+  - Python 3.9+
 
 Examples:
   # Full setup from scratch
