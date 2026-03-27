@@ -14,7 +14,7 @@
   "homepage": "https://github.com/tag1consulting/pulumi-lagoon-provider",
   "license": "Apache-2.0",
   "repository": "https://github.com/tag1consulting/pulumi-lagoon-provider",
-  "logoUrl": "https://raw.githubusercontent.com/tag1consulting/pulumi-lagoon-provider/main/docs/logo.png",
+  "logoUrl": "https://raw.githubusercontent.com/tag1consulting/pulumi-lagoon-provider/main/docs/logo.svg",
   "pluginDownloadURL": "github://api.github.com/tag1consulting/pulumi-lagoon-provider",
   "publisher": "Tag1 Consulting",
   "language": {
