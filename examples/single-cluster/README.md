@@ -20,6 +20,15 @@ This example deploys a complete Lagoon stack to a single Kind cluster. It's a si
 - Python 3.9+
 - Pulumi CLI
 
+## Build Provider (First Time Only)
+
+Before running this example, build the provider binary and generate the Python SDK from the repository root:
+
+```bash
+make go-build        # Build provider/bin/pulumi-resource-lagoon
+make go-sdk-python   # Generate sdk/python/
+```
+
 ## Quick Start
 
 ```bash
