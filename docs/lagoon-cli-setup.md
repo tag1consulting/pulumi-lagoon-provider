@@ -290,7 +290,7 @@ kubectl --context kind-lagoon -n lagoon-core \
 
 # Multi-cluster
 kubectl --context kind-lagoon-prod -n lagoon-core \
-  get secret prod-core-keycloak -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d
+  get secret prod-core-lagoon-core-keycloak -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d
 ```
 
 ## See Also
