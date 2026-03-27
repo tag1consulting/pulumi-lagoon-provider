@@ -17,6 +17,8 @@
 
 .PHONY: help setup preview up destroy refresh output clean port-forwards token check install
 
+PYTHON := python3
+
 # Default target
 help:
 	@echo "Lagoon Pulumi Provider - Example Project"
@@ -92,12 +94,12 @@ clean:
 	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
 	@echo "Done."
 
-# Install provider in development mode
+# Install the Go SDK Python package into a local virtualenv
 install:
-	@echo "Installing provider in development mode..."
-	@if [ -f ../../venv/bin/activate ]; then \
-		. ../../venv/bin/activate && pip install -e ../..; \
-	else \
-		echo "Virtual environment not found at ../../venv"; \
-		echo "Create it with: python3 -m venv ../../venv && source ../../venv/bin/activate && pip install -e ../.."; \
+	@echo "Installing Lagoon provider SDK..."
+	@if [ ! -d "venv" ]; then \
+		echo "Creating virtual environment..."; \
+		$(PYTHON) -m venv venv; \
 	fi
+	@./venv/bin/pip install -q -r requirements.txt
+	@echo "SDK installed. Activate with: source venv/bin/activate"

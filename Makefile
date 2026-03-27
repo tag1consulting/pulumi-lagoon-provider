@@ -4,7 +4,6 @@
 # the complete development/test environment including:
 # - Kind cluster(s)
 # - Lagoon installation via Helm
-# - Python provider installation
 # - Example project deployment
 #
 # Usage:
@@ -12,23 +11,20 @@
 #   make setup-all           - Complete setup from scratch
 #   make cluster-up          - Create Kind cluster and install Lagoon
 #   make cluster-down        - Destroy Kind cluster
-#   make provider-install    - Install provider in development mode
 #   make example-up          - Deploy example project
 #   make example-down        - Destroy example project resources
 
 .PHONY: help setup-all cluster-up cluster-down cluster-status \
-        provider-install provider-test \
         example-up example-down example-preview example-output \
         ensure-lagoon-admin ensure-deploy-target ensure-migrations \
         port-forwards check-health \
         multi-cluster-up multi-cluster-down multi-cluster-preview multi-cluster-status multi-cluster-clusters \
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
-        clean clean-all venv \
+        clean clean-all \
         go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-all go-install check-release-version release-prep go-proxy-warmup
 
 # Variables
-VENV_DIR := venv
 PYTHON := python3
 CLUSTER_NAME := lagoon
 SINGLE_CLUSTER_DIR := examples/single-cluster
@@ -46,8 +42,6 @@ help:
 	@echo "  make setup-all       - Complete setup from scratch"
 	@echo ""
 	@echo "Individual Steps:"
-	@echo "  make venv            - Create Python virtual environment"
-	@echo "  make provider-install - Install provider in development mode"
 	@echo "  make cluster-up      - Create Kind cluster and install Lagoon"
 	@echo "  make cluster-down    - Destroy Kind cluster"
 	@echo "  make cluster-status  - Check cluster and pod status"
@@ -78,8 +72,10 @@ help:
 	@echo "  make multi-cluster-test-api - Test Lagoon API access"
 	@echo "  make multi-cluster-test-ui  - Test all services via port-forward"
 	@echo ""
-	@echo "Testing:"
-	@echo "  make provider-test   - Run provider tests"
+	@echo "Go Provider:"
+	@echo "  make go-build        - Build the Go provider binary"
+	@echo "  make go-test         - Run Go provider unit tests"
+	@echo "  make go-sdk-python   - Regenerate Python SDK"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean           - Kill port-forwards, clean temp files"
@@ -109,7 +105,7 @@ help:
 # Complete Setup
 #==============================================================================
 
-setup-all: check-prerequisites venv provider-install cluster-up wait-for-lagoon ensure-lagoon-admin example-setup
+setup-all: check-prerequisites cluster-up wait-for-lagoon ensure-lagoon-admin example-setup
 	@echo ""
 	@echo "=============================================="
 	@echo "Setup Complete!"
@@ -138,37 +134,10 @@ check-prerequisites:
 	@echo "All prerequisites satisfied."
 
 #==============================================================================
-# Python Virtual Environment
-#==============================================================================
-
-venv:
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "Creating Python virtual environment..."; \
-		$(PYTHON) -m venv $(VENV_DIR); \
-		. $(VENV_DIR)/bin/activate && pip install --upgrade pip; \
-		echo "Virtual environment created at $(VENV_DIR)"; \
-	else \
-		echo "Virtual environment already exists at $(VENV_DIR)"; \
-	fi
-
-#==============================================================================
-# Provider Installation
-#==============================================================================
-
-provider-install: venv
-	@echo "Installing provider in development mode..."
-	@. $(VENV_DIR)/bin/activate && pip install -e .
-	@echo "Provider installed successfully."
-
-provider-test: venv
-	@echo "Running provider tests..."
-	@. $(VENV_DIR)/bin/activate && pytest tests/ -v
-
-#==============================================================================
 # Kind Cluster + Lagoon (Single-cluster)
 #==============================================================================
 
-cluster-up: venv
+cluster-up:
 	@echo "Setting up Kind cluster and Lagoon..."
 	@echo "This will take approximately 10-15 minutes."
 	@echo ""
@@ -281,8 +250,9 @@ ensure-deploy-target:
 # Example Project (simple-project - provider usage demo)
 #==============================================================================
 
-example-setup: venv provider-install
+example-setup:
 	@echo "Setting up example project..."
+	@$(MAKE) -C $(EXAMPLE_DIR) install
 	@cd $(EXAMPLE_DIR) && \
 		pulumi stack select test 2>/dev/null || pulumi stack init test
 	@$(MAKE) ensure-deploy-target
@@ -307,11 +277,11 @@ example-output:
 
 MULTI_CLUSTER_DIR := examples/multi-cluster
 
-multi-cluster-up: venv provider-install
+multi-cluster-up:
 	@echo "Creating multi-cluster environment (prod + nonprod)..."
 	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) deploy
 
-multi-cluster-deploy: venv provider-install
+multi-cluster-deploy:
 	@echo "Deploying multi-cluster environment with automatic retry..."
 	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) deploy
 
@@ -323,7 +293,7 @@ multi-cluster-down:
 	@echo "Destroying multi-cluster environment..."
 	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) down
 
-multi-cluster-preview: venv provider-install
+multi-cluster-preview:
 	@echo "Previewing multi-cluster changes..."
 	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) preview
 
@@ -393,7 +363,6 @@ clean-all: clean
 	fi
 	@echo "Pulumi state removed."
 	@echo ""
-	@rm -rf $(VENV_DIR) 2>/dev/null || true
 	@rm -rf $(SINGLE_CLUSTER_DIR)/venv 2>/dev/null || true
 	@echo "Full cleanup complete."
 
