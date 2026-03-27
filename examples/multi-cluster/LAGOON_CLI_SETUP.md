@@ -230,7 +230,15 @@ curl http://localhost:30030/graphql -X POST \
 
 | User | Password | Role |
 |------|----------|------|
-| lagoonadmin | lagoonadmin | Platform Admin |
+| lagoonadmin | *(auto-generated)* | Platform Admin |
+
+The `lagoonadmin` password is randomly generated during deployment. Retrieve it with:
+
+```bash
+kubectl --context kind-lagoon-prod -n lagoon-core \
+  get secret prod-core-lagoon-core-keycloak \
+  -o jsonpath='{.data.KEYCLOAK_LAGOON_ADMIN_PASSWORD}' | base64 -d && echo
+```
 
 ## Example Commands
 
