@@ -46,7 +46,7 @@ make go-sdk-python
 
 ## Project Structure
 
-```
+```text
 pulumi-lagoon-provider/
 ├── provider/                # Native Go provider (authoritative source)
 │   ├── cmd/pulumi-resource-lagoon/main.go  # Provider entry point

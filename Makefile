@@ -252,6 +252,7 @@ ensure-deploy-target:
 
 example-setup:
 	@echo "Setting up example project..."
+	@$(MAKE) -C $(EXAMPLE_DIR) install
 	@cd $(EXAMPLE_DIR) && \
 		pulumi stack select test 2>/dev/null || pulumi stack init test
 	@$(MAKE) ensure-deploy-target
