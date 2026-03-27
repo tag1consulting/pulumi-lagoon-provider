@@ -15,7 +15,7 @@
 #   make clean         - Kill port-forwards and clean up
 #   make install       - Install provider in development mode
 
-.PHONY: help setup preview up destroy refresh output clean port-forwards token check install
+.PHONY: help setup preview up destroy refresh output clean port-forwards token check ensure-venv install
 
 PYTHON := python3
 
@@ -94,12 +94,15 @@ clean:
 	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
 	@echo "Done."
 
-# Install the Go SDK Python package into a local virtualenv
-install:
-	@echo "Installing Lagoon provider SDK..."
+# Ensure a Python virtual environment exists
+ensure-venv:
 	@if [ ! -d "venv" ]; then \
 		echo "Creating virtual environment..."; \
 		$(PYTHON) -m venv venv; \
 	fi
+
+# Install the Go SDK Python package into a local virtualenv
+install: ensure-venv
+	@echo "Installing Lagoon provider SDK..."
 	@./venv/bin/pip install -q -r requirements.txt
 	@echo "SDK installed. Activate with: source venv/bin/activate"
