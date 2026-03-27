@@ -7,12 +7,15 @@
     "lagoon",
     "hosting",
     "kubernetes",
-    "pulumi"
+    "pulumi",
+    "category/infrastructure",
+    "kind/native"
   ],
   "homepage": "https://github.com/tag1consulting/pulumi-lagoon-provider",
   "license": "Apache-2.0",
   "repository": "https://github.com/tag1consulting/pulumi-lagoon-provider",
-  "pluginDownloadURL": "https://github.com/tag1consulting/pulumi-lagoon-provider/releases/download/v${VERSION}",
+  "logoUrl": "https://raw.githubusercontent.com/tag1consulting/pulumi-lagoon-provider/main/docs/logo.png",
+  "pluginDownloadURL": "github://api.github.com/tag1consulting/pulumi-lagoon-provider",
   "publisher": "Tag1 Consulting",
   "language": {
     "go": {
