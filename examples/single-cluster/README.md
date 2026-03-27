@@ -17,6 +17,7 @@ This example deploys a complete Lagoon stack to a single Kind cluster. It's a si
 - Kind (`brew install kind` or see [kind.sigs.k8s.io](https://kind.sigs.k8s.io/))
 - kubectl
 - Helm
+- jq
 - Python 3.9+
 - Pulumi CLI
 
