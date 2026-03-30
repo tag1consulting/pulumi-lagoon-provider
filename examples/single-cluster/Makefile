@@ -62,6 +62,7 @@ clean:
 # Reset Pulumi state without deleting the Kind cluster (use when state is stale/corrupted)
 clean-state:
 	@echo "Removing Pulumi state (cluster will NOT be deleted)..."
+	@$(PULUMI) stack rm dev --yes --force 2>/dev/null || true
 	@rm -rf .pulumi 2>/dev/null || true
 	@rm -f Pulumi.dev.yaml 2>/dev/null || true
 	@$(PULUMI) stack init dev 2>/dev/null || echo "Stack already exists"
@@ -70,6 +71,7 @@ clean-state:
 # Full cleanup including Pulumi state
 clean-all: clean
 	@echo "Removing Pulumi state..."
+	@$(PULUMI) stack rm dev --yes --force 2>/dev/null || true
 	@rm -rf .pulumi 2>/dev/null || true
 	@rm -f Pulumi.dev.yaml 2>/dev/null || true
 	@echo "Full cleanup complete."
