@@ -1,3 +1,21 @@
+# Release v0.2.9 (2026-03-30)
+
+Patch release fixing the GoReleaser configuration that prevented v0.2.8 provider binaries and SDK packages from being published.
+
+## Bug Fixes
+
+- **Fix GoReleaser `before.hooks` syntax** (#134, closes #133): The `.goreleaser.yml` used an unsupported map syntax (`cmd:`/`dir:`) for `before.hooks`, which expects plain strings in GoReleaser v2. This caused the publish workflow to fail on the v0.2.8 release, blocking provider binary and SDK publishing.
+
+## Installation
+
+```bash
+pip install pulumi-lagoon==0.2.9
+npm install @tag1consulting/pulumi-lagoon@0.2.9
+go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon@v0.2.9
+```
+
+---
+
 # Release v0.2.8 (2026-03-30)
 
 Feature release adding route resource management, Pulumi Registry listing, and fixing several state-corruption bugs.
