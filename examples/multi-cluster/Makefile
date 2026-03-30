@@ -257,10 +257,6 @@ deploy: setup
 	@echo "Checking if infrastructure is ready..."
 	@$(MAKE) wait-for-pods
 	@echo ""
-	@# Refresh state after Helm timeout recovery
-	@echo "Refreshing Pulumi state..."
-	./scripts/run-pulumi.sh refresh --yes || true
-	@echo ""
 	@echo "=========================================="
 	@echo "Phase 2: Deploying deploy targets..."
 	@echo "=========================================="

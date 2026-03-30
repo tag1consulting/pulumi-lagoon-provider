@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/pulumi/pulumi-go-provider/infer"
@@ -357,5 +358,43 @@ func TestDeployTargetConfigCreate_DuplicateAdopt_ListFails(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error when list configs fails")
+	}
+}
+
+func TestDeployTargetConfigCreate_ProjectNotFound(t *testing.T) {
+	mock := &mockLagoonClient{
+		getProjectByIDFn: func(_ context.Context, id int) (*client.Project, error) {
+			return nil, &client.LagoonNotFoundError{ResourceType: "Project", Identifier: fmt.Sprintf("ID=%d", id)}
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTargetConfig{}
+	_, err := r.Create(ctx, infer.CreateRequest[DeployTargetConfigArgs]{
+		Inputs: DeployTargetConfigArgs{ProjectID: 999, DeployTargetID: 7},
+	})
+	if err == nil {
+		t.Fatal("expected error when project does not exist")
+	}
+	if !strings.Contains(err.Error(), "project ID=999 not found") {
+		t.Errorf("expected error to mention project not found, got: %v", err)
+	}
+}
+
+func TestDeployTargetConfigCreate_DeployTargetNotFound(t *testing.T) {
+	mock := &mockLagoonClient{
+		getDeployTargetByIDFn: func(_ context.Context, id int) (*client.DeployTarget, error) {
+			return nil, &client.LagoonNotFoundError{ResourceType: "DeployTarget", Identifier: fmt.Sprintf("ID=%d", id)}
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTargetConfig{}
+	_, err := r.Create(ctx, infer.CreateRequest[DeployTargetConfigArgs]{
+		Inputs: DeployTargetConfigArgs{ProjectID: 1, DeployTargetID: 999},
+	})
+	if err == nil {
+		t.Fatal("expected error when deploy target does not exist")
+	}
+	if !strings.Contains(err.Error(), "deploy target ID=999 not found") {
+		t.Errorf("expected error to mention deploy target not found, got: %v", err)
 	}
 }

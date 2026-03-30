@@ -8,37 +8,46 @@ import (
 
 // Project represents a Lagoon project.
 type Project struct {
-	ID                    int    `json:"id"`
-	Name                  string `json:"name"`
-	GitURL                string `json:"gitUrl"`
-	OpenshiftID           int    `json:"-"` // normalized from openshift object
-	ProductionEnvironment string `json:"productionEnvironment"`
-	Branches              string `json:"branches"`
-	Pullrequests          string `json:"pullrequests"`
-	Created               string `json:"created"`
+	ID                      int    `json:"id"`
+	Name                    string `json:"name"`
+	GitURL                  string `json:"gitUrl"`
+	OpenshiftID             int    `json:"-"` // normalized from openshift object
+	ProductionEnvironment   string `json:"productionEnvironment"`
+	Branches                string `json:"branches"`
+	Pullrequests            string `json:"pullrequests"`
+	OpenshiftProjectPattern string `json:"openshiftProjectPattern"`
+	AutoIdle                *int   `json:"autoIdle"`
+	StorageCalc             *int   `json:"storageCalc"`
+	Created                 string `json:"created"`
 }
 
 // projectRaw is used for unmarshaling the API response which nests openshift.
 type projectRaw struct {
-	ID                    int             `json:"id"`
-	Name                  string          `json:"name"`
-	GitURL                string          `json:"gitUrl"`
-	Openshift             json.RawMessage `json:"openshift"`
-	ProductionEnvironment string          `json:"productionEnvironment"`
-	Branches              string          `json:"branches"`
-	Pullrequests          string          `json:"pullrequests"`
-	Created               string          `json:"created"`
+	ID                      int             `json:"id"`
+	Name                    string          `json:"name"`
+	GitURL                  string          `json:"gitUrl"`
+	Openshift               json.RawMessage `json:"openshift"`
+	ProductionEnvironment   string          `json:"productionEnvironment"`
+	Branches                string          `json:"branches"`
+	Pullrequests            string          `json:"pullrequests"`
+	OpenshiftProjectPattern string          `json:"openshiftProjectPattern"`
+	AutoIdle                *int            `json:"autoIdle"`
+	StorageCalc             *int            `json:"storageCalc"`
+	Created                 string          `json:"created"`
 }
 
 func normalizeProject(raw projectRaw) Project {
 	p := Project{
-		ID:                    raw.ID,
-		Name:                  raw.Name,
-		GitURL:                raw.GitURL,
-		ProductionEnvironment: raw.ProductionEnvironment,
-		Branches:              raw.Branches,
-		Pullrequests:          raw.Pullrequests,
-		Created:               raw.Created,
+		ID:                      raw.ID,
+		Name:                    raw.Name,
+		GitURL:                  raw.GitURL,
+		ProductionEnvironment:   raw.ProductionEnvironment,
+		Branches:                raw.Branches,
+		Pullrequests:            raw.Pullrequests,
+		OpenshiftProjectPattern: raw.OpenshiftProjectPattern,
+		AutoIdle:                raw.AutoIdle,
+		StorageCalc:             raw.StorageCalc,
+		Created:                 raw.Created,
 	}
 
 	// Normalize openshift to just the ID

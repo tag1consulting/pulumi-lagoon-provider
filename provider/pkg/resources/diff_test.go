@@ -1068,6 +1068,62 @@ func TestProjectDiff_OpenshiftProjectPatternUpdate(t *testing.T) {
 	}
 }
 
+func TestProjectDiff_NilInputSkipsOptionalFields(t *testing.T) {
+	// After a refresh, state may have autoIdle=1 / storageCalc=1 / openshiftProjectPattern
+	// from the API, but the user's code doesn't specify these fields (nil inputs).
+	// Diff should NOT flag these as changes — nil input means "unmanaged."
+	r := &Project{}
+	autoIdle := 1
+	storageCalc := 1
+	pattern := "${project}-${environment}"
+	olds := ProjectState{ProjectArgs: ProjectArgs{
+		Name:                    "proj",
+		GitURL:                  "git@example.com:repo.git",
+		DeploytargetID:          1,
+		AutoIdle:                &autoIdle,
+		StorageCalc:             &storageCalc,
+		OpenshiftProjectPattern: &pattern,
+	}}
+	// User's code doesn't set autoIdle, storageCalc, or openshiftProjectPattern
+	news := ProjectArgs{Name: "proj", GitURL: "git@example.com:repo.git", DeploytargetID: 1}
+
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectArgs, ProjectState]{ID: "1", State: olds, Inputs: news})
+	if err != nil {
+		t.Fatalf("Diff failed: %v", err)
+	}
+	if resp.HasChanges {
+		t.Errorf("expected no changes when optional fields are nil in inputs but set in state, got diff: %v", resp.DetailedDiff)
+	}
+}
+
+func TestProjectDiff_NilInputSkipsLegacyOptionalFields(t *testing.T) {
+	// productionEnvironment, branches, and pullrequests are also pointer (optional) fields.
+	// After a refresh, state may have these populated from the API, but if the user's
+	// code omits them (nil inputs), Diff should NOT flag them as changes.
+	r := &Project{}
+	prodEnv := "main"
+	branches := "^(main|develop)$"
+	pullrequests := "true"
+	olds := ProjectState{ProjectArgs: ProjectArgs{
+		Name:                  "proj",
+		GitURL:                "git@example.com:repo.git",
+		DeploytargetID:        1,
+		ProductionEnvironment: &prodEnv,
+		Branches:              &branches,
+		Pullrequests:          &pullrequests,
+	}}
+	// User's code doesn't set productionEnvironment, branches, or pullrequests
+	news := ProjectArgs{Name: "proj", GitURL: "git@example.com:repo.git", DeploytargetID: 1}
+
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectArgs, ProjectState]{ID: "1", State: olds, Inputs: news})
+	if err != nil {
+		t.Fatalf("Diff failed: %v", err)
+	}
+	if resp.HasChanges {
+		t.Errorf("expected no changes when legacy optional fields are nil in inputs but set in state, got diff: %v", resp.DetailedDiff)
+	}
+}
+
 // --- Environment: additional field tests ---
 
 func TestEnvironmentDiff_EnvironmentTypeUpdate(t *testing.T) {

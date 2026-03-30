@@ -18,6 +18,9 @@ mutation AddProject($input: AddProjectInput!) {
         productionEnvironment
         branches
         pullrequests
+        openshiftProjectPattern
+        autoIdle
+        storageCalc
         created
     }
 }`
@@ -35,6 +38,9 @@ query ProjectByName($name: String!) {
         productionEnvironment
         branches
         pullrequests
+        openshiftProjectPattern
+        autoIdle
+        storageCalc
         created
     }
 }`
@@ -52,6 +58,9 @@ query AllProjects {
         productionEnvironment
         branches
         pullrequests
+        openshiftProjectPattern
+        autoIdle
+        storageCalc
         created
     }
 }`
@@ -69,6 +78,9 @@ mutation UpdateProject($input: UpdateProjectInput!) {
         productionEnvironment
         branches
         pullrequests
+        openshiftProjectPattern
+        autoIdle
+        storageCalc
     }
 }`
 

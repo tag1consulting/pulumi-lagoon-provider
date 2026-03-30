@@ -366,6 +366,43 @@ func TestProjectRead_APIError(t *testing.T) {
 	}
 }
 
+func TestProjectRead_OptionalFields(t *testing.T) {
+	autoIdle := 1
+	storagecalc := 0
+	mock := &mockLagoonClient{
+		getProjectByIDFn: func(_ context.Context, id int) (*client.Project, error) {
+			return &client.Project{
+				ID:                      id,
+				Name:                    "myproject",
+				GitURL:                  "git@example.com:repo.git",
+				OpenshiftID:             3,
+				ProductionEnvironment:   "main",
+				Branches:                "main|develop",
+				Pullrequests:            "true",
+				OpenshiftProjectPattern: "${project}-${environment}",
+				AutoIdle:                &autoIdle,
+				StorageCalc:             &storagecalc,
+				Created:                 "2024-01-01",
+			}, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Project{}
+	resp, err := r.Read(ctx, infer.ReadRequest[ProjectArgs, ProjectState]{ID: "42"})
+	if err != nil {
+		t.Fatalf("Read failed: %v", err)
+	}
+	if resp.Inputs.OpenshiftProjectPattern == nil || *resp.Inputs.OpenshiftProjectPattern != "${project}-${environment}" {
+		t.Errorf("expected OpenshiftProjectPattern '${project}-${environment}', got %v", resp.Inputs.OpenshiftProjectPattern)
+	}
+	if resp.Inputs.AutoIdle == nil || *resp.Inputs.AutoIdle != 1 {
+		t.Errorf("expected AutoIdle 1, got %v", resp.Inputs.AutoIdle)
+	}
+	if resp.Inputs.StorageCalc == nil || *resp.Inputs.StorageCalc != 0 {
+		t.Errorf("expected StorageCalc 0, got %v", resp.Inputs.StorageCalc)
+	}
+}
+
 func TestProjectCreate_OptionalFields(t *testing.T) {
 	prodEnv := "main"
 	branches := "main|develop"
