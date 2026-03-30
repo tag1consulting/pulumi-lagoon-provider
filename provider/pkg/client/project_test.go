@@ -145,6 +145,22 @@ func TestGetProjectByID_NotFound(t *testing.T) {
 	}
 }
 
+func TestGetProjectByID_EmptyListNotTreatedAsNotFound(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"allProjects": []map[string]any{}}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetProjectByID(context.Background(), 42)
+	if err == nil {
+		t.Fatal("expected error when allProjects returns empty")
+	}
+	if errors.Is(err, ErrNotFound) {
+		t.Error("empty allProjects must not return ErrNotFound (would cause silent state removal)")
+	}
+}
+
 func TestUpdateProject(t *testing.T) {
 	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
 		if !strings.Contains(query, "updateProject") {
