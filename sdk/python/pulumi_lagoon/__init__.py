@@ -59,3 +59,8 @@ _utilities.register(
 ]
 """
 )
+
+# Expose the package version as the conventional __version__ attribute.
+# The code generator does not emit this; it is appended by the go-sdk-python
+# Makefile target after generation so it survives SDK regenerations.
+__version__: str = _utilities.get_version()

@@ -12,9 +12,32 @@ on:
         type: boolean
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  goreleaser:
+    name: Build and publish provider binaries
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: provider/go.mod
+          cache-dependency-path: provider/go.sum
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          args: release --clean
+          version: '~> 2'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-python:
     name: Build Python distribution
     runs-on: ubuntu-latest
@@ -189,7 +212,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    needs: [build-python, test-install-python]
+    needs: [goreleaser, build-python, test-install-python]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
     environment:
@@ -209,7 +232,7 @@ jobs:
 
   publish-npm:
     name: Publish to npm
-    needs: [build-nodejs, test-install-nodejs]
+    needs: [goreleaser, build-nodejs, test-install-nodejs]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
     environment:
