@@ -90,6 +90,12 @@ func (c *Client) getNotificationByName(ctx context.Context, cfg notificationType
 	if err != nil {
 		return nil, err
 	}
+	// An empty result from allNotifications is suspicious when we're looking for a
+	// specific notification: it may indicate an API permissions issue rather than
+	// genuine deletion. Return an error so callers don't silently remove state.
+	if len(all) == 0 {
+		return nil, fmt.Errorf("allNotifications returned no results; cannot confirm %s %q was deleted (possible API permissions issue)", cfg.typeName, name)
+	}
 	for _, n := range all {
 		if n.TypeName == cfg.typeName && n.Name == name {
 			return &n, nil

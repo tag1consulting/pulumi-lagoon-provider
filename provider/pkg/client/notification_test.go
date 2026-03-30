@@ -224,7 +224,9 @@ func TestGetNotificationEmailByName(t *testing.T) {
 func TestGetNotificationEmailByName_NotFound(t *testing.T) {
 	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
 		return map[string]any{
-			"allNotifications": []map[string]any{},
+			"allNotifications": []map[string]any{
+				{"__typename": "NotificationSlack", "id": 1, "name": "other-notif"},
+			},
 		}, nil
 	})
 	defer server.Close()
@@ -236,6 +238,22 @@ func TestGetNotificationEmailByName_NotFound(t *testing.T) {
 	}
 	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got %T", err)
+	}
+}
+
+func TestGetNotificationByName_EmptyListNotTreatedAsNotFound(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"allNotifications": []map[string]any{}}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetNotificationSlackByName(context.Background(), "my-webhook")
+	if err == nil {
+		t.Fatal("expected error when allNotifications returns empty")
+	}
+	if errors.Is(err, ErrNotFound) {
+		t.Error("empty allNotifications must not return ErrNotFound (would cause silent state removal)")
 	}
 }
 

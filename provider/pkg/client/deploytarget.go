@@ -42,6 +42,13 @@ func (c *Client) GetDeployTargetByID(ctx context.Context, id int) (*DeployTarget
 		return nil, err
 	}
 
+	// An empty result from allKubernetes is suspicious when we're looking for a
+	// specific ID: it may indicate an API permissions issue rather than genuine
+	// deletion. Return an error so callers don't silently remove state.
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("allKubernetes returned no results; cannot confirm deploy target ID=%d was deleted (possible API permissions issue)", id)
+	}
+
 	for _, dt := range targets {
 		if dt.ID == id {
 			return &dt, nil
@@ -59,6 +66,13 @@ func (c *Client) GetDeployTargetByName(ctx context.Context, name string) (*Deplo
 	targets, err := c.GetAllDeployTargets(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// An empty result from allKubernetes is suspicious when we're looking for a
+	// specific resource: it may indicate an API permissions issue rather than genuine
+	// deletion. Return an error so callers don't silently remove state.
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("allKubernetes returned no results; cannot confirm deploy target %q was deleted (possible API permissions issue)", name)
 	}
 
 	for _, dt := range targets {

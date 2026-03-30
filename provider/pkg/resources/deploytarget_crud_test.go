@@ -2,7 +2,10 @@ package resources
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -277,6 +280,47 @@ func TestDeployTargetRead_NotFound(t *testing.T) {
 	}
 	if resp.ID != "" {
 		t.Errorf("expected empty ID, got %q", resp.ID)
+	}
+}
+
+func TestDeployTargetRead_EmptyListReturnsError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getDeployTargetByIDFn: func(_ context.Context, id int) (*client.DeployTarget, error) {
+			return nil, fmt.Errorf("allKubernetes returned no results; cannot confirm deploy target ID=%d was deleted (possible API permissions issue)", id)
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTarget{}
+	_, err := r.Read(ctx, infer.ReadRequest[DeployTargetArgs, DeployTargetState]{ID: "7"})
+	if err == nil {
+		t.Fatal("expected error when allKubernetes returns empty")
+	}
+}
+
+// TestDeployTargetRead_EmptyListGraphQL mirrors TestDeployTargetRead_EmptyListReturnsError
+// using a real GraphQL client backed by an HTTP test server, exercising the full
+// allKubernetes -> client.GetDeployTargetByID -> DeployTarget.Read path.
+func TestDeployTargetRead_EmptyListGraphQL(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		resp := map[string]any{
+			"data": map[string]any{
+				"allKubernetes": []map[string]any{},
+			},
+		}
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	realClient := client.NewClient(server.URL, "test-token")
+	ctx := withTestClient(context.Background(), realClient)
+	r := &DeployTarget{}
+	_, err := r.Read(ctx, infer.ReadRequest[DeployTargetArgs, DeployTargetState]{ID: "7"})
+	if err == nil {
+		t.Fatal("expected error when allKubernetes returns empty list via real GraphQL client")
+	}
+	if !strings.Contains(err.Error(), "allKubernetes") {
+		t.Errorf("expected error to mention allKubernetes, got: %v", err)
 	}
 }
 

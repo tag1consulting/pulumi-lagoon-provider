@@ -114,6 +114,13 @@ func (c *Client) GetProjectByID(ctx context.Context, projectID int) (*Project, e
 		return nil, fmt.Errorf("failed to unmarshal allProjects: %w", err)
 	}
 
+	// An empty result from allProjects is suspicious when we're looking for a
+	// specific project: it may indicate an API permissions issue rather than genuine
+	// deletion. Return an error so callers don't silently remove state.
+	if len(rawProjects) == 0 {
+		return nil, fmt.Errorf("allProjects returned no results; cannot confirm project ID=%d was deleted (possible API permissions issue)", projectID)
+	}
+
 	for _, rp := range rawProjects {
 		if rp.ID == projectID {
 			p := normalizeProject(rp)
