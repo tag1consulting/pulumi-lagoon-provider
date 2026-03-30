@@ -62,6 +62,22 @@ func (r *DeployTargetConfig) Create(ctx context.Context, req infer.CreateRequest
 		}, nil
 	}
 
+	// Pre-check: verify referenced resources exist before calling addDeployTargetConfig.
+	// Without this, the API returns opaque errors when a project or deploy target is
+	// missing (e.g. after a two-phase deploy deletes and recreates resources).
+	if _, err := c.GetProjectByID(ctx, req.Inputs.ProjectID); err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.CreateResponse[DeployTargetConfigState]{}, fmt.Errorf("project ID=%d not found; ensure the project exists before creating a deploy target config", req.Inputs.ProjectID)
+		}
+		return infer.CreateResponse[DeployTargetConfigState]{}, fmt.Errorf("failed to verify project ID=%d exists: %w", req.Inputs.ProjectID, err)
+	}
+	if _, err := c.GetDeployTargetByID(ctx, req.Inputs.DeployTargetID); err != nil {
+		if errors.Is(err, client.ErrNotFound) {
+			return infer.CreateResponse[DeployTargetConfigState]{}, fmt.Errorf("deploy target ID=%d not found; ensure the deploy target exists before creating a deploy target config", req.Inputs.DeployTargetID)
+		}
+		return infer.CreateResponse[DeployTargetConfigState]{}, fmt.Errorf("failed to verify deploy target ID=%d exists: %w", req.Inputs.DeployTargetID, err)
+	}
+
 	dtc, err := c.CreateDeployTargetConfig(ctx, input)
 	if err != nil {
 		if !client.IsDuplicateEntry(err) {
