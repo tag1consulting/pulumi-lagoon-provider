@@ -13,7 +13,7 @@
 #   make clusters      - List Kind clusters
 #   make clean         - Delete Kind clusters directly
 
-.PHONY: help setup preview up down refresh status clusters clean clean-all \
+.PHONY: help setup preview up down refresh status clusters clean clean-all clean-state \
         port-forwards port-forwards-all port-forwards-stop \
         token check fix-rabbitmq fix-migration-lock ensure-lagoon-admin \
         deploy verify wait-for-pods test-api test-ui show-access-info \
@@ -162,6 +162,15 @@ clean:
 	@echo "Killing port-forwards..."
 	@-pgrep -f "kubectl.*port-forward.*lagoon-core" | xargs -r kill 2>/dev/null || true
 	@echo "Done."
+
+# Reset Pulumi state without deleting Kind clusters (use when state is stale/corrupted)
+clean-state:
+	@echo "Removing Pulumi state (clusters will NOT be deleted)..."
+	@pulumi stack rm dev --yes --force 2>/dev/null || true
+	@rm -rf .pulumi 2>/dev/null || true
+	@rm -f Pulumi.dev.yaml 2>/dev/null || true
+	@pulumi stack init dev
+	@echo "State reset complete. Run 'make deploy' to redeploy."
 
 # Full cleanup including Pulumi state
 # Note: This removes the Pulumi stack entirely (works with both local and cloud backends)
