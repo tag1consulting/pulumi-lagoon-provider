@@ -1,6 +1,6 @@
 # Single-cluster Lagoon Example Makefile
 
-.PHONY: help setup deploy preview up down clean clean-all status fix-migration-lock show-access-info
+.PHONY: help setup deploy preview up down clean clean-all clean-state status fix-migration-lock show-access-info
 
 help:
 	@echo "Single-cluster Lagoon Example"
@@ -58,6 +58,14 @@ status:
 clean:
 	@echo "Deleting Kind cluster..."
 	kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
+
+# Reset Pulumi state without deleting the Kind cluster (use when state is stale/corrupted)
+clean-state:
+	@echo "Removing Pulumi state (cluster will NOT be deleted)..."
+	@rm -rf .pulumi 2>/dev/null || true
+	@rm -f Pulumi.dev.yaml 2>/dev/null || true
+	@$(PULUMI) stack init dev 2>/dev/null || echo "Stack already exists"
+	@echo "State reset complete. Run 'make deploy' to redeploy."
 
 # Full cleanup including Pulumi state
 clean-all: clean

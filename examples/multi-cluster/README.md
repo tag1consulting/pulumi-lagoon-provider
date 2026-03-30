@@ -424,6 +424,40 @@ The nonprod remote controller connects to the prod RabbitMQ via NodePort 30672. 
 kubectl --context kind-lagoon-prod get svc -n lagoon-core | grep broker
 ```
 
+### Recovering from Stale Pulumi State
+
+If a Kind cluster is deleted outside of Pulumi (e.g., `kind delete cluster --name lagoon-prod`) and `pulumi up` then fails with authentication errors, timeouts, or "resource does not exist" messages, the Pulumi state is stale and must be cleaned up.
+
+**Option 1 — Reset state and redeploy from scratch (simplest)**
+
+```bash
+make clean-state   # removes Pulumi stack; does NOT delete clusters
+make deploy        # redeploys everything fresh
+```
+
+**Option 2 — Delete individual stuck resources**
+
+Use this when most resources are healthy and only a few are stuck:
+
+```bash
+# List all resources in state
+pulumi stack --show-urns
+
+# Delete a specific stuck resource (and anything that depends on it)
+pulumi state delete 'urn:pulumi:dev::multi-cluster::lagoon:lagoon:DeployTarget::my-target' \
+    --target-dependents --yes
+
+# Then re-run to recreate just the missing resource
+pulumi up --yes
+```
+
+**Option 3 — Full wipe (clusters + state)**
+
+```bash
+make clean-all     # deletes Kind clusters and Pulumi state
+make deploy        # start completely from scratch
+```
+
 ## File Structure
 
 ```
