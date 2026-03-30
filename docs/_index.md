@@ -1,0 +1,117 @@
+---
+title: Lagoon
+meta_desc: Provides an overview of the Lagoon provider for Pulumi. Manage Lagoon hosting platform projects, environments, variables, and more as infrastructure-as-code.
+layout: package
+---
+
+The Lagoon provider for Pulumi lets you manage resources on the [Lagoon](https://docs.lagoon.sh/) open-source hosting platform as infrastructure-as-code. Lagoon is a Kubernetes-native platform designed for hosting web applications, and is developed by [Amazee.io](https://www.amazee.io/).
+
+With this provider you can declaratively manage:
+
+- **Projects** — Git-backed application definitions
+- **Environments** — Branch or pull-request deployments within a project
+- **Variables** — Project- and environment-level configuration variables
+- **Deploy Targets** — Kubernetes clusters registered as deployment targets
+- **Notifications** — Slack, RocketChat, Email, and Microsoft Teams alerts
+- **Tasks** — Advanced task definitions (on-demand commands and container-based jobs)
+- **Groups** — Organizational groupings of projects and users
+
+## Example
+
+{{< chooser language "typescript,python,go,yaml" >}}
+
+{{% choosable language typescript %}}
+```typescript
+import * as pulumi from "@pulumi/pulumi";
+import * as lagoon from "@tag1consulting/pulumi-lagoon";
+
+const provider = new lagoon.Provider("lagoon", {
+    apiUrl: "https://api.lagoon.example.com/graphql",
+    token: "your-lagoon-jwt-token",
+});
+
+const project = new lagoon.lagoon.Project("my-project", {
+    name: "my-project",
+    gitUrl: "git@github.com:my-org/my-repo.git",
+    deploytargetId: 1,
+    productionEnvironment: "main",
+    branches: "^(main|staging)$",
+}, { provider });
+```
+{{% /choosable %}}
+
+{{% choosable language python %}}
+```python
+import pulumi
+import pulumi_lagoon as lagoon
+
+provider = lagoon.Provider("lagoon",
+    api_url="https://api.lagoon.example.com/graphql",
+    token="your-lagoon-jwt-token",
+)
+
+project = lagoon.lagoon.Project("my-project",
+    name="my-project",
+    git_url="git@github.com:my-org/my-repo.git",
+    deploytarget_id=1,
+    production_environment="main",
+    branches="^(main|staging)$",
+    opts=pulumi.ResourceOptions(provider=provider),
+)
+```
+{{% /choosable %}}
+
+{{% choosable language go %}}
+```go
+package main
+
+import (
+    "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+    lagoon "github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon"
+    lagoonres "github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon/lagoon"
+)
+
+func main() {
+    pulumi.Run(func(ctx *pulumi.Context) error {
+        provider, err := lagoon.NewProvider(ctx, "lagoon", &lagoon.ProviderArgs{
+            ApiUrl: pulumi.String("https://api.lagoon.example.com/graphql"),
+            Token:  pulumi.String("your-lagoon-jwt-token"),
+        })
+        if err != nil {
+            return err
+        }
+
+        _, err = lagoonres.NewProject(ctx, "my-project", &lagoonres.ProjectArgs{
+            Name:                  pulumi.String("my-project"),
+            GitUrl:                pulumi.String("git@github.com:my-org/my-repo.git"),
+            DeploytargetId:        pulumi.Int(1),
+            ProductionEnvironment: pulumi.String("main"),
+            Branches:              pulumi.String("^(main|staging)$"),
+        }, pulumi.Provider(provider))
+        return err
+    })
+}
+```
+{{% /choosable %}}
+
+{{% choosable language yaml %}}
+```yaml
+config:
+  lagoon:apiUrl:
+    value: https://api.lagoon.example.com/graphql
+  lagoon:token:
+    value: your-lagoon-jwt-token
+
+resources:
+  my-project:
+    type: lagoon:lagoon:Project
+    properties:
+      name: my-project
+      gitUrl: git@github.com:my-org/my-repo.git
+      deploytargetId: 1
+      productionEnvironment: main
+      branches: "^(main|staging)$"
+```
+{{% /choosable %}}
+
+{{< /chooser >}}
