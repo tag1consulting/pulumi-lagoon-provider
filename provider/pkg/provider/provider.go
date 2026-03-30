@@ -23,6 +23,7 @@ func NewProvider(version string) (p.Provider, error) {
 				"importBasePath":                "github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon",
 				"generateExtraInputTypes":       true,
 				"generateResourceContainerTypes": true,
+				"respectSchemaVersion":           true,
 			},
 			"nodejs": map[string]any{
 				"packageName":          "@tag1consulting/pulumi-lagoon",
