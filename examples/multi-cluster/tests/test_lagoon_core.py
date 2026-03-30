@@ -121,25 +121,25 @@ class TestServiceNaming:
         """Test API service name follows Helm chart pattern."""
         release_name = "prod-core"
 
-        # Pattern: {release_name}-api
-        api_service = f"{release_name}-api"
-        assert api_service == "prod-core-api"
+        # Pattern: {release_name}-lagoon-core-api (no deduplication: "lagoon-core" not in "prod-core")
+        api_service = f"{release_name}-lagoon-core-api"
+        assert api_service == "prod-core-lagoon-core-api"
 
     def test_broker_service_name(self):
         """Test RabbitMQ broker service name follows Helm chart pattern."""
         release_name = "prod-core"
 
-        # Pattern: {release_name}-broker
-        broker_service = f"{release_name}-broker"
-        assert broker_service == "prod-core-broker"
+        # Pattern: {release_name}-lagoon-core-broker
+        broker_service = f"{release_name}-lagoon-core-broker"
+        assert broker_service == "prod-core-lagoon-core-broker"
 
     def test_ssh_service_name(self):
         """Test SSH service name follows Helm chart pattern."""
         release_name = "prod-core"
 
-        # Pattern: {release_name}-ssh
-        ssh_service = f"{release_name}-ssh"
-        assert ssh_service == "prod-core-ssh"
+        # Pattern: {release_name}-lagoon-core-ssh
+        ssh_service = f"{release_name}-lagoon-core-ssh"
+        assert ssh_service == "prod-core-lagoon-core-ssh"
 
 
 class TestRabbitMQNodePortConfiguration:
@@ -162,9 +162,9 @@ class TestRabbitMQNodePortConfiguration:
         release_name = "prod-core"
 
         # Selector labels should match broker pods
-        # Pattern: {release_name}-broker
+        # Pattern: {release_name}-lagoon-core-broker
         selector = {
-            "app.kubernetes.io/component": f"{release_name}-broker",
+            "app.kubernetes.io/component": f"{release_name}-lagoon-core-broker",
             "app.kubernetes.io/instance": release_name,
             "app.kubernetes.io/name": "lagoon-core",
         }
