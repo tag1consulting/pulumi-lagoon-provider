@@ -40,8 +40,8 @@ At least one authentication method must be provided:
 | Config key | Environment variable | Default | Description |
 |---|---|---|---|
 | `lagoon:apiUrl` | `LAGOON_API_URL` | `https://api.lagoon.sh/graphql` | The Lagoon GraphQL API endpoint |
-| `lagoon:jwtAudience` | — | `api.dev` | Audience claim for generated JWT tokens |
-| `lagoon:insecure` | — | `false` | Disable SSL certificate verification |
+| `lagoon:jwtAudience` | `LAGOON_JWT_AUDIENCE` | `api.dev` | Audience claim for generated JWT tokens |
+| `lagoon:insecure` | `LAGOON_INSECURE` | `false` | Disable SSL certificate verification |
 
 ### Setting Configuration
 
