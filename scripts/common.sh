@@ -55,16 +55,18 @@ case "${LAGOON_PRESET:-}" in
         ;;
     multi-prod)
         # Multi-cluster production defaults
-        # Release name is "prod-core", so services are {release_name}-{component}
+        # Release name is "prod-core"; chart name is "lagoon-core". Since the release name
+        # does NOT contain the chart name, Helm does not deduplicate, so services are named
+        # {release_name}-lagoon-core-{component} (e.g. prod-core-lagoon-core-keycloak).
         KUBE_CONTEXT="${KUBE_CONTEXT:-kind-lagoon-prod}"
         LAGOON_NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
         KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-lagoon-prod}"
-        KEYCLOAK_SVC="${KEYCLOAK_SVC:-prod-core-keycloak}"
-        API_SVC="${API_SVC:-prod-core-api}"
-        SSH_SVC="${SSH_SVC:-prod-core-ssh}"
-        KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-prod-core-keycloak}"
-        CORE_SECRETS="${CORE_SECRETS:-prod-core-secrets}"
-        BROKER_SECRET="${BROKER_SECRET:-prod-core-broker}"
+        KEYCLOAK_SVC="${KEYCLOAK_SVC:-prod-core-lagoon-core-keycloak}"
+        API_SVC="${API_SVC:-prod-core-lagoon-core-api}"
+        SSH_SVC="${SSH_SVC:-prod-core-lagoon-core-ssh}"
+        KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-prod-core-lagoon-core-keycloak}"
+        CORE_SECRETS="${CORE_SECRETS:-prod-core-lagoon-core-secrets}"
+        BROKER_SECRET="${BROKER_SECRET:-prod-core-lagoon-core-broker}"
         REMOTE_SECRET="${REMOTE_SECRET:-prod-lagoon-remote-lagoon-build-deploy}"
         REMOTE_DEPLOYMENT="${REMOTE_DEPLOYMENT:-prod-lagoon-remote-lagoon-build-deploy}"
         ;;
