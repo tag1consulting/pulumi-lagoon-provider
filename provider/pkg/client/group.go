@@ -47,6 +47,13 @@ func (c *Client) GetGroupByName(ctx context.Context, name string) (*Group, error
 		return nil, fmt.Errorf("allGroups: %w", err)
 	}
 
+	// An empty result from allGroups is suspicious when we're looking for a
+	// specific group: it may indicate an API permissions issue rather than genuine
+	// deletion. Return an error so callers don't silently remove state.
+	if len(groups) == 0 {
+		return nil, fmt.Errorf("allGroups returned no results; cannot confirm group %q was deleted (possible API permissions issue)", name)
+	}
+
 	for _, g := range groups {
 		if g.Name == name {
 			return &g, nil

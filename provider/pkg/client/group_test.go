@@ -115,6 +115,22 @@ func TestGetGroupByName_NotFound(t *testing.T) {
 	}
 }
 
+func TestGetGroupByName_EmptyListNotTreatedAsNotFound(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"allGroups": []map[string]any{}}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetGroupByName(context.Background(), "my-group")
+	if err == nil {
+		t.Fatal("expected error when allGroups returns empty")
+	}
+	if errors.Is(err, ErrNotFound) {
+		t.Error("empty allGroups must not return ErrNotFound (would cause silent state removal)")
+	}
+}
+
 func TestUpdateGroup(t *testing.T) {
 	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
 		if !strings.Contains(query, "updateGroup") {
