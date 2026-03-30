@@ -103,14 +103,22 @@ check_knex_migrations() {
 
     log_info "Checking if Knex migrations have been run..."
 
-    # First, check if the migratedb job completed successfully (works for all versions)
-    local job_status
-    job_status=$(kubectl --context "$KUBE_CONTEXT" -n "$LAGOON_NAMESPACE" get jobs \
-        -o jsonpath='{.items[?(@.metadata.name contains "migratedb")].status.succeeded}' 2>/dev/null | head -1)
+    # First, check if the migratedb job completed successfully (works for all versions).
+    # Note: Kubernetes JSONPath does not support substring filters like 'contains';
+    # get job names as plain text and use grep to find a migratedb job, then query
+    # that specific job's status with a valid JSONPath field expression.
+    local migratedb_job
+    migratedb_job=$(kubectl --context "$KUBE_CONTEXT" -n "$LAGOON_NAMESPACE" get jobs \
+        -o name 2>/dev/null | grep migratedb | head -1 | cut -d/ -f2)
 
-    if [ "$job_status" = "1" ]; then
-        log_info "Migration job completed successfully - assuming migrations are applied"
-        return 0
+    if [ -n "$migratedb_job" ]; then
+        local job_status
+        job_status=$(kubectl --context "$KUBE_CONTEXT" -n "$LAGOON_NAMESPACE" get job "$migratedb_job" \
+            -o jsonpath='{.status.succeeded}' 2>/dev/null)
+        if [ "$job_status" = "1" ]; then
+            log_info "Migration job '$migratedb_job' completed successfully - assuming migrations are applied"
+            return 0
+        fi
     fi
 
     # Fallback: Try to check the openshift table directly using node
