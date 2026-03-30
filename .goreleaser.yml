@@ -2,7 +2,7 @@ version: 2
 
 before:
   hooks:
-    - cd provider && go mod tidy
+    - bash -c "cd provider && go mod tidy"
 
 builds:
   - id: pulumi-resource-lagoon
