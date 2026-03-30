@@ -196,6 +196,11 @@ func (r *Project) Read(ctx context.Context, req infer.ReadRequest[ProjectArgs, P
 	if project.Pullrequests != "" {
 		args.Pullrequests = &project.Pullrequests
 	}
+	if project.OpenshiftProjectPattern != "" {
+		args.OpenshiftProjectPattern = &project.OpenshiftProjectPattern
+	}
+	args.AutoIdle = project.AutoIdle
+	args.StorageCalc = project.StorageCalc
 
 	st := ProjectState{
 		ProjectArgs: args,
@@ -235,13 +240,16 @@ func (r *Project) Diff(ctx context.Context, req infer.DiffRequest[ProjectArgs, P
 	if ptrDiffers(req.Inputs.Pullrequests, req.State.Pullrequests) {
 		diff["pullrequests"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(req.Inputs.OpenshiftProjectPattern, req.State.OpenshiftProjectPattern) {
+	// These optional fields use nil-means-unmanaged semantics: if the user's
+	// input is nil they don't want to manage the field, so skip the diff even
+	// if the API returns a value.  This prevents spurious updates on refresh.
+	if req.Inputs.OpenshiftProjectPattern != nil && ptrDiffers(req.Inputs.OpenshiftProjectPattern, req.State.OpenshiftProjectPattern) {
 		diff["openshiftProjectPattern"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrIntDiffers(req.Inputs.AutoIdle, req.State.AutoIdle) {
+	if req.Inputs.AutoIdle != nil && ptrIntDiffers(req.Inputs.AutoIdle, req.State.AutoIdle) {
 		diff["autoIdle"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrIntDiffers(req.Inputs.StorageCalc, req.State.StorageCalc) {
+	if req.Inputs.StorageCalc != nil && ptrIntDiffers(req.Inputs.StorageCalc, req.State.StorageCalc) {
 		diff["storageCalc"] = p.PropertyDiff{Kind: p.Update}
 	}
 
