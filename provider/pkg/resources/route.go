@@ -151,16 +151,17 @@ func (r *Route) Create(ctx context.Context, req infer.CreateRequest[RouteArgs]) 
 		return infer.CreateResponse[RouteState]{}, fmt.Errorf("failed to create route: %w", err)
 	}
 
-	// monitoringPath is not in AddRouteToProjectInput — apply via update
+	// monitoringPath is not in AddRouteToProjectInput — apply via follow-up update.
+	// If the update fails, clear monitoringPath from args so state reflects reality
+	// and the next apply retries setting the field.
 	if args.MonitoringPath != nil {
 		patch := map[string]any{
-			"domain":         args.Domain,
-			"project":        args.ProjectName,
-			"patch":          map[string]any{"monitoringPath": *args.MonitoringPath},
+			"domain":  args.Domain,
+			"project": args.ProjectName,
+			"patch":   map[string]any{"monitoringPath": *args.MonitoringPath},
 		}
 		if _, err := c.UpdateRouteOnProject(ctx, route.ID, patch); err != nil {
-			// Non-fatal: route exists, monitoringPath will be set on next apply
-			_ = err
+			args.MonitoringPath = nil
 		}
 	}
 
@@ -193,7 +194,7 @@ func (r *Route) Update(ctx context.Context, req infer.UpdateRequest[RouteArgs, R
 
 	// Build scalar patch
 	patch := map[string]any{}
-	if args.TLSAcme != state.TLSAcme {
+	if ptrBoolDiffers(args.TLSAcme, state.TLSAcme) {
 		setOptionalBool(patch, "tlsAcme", args.TLSAcme)
 	}
 	if ptrDiffers(args.Insecure, state.Insecure) {
@@ -202,16 +203,16 @@ func (r *Route) Update(ctx context.Context, req infer.UpdateRequest[RouteArgs, R
 	if ptrDiffers(args.MonitoringPath, state.MonitoringPath) {
 		setOptional(patch, "monitoringPath", args.MonitoringPath)
 	}
-	if args.DisableRequestVerification != state.DisableRequestVerification {
+	if ptrBoolDiffers(args.DisableRequestVerification, state.DisableRequestVerification) {
 		setOptionalBool(patch, "disableRequestVerification", args.DisableRequestVerification)
 	}
-	if args.HSTSEnabled != state.HSTSEnabled {
+	if ptrBoolDiffers(args.HSTSEnabled, state.HSTSEnabled) {
 		setOptionalBool(patch, "hstsEnabled", args.HSTSEnabled)
 	}
-	if args.HSTSPreload != state.HSTSPreload {
+	if ptrBoolDiffers(args.HSTSPreload, state.HSTSPreload) {
 		setOptionalBool(patch, "hstsPreload", args.HSTSPreload)
 	}
-	if args.HSTSIncludeSubdomains != state.HSTSIncludeSubdomains {
+	if ptrBoolDiffers(args.HSTSIncludeSubdomains, state.HSTSIncludeSubdomains) {
 		setOptionalBool(patch, "hstsIncludeSubdomains", args.HSTSIncludeSubdomains)
 	}
 	if ptrIntDiffers(args.HSTSMaxAge, state.HSTSMaxAge) {
@@ -347,7 +348,7 @@ func (r *Route) Diff(ctx context.Context, req infer.DiffRequest[RouteArgs, Route
 	if ptrDiffers(req.Inputs.Environment, req.State.Environment) {
 		diff["environment"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if req.Inputs.TLSAcme != req.State.TLSAcme {
+	if ptrBoolDiffers(req.Inputs.TLSAcme, req.State.TLSAcme) {
 		diff["tlsAcme"] = p.PropertyDiff{Kind: p.Update}
 	}
 	if ptrDiffers(req.Inputs.Insecure, req.State.Insecure) {
@@ -356,22 +357,22 @@ func (r *Route) Diff(ctx context.Context, req infer.DiffRequest[RouteArgs, Route
 	if ptrDiffers(req.Inputs.RouteType, req.State.RouteType) {
 		diff["routeType"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if req.Inputs.Primary != req.State.Primary {
+	if ptrBoolDiffers(req.Inputs.Primary, req.State.Primary) {
 		diff["primary"] = p.PropertyDiff{Kind: p.Update}
 	}
 	if ptrDiffers(req.Inputs.MonitoringPath, req.State.MonitoringPath) {
 		diff["monitoringPath"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if req.Inputs.DisableRequestVerification != req.State.DisableRequestVerification {
+	if ptrBoolDiffers(req.Inputs.DisableRequestVerification, req.State.DisableRequestVerification) {
 		diff["disableRequestVerification"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if req.Inputs.HSTSEnabled != req.State.HSTSEnabled {
+	if ptrBoolDiffers(req.Inputs.HSTSEnabled, req.State.HSTSEnabled) {
 		diff["hstsEnabled"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if req.Inputs.HSTSPreload != req.State.HSTSPreload {
+	if ptrBoolDiffers(req.Inputs.HSTSPreload, req.State.HSTSPreload) {
 		diff["hstsPreload"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if req.Inputs.HSTSIncludeSubdomains != req.State.HSTSIncludeSubdomains {
+	if ptrBoolDiffers(req.Inputs.HSTSIncludeSubdomains, req.State.HSTSIncludeSubdomains) {
 		diff["hstsIncludeSubdomains"] = p.PropertyDiff{Kind: p.Update}
 	}
 	if ptrIntDiffers(req.Inputs.HSTSMaxAge, req.State.HSTSMaxAge) {
