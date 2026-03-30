@@ -280,6 +280,20 @@ func TestDeployTargetRead_NotFound(t *testing.T) {
 	}
 }
 
+func TestDeployTargetRead_EmptyListReturnsError(t *testing.T) {
+	mock := &mockLagoonClient{
+		getDeployTargetByIDFn: func(_ context.Context, id int) (*client.DeployTarget, error) {
+			return nil, fmt.Errorf("allKubernetes returned no results; cannot confirm deploy target ID=%d was deleted (possible API permissions issue)", id)
+		},
+	}
+	ctx := testCtx(mock)
+	r := &DeployTarget{}
+	_, err := r.Read(ctx, infer.ReadRequest[DeployTargetArgs, DeployTargetState]{ID: "7"})
+	if err == nil {
+		t.Fatal("expected error when allKubernetes returns empty")
+	}
+}
+
 func TestDeployTargetRead_InvalidID(t *testing.T) {
 	mock := &mockLagoonClient{}
 	ctx := testCtx(mock)
