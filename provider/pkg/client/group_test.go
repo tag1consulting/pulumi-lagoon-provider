@@ -129,6 +129,9 @@ func TestGetGroupByName_EmptyListNotTreatedAsNotFound(t *testing.T) {
 	if errors.Is(err, ErrNotFound) {
 		t.Error("empty allGroups must not return ErrNotFound (would cause silent state removal)")
 	}
+	if !strings.Contains(err.Error(), "allGroups") || !strings.Contains(err.Error(), "no results") {
+		t.Errorf("expected descriptive empty-list error mentioning allGroups and no results, got: %v", err)
+	}
 }
 
 func TestUpdateGroup(t *testing.T) {
