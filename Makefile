@@ -402,6 +402,8 @@ go-sdk-python: go-build
 	rsync -a --delete $(SDK_TMP)/python/pulumi_lagoon/ sdk/python/pulumi_lagoon/
 	cp LICENSE sdk/python/LICENSE
 	rm -rf $(SDK_TMP)
+	# Append __version__ so it survives SDK regeneration (generator does not emit it).
+	printf '\n# Expose the package version as the conventional __version__ attribute.\n# The code generator does not emit this; it is appended by the go-sdk-python\n# Makefile target after generation so it survives SDK regenerations.\n__version__: str = _utilities.get_version()\n' >> sdk/python/pulumi_lagoon/__init__.py
 
 go-sdk-nodejs: go-build
 	rm -rf $(SDK_TMP)

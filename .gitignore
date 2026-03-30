@@ -72,6 +72,11 @@ dmypy.json
 .claude/
 memory-bank/session-summary*.md
 
+# Legacy Python dynamic provider artifact (pre-v0.2.0); real SDK is in sdk/python/.
+# Empty if present locally; listed here to prevent accidental commits and to avoid
+# shadowing the installed SDK when Python is invoked from the repo root.
+/pulumi_lagoon/
+
 # Logs
 *.log
 
