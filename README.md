@@ -12,7 +12,7 @@ A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as inf
 
 This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, deploy targets, notifications, tasks, etc.) using Pulumi, with native SDKs for Python, TypeScript/JavaScript, and Go.
 
-**Status**: v0.2.7 — Native Go Provider
+**Status**: v0.2.8 — Native Go Provider
 
 ## Supported Resources
 
