@@ -231,18 +231,18 @@ func (r *Project) Diff(ctx context.Context, req infer.DiffRequest[ProjectArgs, P
 	if req.Inputs.DeploytargetID != req.State.DeploytargetID {
 		diff["deploytargetId"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if ptrDiffers(req.Inputs.ProductionEnvironment, req.State.ProductionEnvironment) {
-		diff["productionEnvironment"] = p.PropertyDiff{Kind: p.Update}
-	}
-	if ptrDiffers(req.Inputs.Branches, req.State.Branches) {
-		diff["branches"] = p.PropertyDiff{Kind: p.Update}
-	}
-	if ptrDiffers(req.Inputs.Pullrequests, req.State.Pullrequests) {
-		diff["pullrequests"] = p.PropertyDiff{Kind: p.Update}
-	}
-	// These optional fields use nil-means-unmanaged semantics: if the user's
+	// All pointer fields use nil-means-unmanaged semantics: if the user's
 	// input is nil they don't want to manage the field, so skip the diff even
 	// if the API returns a value.  This prevents spurious updates on refresh.
+	if req.Inputs.ProductionEnvironment != nil && ptrDiffers(req.Inputs.ProductionEnvironment, req.State.ProductionEnvironment) {
+		diff["productionEnvironment"] = p.PropertyDiff{Kind: p.Update}
+	}
+	if req.Inputs.Branches != nil && ptrDiffers(req.Inputs.Branches, req.State.Branches) {
+		diff["branches"] = p.PropertyDiff{Kind: p.Update}
+	}
+	if req.Inputs.Pullrequests != nil && ptrDiffers(req.Inputs.Pullrequests, req.State.Pullrequests) {
+		diff["pullrequests"] = p.PropertyDiff{Kind: p.Update}
+	}
 	if req.Inputs.OpenshiftProjectPattern != nil && ptrDiffers(req.Inputs.OpenshiftProjectPattern, req.State.OpenshiftProjectPattern) {
 		diff["openshiftProjectPattern"] = p.PropertyDiff{Kind: p.Update}
 	}
