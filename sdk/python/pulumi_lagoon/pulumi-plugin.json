@@ -1,6 +1,6 @@
 {
   "resource": true,
   "name": "lagoon",
-  "version": "0.2.7",
-  "server": "github://api.github.com/tag1consulting/pulumi-lagoon-provider"
+  "version": "0.2.8",
+  "server": "https://github.com/tag1consulting/pulumi-lagoon-provider/releases/download/v${VERSION}"
 }
