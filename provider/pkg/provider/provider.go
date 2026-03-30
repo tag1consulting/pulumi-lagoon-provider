@@ -17,7 +17,7 @@ func NewProvider(version string) (p.Provider, error) {
 		WithHomepage("https://github.com/tag1consulting/pulumi-lagoon-provider").
 		WithLicense("Apache-2.0").
 		WithKeywords("lagoon", "hosting", "kubernetes", "pulumi").
-		WithPluginDownloadURL("https://github.com/tag1consulting/pulumi-lagoon-provider/releases/download/v${VERSION}").
+		WithPluginDownloadURL("github://api.github.com/tag1consulting/pulumi-lagoon-provider").
 		WithLanguageMap(map[string]any{
 			"go": map[string]any{
 				"importBasePath":                "github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon",

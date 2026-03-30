@@ -53,7 +53,7 @@ export function getVersion(): string {
 
 /** @internal */
 export function resourceOptsDefaults(): any {
-    return { version: getVersion(), pluginDownloadURL: "https://github.com/tag1consulting/pulumi-lagoon-provider/releases/download/v${VERSION}" };
+    return { version: getVersion(), pluginDownloadURL: "github://api.github.com/tag1consulting/pulumi-lagoon-provider" };
 }
 
 /** @internal */
