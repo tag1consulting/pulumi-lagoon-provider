@@ -153,6 +153,40 @@ kubectl get pods -A --context kind-lagoon
 kubectl logs -n lagoon-core -l app.kubernetes.io/name=lagoon-core --context kind-lagoon
 ```
 
+### Recovering from Stale Pulumi State
+
+If the Kind cluster is deleted outside of Pulumi (e.g., `kind delete cluster --name lagoon`) and `pulumi up` then fails with authentication errors, timeouts, or "resource does not exist" messages, the Pulumi state is stale and must be cleaned up.
+
+**Option 1 — Reset state and redeploy from scratch (simplest)**
+
+```bash
+make clean-state   # removes Pulumi stack; does NOT delete the cluster
+make deploy        # redeploys everything fresh
+```
+
+**Option 2 — Delete individual stuck resources**
+
+Use this when most resources are healthy and only a few are stuck:
+
+```bash
+# List all resources in state
+pulumi stack --show-urns
+
+# Delete a specific stuck resource (and anything that depends on it)
+pulumi state delete 'urn:pulumi:dev::single-cluster::lagoon:lagoon:DeployTarget::my-target' \
+    --target-dependents --yes
+
+# Then re-run to recreate just the missing resource
+pulumi up --yes
+```
+
+**Option 3 — Full wipe (cluster + state)**
+
+```bash
+make clean-all     # deletes Kind cluster and Pulumi state
+make deploy        # start completely from scratch
+```
+
 ## Comparison with Multi-Cluster
 
 | Feature | Single-Cluster | Multi-Cluster |
