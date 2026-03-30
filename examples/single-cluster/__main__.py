@@ -303,15 +303,16 @@ if provider is not None and config.install_lagoon:
     )
 
     # Ensure database migrations are applied
-    # Lagoon v2.30.0 has a bug where Knex migrations aren't run by the init container.
-    # This check ensures the base schema tables exist before we try to use the API.
+    # NOTE: Lagoon v2.30.0 had a bug where Knex migrations weren't run by the init
+    # container. This was fixed in v2.31.0 (the init container now runs all migrations).
+    # This check is kept as a safety net for backward compatibility with older versions.
     pulumi.log.info("Ensuring Lagoon database migrations are applied...")
 
     knex_migrations = ensure_knex_migrations(
         "lagoon",
         context=cluster_config.context_name,
         namespace=namespace_config.lagoon_core,
-        core_secrets_name="lagoon-core-lagoon-core-secrets",
+        core_secrets_name="lagoon-core-secrets",
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release, keycloak_config],
         ),
@@ -377,7 +378,7 @@ if lagoon_remote is not None:
     # This ensures we use the same secret the API is configured with
     read_jwt_secret = command.Command(
         "read-jwt-secret",
-        create=f'kubectl --context {cluster_config.context_name} -n {namespace_config.lagoon_core} get secret lagoon-core-lagoon-core-secrets -o jsonpath="{{.data.JWTSECRET}}" | base64 -d',
+        create=f'kubectl --context {cluster_config.context_name} -n {namespace_config.lagoon_core} get secret lagoon-core-secrets -o jsonpath="{{.data.JWTSECRET}}" | base64 -d',
         opts=pulumi.ResourceOptions(
             depends_on=[lagoon_core.release],
             additional_secret_outputs=["stdout"],

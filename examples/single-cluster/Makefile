@@ -95,17 +95,17 @@ fix-migration-lock:
 	@echo "Fixing Lagoon API migration lock..."
 	@echo ""
 	@echo "Step 1: Scale down API deployment to stop all pods..."
-	@kubectl --context kind-$(CLUSTER_NAME) scale deployment -n lagoon-core lagoon-core-lagoon-core-api --replicas=0 || true
+	@kubectl --context kind-$(CLUSTER_NAME) scale deployment -n lagoon-core lagoon-core-api --replicas=0 || true
 	@sleep 5
 	@echo ""
 	@echo "Step 2: Clear migration lock in database..."
-	@kubectl --context kind-$(CLUSTER_NAME) exec -n lagoon-core lagoon-core-lagoon-core-api-db-0 -- \
+	@kubectl --context kind-$(CLUSTER_NAME) exec -n lagoon-core lagoon-core-api-db-0 -- \
 		mysql -u root -pLag00n infrastructure -e \
 		"DELETE FROM lagoon_migrations_lock WHERE \`index\` > 1; UPDATE lagoon_migrations_lock SET is_locked = 0; SELECT * FROM lagoon_migrations_lock;" \
 		2>/dev/null || echo "  Could not connect to database (may not be running yet)"
 	@echo ""
 	@echo "Step 3: Scale API deployment back to 1 replica..."
-	@kubectl --context kind-$(CLUSTER_NAME) scale deployment -n lagoon-core lagoon-core-lagoon-core-api --replicas=1 || true
+	@kubectl --context kind-$(CLUSTER_NAME) scale deployment -n lagoon-core lagoon-core-api --replicas=1 || true
 	@echo ""
 	@echo "Waiting for API pod to start..."
 	@sleep 20
