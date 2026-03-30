@@ -14,6 +14,8 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+    ignore_usernames:
+      - "dependabot[bot]"
 chat:
   auto_reply: true
 tone_instructions: "Provide architectural insights on system design, scalability, and long-term maintainability."
