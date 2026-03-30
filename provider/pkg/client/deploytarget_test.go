@@ -108,7 +108,9 @@ func TestGetDeployTargetByName(t *testing.T) {
 func TestGetDeployTargetByName_NotFound(t *testing.T) {
 	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
 		return map[string]any{
-			"allKubernetes": []map[string]any{},
+			"allKubernetes": []map[string]any{
+				{"id": 1, "name": "cluster-1", "consoleUrl": "https://c1.example.com"},
+			},
 		}, nil
 	})
 	defer server.Close()
@@ -120,6 +122,38 @@ func TestGetDeployTargetByName_NotFound(t *testing.T) {
 	}
 	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got %T", err)
+	}
+}
+
+func TestGetDeployTargetByID_EmptyListNotTreatedAsNotFound(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"allKubernetes": []map[string]any{}}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetDeployTargetByID(context.Background(), 42)
+	if err == nil {
+		t.Fatal("expected error when allKubernetes returns empty")
+	}
+	if errors.Is(err, ErrNotFound) {
+		t.Error("empty allKubernetes must not return ErrNotFound (would cause silent state removal)")
+	}
+}
+
+func TestGetDeployTargetByName_EmptyListNotTreatedAsNotFound(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		return map[string]any{"allKubernetes": []map[string]any{}}, nil
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	_, err := c.GetDeployTargetByName(context.Background(), "my-cluster")
+	if err == nil {
+		t.Fatal("expected error when allKubernetes returns empty")
+	}
+	if errors.Is(err, ErrNotFound) {
+		t.Error("empty allKubernetes must not return ErrNotFound (would cause silent state removal)")
 	}
 }
 
