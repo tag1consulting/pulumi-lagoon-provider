@@ -57,7 +57,7 @@ yarn add @tag1consulting/pulumi-lagoon
 go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon
 ```
 
-### .NET / C#
+### .NET / C\#
 
 ```bash
 dotnet add package Tag1Consulting.Lagoon
@@ -166,7 +166,7 @@ project, err := lagoon.NewProject(ctx, "my-site", &lagoon.ProjectArgs{
 })
 ```
 
-### C#
+### C\#
 
 ```csharp
 using System.Collections.Generic;

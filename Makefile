@@ -460,7 +460,7 @@ check-release-version:
 ifndef VERSION
 	$(error VERSION is required. Usage: make release-prep VERSION=0.3.0)
 endif
-	@echo "$(VERSION)" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+' || \
+	@echo "$(VERSION)" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || \
 		(echo "ERROR: VERSION must be a bare semver (e.g. 0.3.0), got '$(VERSION)'" >&2 && exit 1)
 
 # Release prep: bump versions first, then rebuild provider and regenerate SDKs,
@@ -479,6 +479,7 @@ release-prep: check-release-version
 	sed -i 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml
 	jq --indent 4 --arg v "$(VERSION)" '.version = $$v | .pulumi.version = $$v' sdk/nodejs/package.json > sdk/nodejs/package.json.tmp && mv sdk/nodejs/package.json.tmp sdk/nodejs/package.json
 	sed -i 's|<Version>.*</Version>|<Version>$(VERSION)</Version>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+	echo "$(VERSION)" > sdk/dotnet/version.txt
 	@echo "=== Running tests ==="
 	cd provider && CGO_ENABLED=0 go test ./... -count=1
 	@echo ""
@@ -488,7 +489,7 @@ release-prep: check-release-version
 	@echo "  2. Commit, push, and open PR to main"
 	@echo "  3. After merge: git tag v$(VERSION) && git push origin v$(VERSION)"
 	@echo "  4. Tag Go module: git tag sdk/go/lagoon/v$(VERSION) v$(VERSION)^{} && git push origin sdk/go/lagoon/v$(VERSION)"
-	@echo "  5. Create GitHub release (triggers publish.yml: PyPI, npm, Go proxy warm-up)"
+	@echo "  5. Create GitHub release (triggers publish.yml: PyPI, npm, NuGet, Go proxy warm-up)"
 	@echo "  6. Verify: make go-proxy-warmup VERSION=$(VERSION)  (or check CI)"
 
 # Warm the Go module proxy so the SDK is immediately available via go get and
