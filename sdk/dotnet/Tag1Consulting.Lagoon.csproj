@@ -9,6 +9,7 @@
     <PackageProjectUrl>https://github.com/tag1consulting/pulumi-lagoon-provider</PackageProjectUrl>
     <RepositoryUrl>https://github.com/tag1consulting/pulumi-lagoon-provider</RepositoryUrl>
     <PackageIcon>logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <Version>0.3.0</Version>
 
     <TargetFramework>net8.0</TargetFramework>
@@ -56,6 +57,7 @@
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
+    <None Include="README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>
