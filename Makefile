@@ -429,7 +429,8 @@ go-sdk-go: go-build
 	rm -rf $(SDK_TMP)
 
 # go-sdk-dotnet regenerates the .NET SDK. The rsync uses --delete to refresh all
-# generated files, then post-processes the result:
+# generated files but preserves hand-maintained files (logo.png, README.md), then
+# post-processes the result:
 #   - patches TargetFramework to net8.0 (codegen emits net6.0 which is EOL)
 #   - restores logo.png from docs/ (codegen copies the SVG under a .png name;
 #     we overwrite it with the real PNG so NuGet package icon renders correctly)
@@ -437,13 +438,19 @@ go-sdk-dotnet: go-build
 	rm -rf $(SDK_TMP)
 	pulumi package gen-sdk ./$(PROVIDER_BIN) --language dotnet -o $(SDK_TMP)
 	mkdir -p sdk/dotnet
-	rsync -a --delete --exclude='logo.png' $(SDK_TMP)/dotnet/ sdk/dotnet/
+	rsync -a --delete --exclude='logo.png' --exclude='README.md' $(SDK_TMP)/dotnet/ sdk/dotnet/
 	cp LICENSE sdk/dotnet/LICENSE
 	# Patch generated TargetFramework to net8.0 (codegen emits net6.0, which is EOL).
 	# Match any TFM so this remains effective if codegen ever emits net7.0/net9.0.
 	sed -i 's|<TargetFramework>[^<]*</TargetFramework>|<TargetFramework>net8.0</TargetFramework>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj
 	grep -q '<TargetFramework>net8.0</TargetFramework>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
 		(echo "ERROR: TargetFramework patch failed in Tag1Consulting.Lagoon.csproj" >&2 && exit 1)
+	# Inject PackageReadmeFile property (codegen does not emit it).
+	sed -i '/<PackageIcon>logo.png<\/PackageIcon>/a\    <PackageReadmeFile>README.md</PackageReadmeFile>' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+	grep -q '<PackageReadmeFile>README.md</PackageReadmeFile>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
+		(echo "ERROR: PackageReadmeFile patch failed in Tag1Consulting.Lagoon.csproj" >&2 && exit 1)
+	# Pack README.md into the nupkg root (codegen does not include it).
+	sed -i '/<None Include="logo.png">/i\    <None Include="README.md" Pack="true" PackagePath="" />' sdk/dotnet/Tag1Consulting.Lagoon.csproj
 	# Replace the SVG-disguised-as-PNG that codegen copies with a real PNG.
 	cp docs/logo.png sdk/dotnet/logo.png
 	rm -rf $(SDK_TMP)
