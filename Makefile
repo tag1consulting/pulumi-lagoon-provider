@@ -455,11 +455,13 @@ go-install: go-build
 	mkdir -p $(GO_BIN)
 	cp $(PROVIDER_BIN) $(GO_BIN)/
 
-# Guard target: ensures VERSION is set before expensive work begins.
+# Guard target: ensures VERSION is a bare semver before expensive work begins.
 check-release-version:
 ifndef VERSION
 	$(error VERSION is required. Usage: make release-prep VERSION=0.3.0)
 endif
+	@echo "$(VERSION)" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+' || \
+		(echo "ERROR: VERSION must be a bare semver (e.g. 0.3.0), got '$(VERSION)'" >&2 && exit 1)
 
 # Release prep: bump versions first, then rebuild provider and regenerate SDKs,
 # then run tests.  Versions are updated before the build so the provider binary
