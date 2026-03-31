@@ -291,8 +291,12 @@ jobs:
           echo "$VERSION" > sdk/dotnet/version.txt
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" sdk/dotnet/pulumi-plugin.json
 
+      - name: Restore dependencies
+        run: dotnet restore
+        working-directory: sdk/dotnet
+
       - name: Pack
-        run: dotnet pack -c Release -o dist/
+        run: dotnet pack -c Release -o dist/ --no-restore
         working-directory: sdk/dotnet
 
       - name: Upload artifacts
@@ -332,8 +336,11 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
     environment:
-      name: nuget
+      name: dotnet
       url: https://www.nuget.org/packages/Tag1Consulting.Lagoon
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
@@ -346,8 +353,14 @@ jobs:
           name: dist-dotnet
           path: dist/
 
+      - name: NuGet login (OIDC trusted publishing)
+        uses: NuGet/login@v1
+        id: nuget_login
+        with:
+          user: gchaix
+
       - name: Publish to NuGet
-        run: dotnet nuget push dist/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push dist/*.nupkg --api-key "${{ steps.nuget_login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
   warm-go-proxy:
     name: Warm Go module proxy

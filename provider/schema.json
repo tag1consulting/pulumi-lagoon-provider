@@ -19,6 +19,7 @@
   "publisher": "Tag1 Consulting",
   "language": {
     "csharp": {
+      "packageId": "Tag1Consulting.Lagoon",
       "packageReferences": {
         "Pulumi": "3.*"
       },

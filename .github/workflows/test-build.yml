@@ -153,6 +153,31 @@ jobs:
           name: dist-dotnet
           path: sdk/dotnet/dist/
 
+  test-install-dotnet:
+    name: Test .NET installation
+    needs: build-dotnet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0'
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-dotnet
+          path: dist/
+
+      - name: Install and verify
+        run: |
+          mkdir -p /tmp/test-dotnet/TestInstall
+          cd /tmp/test-dotnet/TestInstall
+          dotnet new console --force
+          dotnet nuget add source $GITHUB_WORKSPACE/dist --name local
+          dotnet add package Tag1Consulting.Lagoon --source local
+          dotnet build
+
   test-go-sdk:
     name: Verify Go SDK compiles
     runs-on: ubuntu-latest

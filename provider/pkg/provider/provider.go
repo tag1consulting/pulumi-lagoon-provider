@@ -36,6 +36,7 @@ func NewProvider(version string) (p.Provider, error) {
 				"respectSchemaVersion": true,
 			},
 			"csharp": map[string]any{
+				"packageId": "Tag1Consulting.Lagoon",
 				"packageReferences": map[string]any{
 					"Pulumi": "3.*",
 				},

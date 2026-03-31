@@ -428,17 +428,27 @@ go-sdk-go: go-build
 	cp LICENSE sdk/go/lagoon/LICENSE
 	rm -rf $(SDK_TMP)
 
+# go-sdk-dotnet regenerates the .NET SDK. The rsync uses --delete to refresh all
+# generated files, then post-processes the result:
+#   - patches TargetFramework to net8.0 (codegen emits net6.0 which is EOL)
+#   - restores logo.png from docs/ (codegen copies the SVG under a .png name;
+#     we overwrite it with the real PNG so NuGet package icon renders correctly)
 go-sdk-dotnet: go-build
 	rm -rf $(SDK_TMP)
 	pulumi package gen-sdk ./$(PROVIDER_BIN) --language dotnet -o $(SDK_TMP)
 	mkdir -p sdk/dotnet
-	rsync -a --delete $(SDK_TMP)/dotnet/ sdk/dotnet/
+	rsync -a --delete --exclude='logo.png' $(SDK_TMP)/dotnet/ sdk/dotnet/
 	cp LICENSE sdk/dotnet/LICENSE
+	# Patch generated TargetFramework: net6.0 is EOL; use net8.0 instead.
+	sed -i 's|<TargetFramework>net6.0</TargetFramework>|<TargetFramework>net8.0</TargetFramework>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+	# Replace the SVG-disguised-as-PNG that codegen copies with a real PNG.
+	cp docs/logo.png sdk/dotnet/logo.png
 	rm -rf $(SDK_TMP)
 
 # go-sdk-all regenerates all SDKs without a clean; use go-sdk-clean first for a
 # full reset (note: go-sdk-clean deletes hand-maintained files like README.pypi.md,
-# package-lock.json, go.mod/go.sum, so only use it when those can be restored from git).
+# pyproject.toml license fix, package-lock.json, go.mod/go.sum, and
+# Tag1Consulting.Lagoon.csproj; only use it when those can be restored from git).
 go-sdk-all: go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet
 
 go-install: go-build
