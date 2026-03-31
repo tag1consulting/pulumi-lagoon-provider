@@ -439,8 +439,11 @@ go-sdk-dotnet: go-build
 	mkdir -p sdk/dotnet
 	rsync -a --delete --exclude='logo.png' $(SDK_TMP)/dotnet/ sdk/dotnet/
 	cp LICENSE sdk/dotnet/LICENSE
-	# Patch generated TargetFramework: net6.0 is EOL; use net8.0 instead.
-	sed -i 's|<TargetFramework>net6.0</TargetFramework>|<TargetFramework>net8.0</TargetFramework>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+	# Patch generated TargetFramework to net8.0 (codegen emits net6.0, which is EOL).
+	# Match any TFM so this remains effective if codegen ever emits net7.0/net9.0.
+	sed -i 's|<TargetFramework>[^<]*</TargetFramework>|<TargetFramework>net8.0</TargetFramework>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+	grep -q '<TargetFramework>net8.0</TargetFramework>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
+		(echo "ERROR: TargetFramework patch failed in Tag1Consulting.Lagoon.csproj" >&2 && exit 1)
 	# Replace the SVG-disguised-as-PNG that codegen copies with a real PNG.
 	cp docs/logo.png sdk/dotnet/logo.png
 	rm -rf $(SDK_TMP)
@@ -455,7 +458,10 @@ go-install: go-build
 	mkdir -p $(GO_BIN)
 	cp $(PROVIDER_BIN) $(GO_BIN)/
 
-# Guard target: ensures VERSION is a bare semver before expensive work begins.
+# Guard target: ensures VERSION is a bare semver (x.y.z) before expensive work begins.
+# Intentionally stricter than CI (which allows pre-release/build suffixes like x.y.z-rc1):
+# release-prep only cuts stable releases, and the publish pipeline does not support
+# pre-release NuGet/PyPI/npm packages. Use a release tag directly to publish pre-releases.
 check-release-version:
 ifndef VERSION
 	$(error VERSION is required. Usage: make release-prep VERSION=0.3.0)
