@@ -16,7 +16,8 @@ func NewProvider(version string) (p.Provider, error) {
 		WithRepository("https://github.com/tag1consulting/pulumi-lagoon-provider").
 		WithHomepage("https://github.com/tag1consulting/pulumi-lagoon-provider").
 		WithLicense("Apache-2.0").
-		WithKeywords("lagoon", "hosting", "kubernetes", "pulumi").
+		WithKeywords("lagoon", "hosting", "kubernetes", "pulumi", "category/infrastructure", "kind/native").
+		WithLogoURL("https://raw.githubusercontent.com/tag1consulting/pulumi-lagoon-provider/main/docs/logo.svg").
 		WithPluginDownloadURL("github://api.github.com/tag1consulting/pulumi-lagoon-provider").
 		WithLanguageMap(map[string]any{
 			"go": map[string]any{
@@ -32,6 +33,13 @@ func NewProvider(version string) (p.Provider, error) {
 			"python": map[string]any{
 				"packageName":          "pulumi_lagoon",
 				"pyproject":            map[string]any{"enabled": true},
+				"respectSchemaVersion": true,
+			},
+			"csharp": map[string]any{
+				"packageReferences": map[string]any{
+					"Pulumi": "3.*",
+				},
+				"rootNamespace":        "Tag1Consulting",
 				"respectSchemaVersion": true,
 			},
 		}).

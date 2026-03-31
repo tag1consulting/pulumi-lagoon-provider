@@ -11,6 +11,7 @@ The Lagoon provider is available for the following languages:
 * **TypeScript/JavaScript**: [`@tag1consulting/pulumi-lagoon`](https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon) on npm
 * **Python**: [`pulumi_lagoon`](https://pypi.org/project/pulumi-lagoon/) on PyPI
 * **Go**: [`github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon`](https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon) on pkg.go.dev
+* **C#/.NET**: [`Tag1Consulting.Lagoon`](https://www.nuget.org/packages/Tag1Consulting.Lagoon) on NuGet
 
 ### Provider Binary
 

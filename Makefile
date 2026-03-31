@@ -22,7 +22,7 @@
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
         clean clean-all \
-        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-all go-install check-release-version release-prep go-proxy-warmup
+        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet go-sdk-all go-install check-release-version release-prep go-proxy-warmup
 
 # Variables
 PYTHON := python3
@@ -388,7 +388,7 @@ go-schema: go-build
 	pulumi package get-schema ./$(PROVIDER_BIN) > provider/schema.json
 
 go-sdk-clean:
-	rm -rf sdk/python sdk/nodejs sdk/go
+	rm -rf sdk/python sdk/nodejs sdk/go sdk/dotnet
 
 # SDK generation uses a temp directory to avoid deleting hand-maintained files
 # (README.pypi.md, pyproject.toml license fix, package-lock.json, go.mod/go.sum).
@@ -428,10 +428,18 @@ go-sdk-go: go-build
 	cp LICENSE sdk/go/lagoon/LICENSE
 	rm -rf $(SDK_TMP)
 
+go-sdk-dotnet: go-build
+	rm -rf $(SDK_TMP)
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language dotnet -o $(SDK_TMP)
+	mkdir -p sdk/dotnet
+	rsync -a --delete $(SDK_TMP)/dotnet/ sdk/dotnet/
+	cp LICENSE sdk/dotnet/LICENSE
+	rm -rf $(SDK_TMP)
+
 # go-sdk-all regenerates all SDKs without a clean; use go-sdk-clean first for a
 # full reset (note: go-sdk-clean deletes hand-maintained files like README.pypi.md,
 # package-lock.json, go.mod/go.sum, so only use it when those can be restored from git).
-go-sdk-all: go-sdk-python go-sdk-nodejs go-sdk-go
+go-sdk-all: go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet
 
 go-install: go-build
 	mkdir -p $(GO_BIN)
@@ -455,9 +463,10 @@ release-prep: check-release-version
 	sed -i 's/^\*\*Status\*\*: v[0-9]\+\.[0-9]\+\.[0-9]\+/\*\*Status\*\*: v$(VERSION)/' README.md
 	sed -i 's/^\*\*Status\*\*: v[0-9]\+\.[0-9]\+\.[0-9]\+/\*\*Status\*\*: v$(VERSION)/' CLAUDE.md
 	printf '# Release v$(VERSION) (%s)\n\nTODO: Write release notes before committing.\n\n---\n\n' "$$(date +%Y-%m-%d)" > /tmp/rn_header.md && cat RELEASE_NOTES.md >> /tmp/rn_header.md && mv /tmp/rn_header.md RELEASE_NOTES.md
-	$(MAKE) PROVIDER_VERSION=$(VERSION) go-build go-sdk-python go-sdk-nodejs go-sdk-go
+	$(MAKE) PROVIDER_VERSION=$(VERSION) go-build go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet
 	sed -i 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml
 	jq --indent 4 --arg v "$(VERSION)" '.version = $$v | .pulumi.version = $$v' sdk/nodejs/package.json > sdk/nodejs/package.json.tmp && mv sdk/nodejs/package.json.tmp sdk/nodejs/package.json
+	sed -i 's|<Version>.*</Version>|<Version>$(VERSION)</Version>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj
 	@echo "=== Running tests ==="
 	cd provider && CGO_ENABLED=0 go test ./... -count=1
 	@echo ""

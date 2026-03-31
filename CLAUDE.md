@@ -18,8 +18,8 @@ The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1cons
 
 ### Native Go Provider (Current)
 - Go-based native provider using `pulumi-go-provider` v1.3.0 (`infer` package)
-- Generated SDKs for Python, TypeScript, and Go from a single schema
-- Published to PyPI (`pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), and Go module
+- Generated SDKs for Python, TypeScript, Go, and .NET/C# from a single schema
+- Published to PyPI (`pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), Go module, and NuGet (`Tag1Consulting.Lagoon`)
 - 490+ unit tests in `provider/`; comprehensive resource CRUD lifecycle
 
 > **Historical note**: v0.1.x was a Python dynamic provider, fully superseded in v0.2.0. The legacy code was removed in v0.2.7 (issue #77).
@@ -60,7 +60,8 @@ pulumi-lagoon-provider/
 ├── sdk/                    # Generated multi-language SDKs
 │   ├── python/             # Generated Python SDK (published to PyPI)
 │   ├── nodejs/             # Generated TypeScript/Node.js SDK (published to npm)
-│   └── go/                 # Generated Go SDK
+│   ├── go/                 # Generated Go SDK
+│   └── dotnet/             # Generated .NET/C# SDK (published to NuGet)
 │
 ├── scripts/                # SHARED operational scripts
 │   ├── common.sh           # Common functions and configuration
