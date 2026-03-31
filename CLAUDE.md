@@ -10,7 +10,7 @@ This provider allows you to declaratively manage Lagoon hosting platform resourc
 
 ## Project Status
 
-**Status**: v0.2.9 Released (Native Go Provider)
+**Status**: v0.3.0 Released (Native Go Provider)
 
 The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), and Go (`github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon`). v0.2.x ships the native Go provider with generated multi-language SDKs, replacing the Python dynamic provider.
 
