@@ -3,6 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/pulumi-lagoon.svg)](https://pypi.org/project/pulumi-lagoon/)
 [![npm version](https://img.shields.io/npm/v/@tag1consulting/pulumi-lagoon.svg)](https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon)
 [![Go Reference](https://pkg.go.dev/badge/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon.svg)](https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon)
+[![NuGet version](https://img.shields.io/nuget/v/Tag1Consulting.Lagoon.svg)](https://www.nuget.org/packages/Tag1Consulting.Lagoon)
 [![Go Tests](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test-go.yml/badge.svg?branch=main)](https://github.com/tag1consulting/pulumi-lagoon-provider/actions/workflows/test-go.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -10,7 +11,7 @@ A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as inf
 
 ## Overview
 
-This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, deploy targets, notifications, tasks, etc.) using Pulumi, with native SDKs for Python, TypeScript/JavaScript, and Go.
+This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, deploy targets, notifications, tasks, etc.) using Pulumi, with native SDKs for Python, TypeScript/JavaScript, Go, and .NET/C#.
 
 **Status**: v0.2.9 — Native Go Provider
 
@@ -54,6 +55,12 @@ yarn add @tag1consulting/pulumi-lagoon
 
 ```bash
 go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon
+```
+
+### .NET / C\#
+
+```bash
+dotnet add package Tag1Consulting.Lagoon
 ```
 
 ## Lagoon Compatibility
@@ -157,6 +164,31 @@ project, err := lagoon.NewProject(ctx, "my-site", &lagoon.ProjectArgs{
     DeploytargetId:        pulumi.Int(1),
     ProductionEnvironment: pulumi.String("main"),
 })
+```
+
+### C\#
+
+```csharp
+using System.Collections.Generic;
+using Pulumi;
+using Tag1Consulting.Lagoon.Lagoon;
+
+return await Deployment.RunAsync(() =>
+{
+    var project = new Project("my-site", new ProjectArgs
+    {
+        Name = "my-drupal-site",
+        GitUrl = "git@github.com:org/repo.git",
+        DeploytargetId = 1,
+        ProductionEnvironment = "main",
+        Branches = "^(main|develop|stage)$",
+    });
+
+    return new Dictionary<string, object?>
+    {
+        ["projectId"] = project.LagoonId,
+    };
+});
 ```
 
 ## Examples

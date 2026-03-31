@@ -18,10 +18,19 @@
   "pluginDownloadURL": "github://api.github.com/tag1consulting/pulumi-lagoon-provider",
   "publisher": "Tag1 Consulting",
   "language": {
+    "csharp": {
+      "packageId": "Tag1Consulting.Lagoon",
+      "packageReferences": {
+        "Pulumi": "3.*"
+      },
+      "respectSchemaVersion": true,
+      "rootNamespace": "Tag1Consulting"
+    },
     "go": {
       "generateExtraInputTypes": true,
       "generateResourceContainerTypes": true,
-      "importBasePath": "github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon"
+      "importBasePath": "github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon",
+      "respectSchemaVersion": true
     },
     "nodejs": {
       "packageName": "@tag1consulting/pulumi-lagoon",

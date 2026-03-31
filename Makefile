@@ -22,7 +22,7 @@
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
         clean clean-all \
-        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-all go-install check-release-version release-prep go-proxy-warmup
+        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet go-sdk-all go-install check-release-version release-prep go-proxy-warmup
 
 # Variables
 PYTHON := python3
@@ -388,7 +388,7 @@ go-schema: go-build
 	pulumi package get-schema ./$(PROVIDER_BIN) > provider/schema.json
 
 go-sdk-clean:
-	rm -rf sdk/python sdk/nodejs sdk/go
+	rm -rf sdk/python sdk/nodejs sdk/go sdk/dotnet
 
 # SDK generation uses a temp directory to avoid deleting hand-maintained files
 # (README.pypi.md, pyproject.toml license fix, package-lock.json, go.mod/go.sum).
@@ -428,20 +428,46 @@ go-sdk-go: go-build
 	cp LICENSE sdk/go/lagoon/LICENSE
 	rm -rf $(SDK_TMP)
 
+# go-sdk-dotnet regenerates the .NET SDK. The rsync uses --delete to refresh all
+# generated files, then post-processes the result:
+#   - patches TargetFramework to net8.0 (codegen emits net6.0 which is EOL)
+#   - restores logo.png from docs/ (codegen copies the SVG under a .png name;
+#     we overwrite it with the real PNG so NuGet package icon renders correctly)
+go-sdk-dotnet: go-build
+	rm -rf $(SDK_TMP)
+	pulumi package gen-sdk ./$(PROVIDER_BIN) --language dotnet -o $(SDK_TMP)
+	mkdir -p sdk/dotnet
+	rsync -a --delete --exclude='logo.png' $(SDK_TMP)/dotnet/ sdk/dotnet/
+	cp LICENSE sdk/dotnet/LICENSE
+	# Patch generated TargetFramework to net8.0 (codegen emits net6.0, which is EOL).
+	# Match any TFM so this remains effective if codegen ever emits net7.0/net9.0.
+	sed -i 's|<TargetFramework>[^<]*</TargetFramework>|<TargetFramework>net8.0</TargetFramework>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+	grep -q '<TargetFramework>net8.0</TargetFramework>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
+		(echo "ERROR: TargetFramework patch failed in Tag1Consulting.Lagoon.csproj" >&2 && exit 1)
+	# Replace the SVG-disguised-as-PNG that codegen copies with a real PNG.
+	cp docs/logo.png sdk/dotnet/logo.png
+	rm -rf $(SDK_TMP)
+
 # go-sdk-all regenerates all SDKs without a clean; use go-sdk-clean first for a
 # full reset (note: go-sdk-clean deletes hand-maintained files like README.pypi.md,
-# package-lock.json, go.mod/go.sum, so only use it when those can be restored from git).
-go-sdk-all: go-sdk-python go-sdk-nodejs go-sdk-go
+# pyproject.toml license fix, package-lock.json, go.mod/go.sum, and
+# Tag1Consulting.Lagoon.csproj; only use it when those can be restored from git).
+go-sdk-all: go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet
 
 go-install: go-build
 	mkdir -p $(GO_BIN)
 	cp $(PROVIDER_BIN) $(GO_BIN)/
 
-# Guard target: ensures VERSION is set before expensive work begins.
+# Guard target: ensures VERSION is a bare semver (x.y.z) before expensive work begins.
+# Intentionally stricter than CI (which allows pre-release/build suffixes like x.y.z-rc1):
+# release-prep only cuts stable releases, and the publish pipeline does not support
+# pre-release NuGet/PyPI/npm packages. Use a release tag directly to publish pre-releases.
 check-release-version:
 ifndef VERSION
 	$(error VERSION is required. Usage: make release-prep VERSION=0.3.0)
 endif
+	@echo "$(VERSION)" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || \
+		(echo "ERROR: VERSION must be a bare semver (e.g. 0.3.0), got '$(VERSION)'" >&2 && exit 1)
 
 # Release prep: bump versions first, then rebuild provider and regenerate SDKs,
 # then run tests.  Versions are updated before the build so the provider binary
@@ -455,9 +481,11 @@ release-prep: check-release-version
 	sed -i 's/^\*\*Status\*\*: v[0-9]\+\.[0-9]\+\.[0-9]\+/\*\*Status\*\*: v$(VERSION)/' README.md
 	sed -i 's/^\*\*Status\*\*: v[0-9]\+\.[0-9]\+\.[0-9]\+/\*\*Status\*\*: v$(VERSION)/' CLAUDE.md
 	printf '# Release v$(VERSION) (%s)\n\nTODO: Write release notes before committing.\n\n---\n\n' "$$(date +%Y-%m-%d)" > /tmp/rn_header.md && cat RELEASE_NOTES.md >> /tmp/rn_header.md && mv /tmp/rn_header.md RELEASE_NOTES.md
-	$(MAKE) PROVIDER_VERSION=$(VERSION) go-build go-sdk-python go-sdk-nodejs go-sdk-go
+	$(MAKE) PROVIDER_VERSION=$(VERSION) go-build go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet
 	sed -i 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml
 	jq --indent 4 --arg v "$(VERSION)" '.version = $$v | .pulumi.version = $$v' sdk/nodejs/package.json > sdk/nodejs/package.json.tmp && mv sdk/nodejs/package.json.tmp sdk/nodejs/package.json
+	sed -i 's|<Version>.*</Version>|<Version>$(VERSION)</Version>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+	echo "$(VERSION)" > sdk/dotnet/version.txt
 	@echo "=== Running tests ==="
 	cd provider && CGO_ENABLED=0 go test ./... -count=1
 	@echo ""
@@ -467,7 +495,7 @@ release-prep: check-release-version
 	@echo "  2. Commit, push, and open PR to main"
 	@echo "  3. After merge: git tag v$(VERSION) && git push origin v$(VERSION)"
 	@echo "  4. Tag Go module: git tag sdk/go/lagoon/v$(VERSION) v$(VERSION)^{} && git push origin sdk/go/lagoon/v$(VERSION)"
-	@echo "  5. Create GitHub release (triggers publish.yml: PyPI, npm, Go proxy warm-up)"
+	@echo "  5. Create GitHub release (triggers publish.yml: PyPI, npm, NuGet, Go proxy warm-up)"
 	@echo "  6. Verify: make go-proxy-warmup VERSION=$(VERSION)  (or check CI)"
 
 # Warm the Go module proxy so the SDK is immediately available via go get and

@@ -128,6 +128,58 @@ jobs:
         run: node -e "const lagoon = require('@tag1consulting/pulumi-lagoon'); console.log('Successfully loaded:', Object.keys(lagoon).length, 'exports');"
         working-directory: /tmp/test-install
 
+  build-dotnet:
+    name: Build .NET distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0'
+
+      - name: Build package
+        run: dotnet build -c Release
+        working-directory: sdk/dotnet
+
+      - name: Pack
+        run: dotnet pack -c Release -o dist/
+        working-directory: sdk/dotnet
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-dotnet
+          path: sdk/dotnet/dist/
+
+  test-install-dotnet:
+    name: Test .NET installation
+    needs: build-dotnet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0'
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-dotnet
+          path: dist/
+
+      - name: Install and verify
+        run: |
+          NUPKG=$(ls "$GITHUB_WORKSPACE/dist/"*.nupkg | head -1)
+          VERSION=$(basename "$NUPKG" .nupkg | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          mkdir -p /tmp/test-dotnet/TestInstall
+          cd /tmp/test-dotnet/TestInstall
+          dotnet new console --force
+          dotnet nuget add source "$GITHUB_WORKSPACE/dist" --name local-lagoon
+          dotnet add package Tag1Consulting.Lagoon --version "$VERSION"
+          dotnet build
+
   test-go-sdk:
     name: Verify Go SDK compiles
     runs-on: ubuntu-latest

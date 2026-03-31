@@ -18,7 +18,7 @@ With this provider you can declaratively manage:
 
 ## Example
 
-{{< chooser language "typescript,python,go,yaml" >}}
+{{< chooser language "typescript,python,go,csharp,yaml" >}}
 
 {{% choosable language typescript %}}
 ```typescript
@@ -91,6 +91,32 @@ func main() {
         return err
     })
 }
+```
+{{% /choosable %}}
+
+{{% choosable language csharp %}}
+```csharp
+using Pulumi;
+using Tag1Consulting.Lagoon;
+using Tag1Consulting.Lagoon.Lagoon;
+
+return await Deployment.RunAsync(() =>
+{
+    var provider = new Provider("lagoon", new ProviderArgs
+    {
+        ApiUrl = "https://api.lagoon.example.com/graphql",
+        Token = "your-lagoon-jwt-token",
+    });
+
+    var project = new Project("my-project", new ProjectArgs
+    {
+        Name = "my-project",
+        GitUrl = "git@github.com:my-org/my-repo.git",
+        DeploytargetId = 1,
+        ProductionEnvironment = "main",
+        Branches = "^(main|staging)$",
+    }, new CustomResourceOptions { Provider = provider });
+});
 ```
 {{% /choosable %}}
 
