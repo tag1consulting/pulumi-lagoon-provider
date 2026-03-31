@@ -176,9 +176,8 @@ jobs:
           mkdir -p /tmp/test-dotnet/TestInstall
           cd /tmp/test-dotnet/TestInstall
           dotnet new console --force
-          dotnet add package Tag1Consulting.Lagoon --version "$VERSION" \
-            --source "$GITHUB_WORKSPACE/dist" \
-            --source "https://api.nuget.org/v3/index.json"
+          dotnet nuget add source "$GITHUB_WORKSPACE/dist" --name local-lagoon
+          dotnet add package Tag1Consulting.Lagoon --version "$VERSION"
           dotnet build
 
   test-go-sdk:
