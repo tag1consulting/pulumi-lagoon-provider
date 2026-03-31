@@ -12,7 +12,7 @@ dotnet add package Tag1Consulting.Lagoon
 
 Resources are in the `Tag1Consulting.Lagoon.Lagoon` namespace. The provider config class is at `Tag1Consulting.Lagoon.Provider`. See the [README](README.md) for a usage example.
 
-NuGet publishing uses OIDC trusted publishing (no stored API key). The package targets `net8.0`.
+NuGet publishing uses OIDC trusted publishing (no stored API key). The package targets `net8.0`. The .NET SDK is generated from the same Go provider schema as the Python, TypeScript, and Go SDKs — it exposes identical resources and provider behavior; language-specific bugs should be filed in the main repo.
 
 ### Fix: `check-release-version` regex (`$$` escaping in Makefile)
 
