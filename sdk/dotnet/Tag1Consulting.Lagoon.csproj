@@ -9,7 +9,7 @@
     <PackageProjectUrl>https://github.com/tag1consulting/pulumi-lagoon-provider</PackageProjectUrl>
     <RepositoryUrl>https://github.com/tag1consulting/pulumi-lagoon-provider</RepositoryUrl>
     <PackageIcon>logo.png</PackageIcon>
-    <Version>0.2.9</Version>
+    <Version>0.3.0</Version>
 
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>

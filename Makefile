@@ -370,7 +370,7 @@ clean-all: clean
 # Go Provider (Native)
 #==============================================================================
 
-PROVIDER_VERSION ?= 0.2.9
+PROVIDER_VERSION ?= 0.3.0
 PROVIDER_BIN     := provider/bin/pulumi-resource-lagoon
 GO_BIN           ?= $(if $(GOPATH),$(GOPATH)/bin,$(HOME)/go/bin)
 
@@ -466,7 +466,7 @@ check-release-version:
 ifndef VERSION
 	$(error VERSION is required. Usage: make release-prep VERSION=0.3.0)
 endif
-	@echo "$(VERSION)" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || \
+	@echo "$(VERSION)" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$$' || \
 		(echo "ERROR: VERSION must be a bare semver (e.g. 0.3.0), got '$(VERSION)'" >&2 && exit 1)
 
 # Release prep: bump versions first, then rebuild provider and regenerate SDKs,
