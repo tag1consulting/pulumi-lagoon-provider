@@ -2,7 +2,7 @@
 
 Minor release adding the .NET/C# SDK and a Makefile fix for the `check-release-version` regex.
 
-### New: .NET/C# SDK (`Tag1Consulting.Lagoon` on NuGet)
+## New: .NET/C# SDK (`Tag1Consulting.Lagoon` on NuGet)
 
 The provider now ships a generated .NET/C# SDK alongside the existing Python, TypeScript, and Go SDKs. Install via:
 
@@ -14,7 +14,7 @@ Resources are in the `Tag1Consulting.Lagoon.Lagoon` namespace. The provider conf
 
 NuGet publishing uses OIDC trusted publishing (no stored API key). The package targets `net8.0`. The .NET SDK is generated from the same Go provider schema as the Python, TypeScript, and Go SDKs — it exposes identical resources and provider behavior; language-specific bugs should be filed in the main repo.
 
-### Fix: `check-release-version` regex (`$$` escaping in Makefile)
+## Fix: `check-release-version` regex (`$$` escaping in Makefile)
 
 The `'^[0-9]+\.[0-9]+\.[0-9]+$'` regex in `check-release-version` used an unescaped `$` that Make interpreted as a variable reference, causing a shell syntax error when running `make release-prep`. Fixed by escaping it as `$$`.
 
