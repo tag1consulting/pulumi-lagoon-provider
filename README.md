@@ -166,6 +166,31 @@ project, err := lagoon.NewProject(ctx, "my-site", &lagoon.ProjectArgs{
 })
 ```
 
+### C#
+
+```csharp
+using System.Collections.Generic;
+using Pulumi;
+using Tag1Consulting.Lagoon.Lagoon;
+
+return await Deployment.RunAsync(() =>
+{
+    var project = new Project("my-site", new ProjectArgs
+    {
+        Name = "my-drupal-site",
+        GitUrl = "git@github.com:org/repo.git",
+        DeploytargetId = 1,
+        ProductionEnvironment = "main",
+        Branches = "^(main|develop|stage)$",
+    });
+
+    return new Dictionary<string, object?>
+    {
+        ["projectId"] = project.LagoonId,
+    };
+});
+```
+
 ## Examples
 
 See the `examples/` directory for complete examples:

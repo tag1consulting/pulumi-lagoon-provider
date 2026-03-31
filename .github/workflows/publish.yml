@@ -323,11 +323,12 @@ jobs:
 
       - name: Install and verify
         run: |
+          NUPKG=$(ls "$GITHUB_WORKSPACE/dist/"*.nupkg | head -1)
+          VERSION=$(basename "$NUPKG" .nupkg | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
           mkdir -p /tmp/test-dotnet/TestInstall
           cd /tmp/test-dotnet/TestInstall
           dotnet new console --force
-          dotnet nuget add source $GITHUB_WORKSPACE/dist --name local
-          dotnet add package Tag1Consulting.Lagoon --source local
+          dotnet add package Tag1Consulting.Lagoon --version "$VERSION" --source "$GITHUB_WORKSPACE/dist"
           dotnet build
 
   publish-nuget:
