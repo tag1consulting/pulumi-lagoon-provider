@@ -23,11 +23,11 @@ builds:
 
 archives:
   - id: archive
-    format: tar.gz
+    formats: tar.gz
     name_template: "pulumi-resource-lagoon-v{{ .Version }}-{{ .Os }}-{{ .Arch }}"
     format_overrides:
       - goos: windows
-        format: zip
+        formats: zip
 
 checksum:
   name_template: "checksums.txt"
