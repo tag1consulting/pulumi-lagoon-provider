@@ -104,6 +104,35 @@ func TestRouteCreate_WithMonitoringPath(t *testing.T) {
 	}
 }
 
+func TestRouteCreate_MonitoringPathUpdateFails(t *testing.T) {
+	mp := "/health"
+	mock := &mockLagoonClient{
+		addRouteToProjectFn: func(_ context.Context, _ map[string]any) (*client.Route, error) {
+			return &client.Route{ID: 5, Domain: "example.com", ProjectName: "p", Source: "API", Created: "2024-01-01"}, nil
+		},
+		updateRouteOnProjectFn: func(_ context.Context, _ int, _ map[string]any) (*client.Route, error) {
+			return nil, fmt.Errorf("API error: internal server error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Route{}
+	resp, err := r.Create(ctx, infer.CreateRequest[RouteArgs]{
+		Inputs: RouteArgs{ProjectName: "p", Domain: "example.com", MonitoringPath: &mp},
+	})
+	if err != nil {
+		t.Fatalf("expected create to succeed despite monitoringPath failure, got: %v", err)
+	}
+	if resp.Output.MonitoringPath != nil {
+		t.Errorf("expected monitoringPath to be nil in state, got %v", *resp.Output.MonitoringPath)
+	}
+	if resp.Output.LagoonID != 5 {
+		t.Errorf("expected LagoonID 5, got %d", resp.Output.LagoonID)
+	}
+	if resp.ID != "5" {
+		t.Errorf("expected ID '5', got %s", resp.ID)
+	}
+}
+
 func TestRouteCreate_WithEnvironment(t *testing.T) {
 	env := "main"
 	mock := &mockLagoonClient{

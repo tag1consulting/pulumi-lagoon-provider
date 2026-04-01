@@ -152,8 +152,8 @@ func (r *Route) Create(ctx context.Context, req infer.CreateRequest[RouteArgs]) 
 	}
 
 	// monitoringPath is not in AddRouteToProjectInput — apply via follow-up update.
-	// If the update fails, clear monitoringPath from args so state reflects reality
-	// and the next apply retries setting the field.
+	// If the update fails, warn the user and clear monitoringPath from state so
+	// the next apply detects a diff and retries setting the field.
 	if args.MonitoringPath != nil {
 		patch := map[string]any{
 			"domain":  args.Domain,
@@ -161,6 +161,9 @@ func (r *Route) Create(ctx context.Context, req infer.CreateRequest[RouteArgs]) 
 			"patch":   map[string]any{"monitoringPath": *args.MonitoringPath},
 		}
 		if _, err := c.UpdateRouteOnProject(ctx, route.ID, patch); err != nil {
+			p.GetLogger(ctx).Warningf(
+				"Route created but failed to set monitoringPath: %v. "+
+					"The next `pulumi up` will retry.", err)
 			args.MonitoringPath = nil
 		}
 	}
