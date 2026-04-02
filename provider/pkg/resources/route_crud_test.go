@@ -1,8 +1,11 @@
 package resources
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
+	"strings"
 	"testing"
 
 	p "github.com/pulumi/pulumi-go-provider"
@@ -93,7 +96,7 @@ func TestRouteCreate_WithMonitoringPath(t *testing.T) {
 	}
 	ctx := testCtx(mock)
 	r := &Route{}
-	_, err := r.Create(ctx, infer.CreateRequest[RouteArgs]{
+	resp, err := r.Create(ctx, infer.CreateRequest[RouteArgs]{
 		Inputs: RouteArgs{ProjectName: "p", Domain: "example.com", MonitoringPath: &mp},
 	})
 	if err != nil {
@@ -101,6 +104,55 @@ func TestRouteCreate_WithMonitoringPath(t *testing.T) {
 	}
 	if !updateCalled {
 		t.Error("expected UpdateRouteOnProject to be called for monitoringPath")
+	}
+	if resp.Output.MonitoringPath == nil || *resp.Output.MonitoringPath != "/health" {
+		t.Errorf("expected monitoringPath /health in final state, got %v", resp.Output.MonitoringPath)
+	}
+}
+
+func TestRouteCreate_MonitoringPathUpdateFails(t *testing.T) {
+	updateCalled := false
+	mp := "/health"
+	mock := &mockLagoonClient{
+		addRouteToProjectFn: func(_ context.Context, _ map[string]any) (*client.Route, error) {
+			return &client.Route{ID: 5, Domain: "example.com", ProjectName: "p", Source: "API", Created: "2024-01-01"}, nil
+		},
+		updateRouteOnProjectFn: func(_ context.Context, _ int, _ map[string]any) (*client.Route, error) {
+			updateCalled = true
+			return nil, fmt.Errorf("API error: internal server error")
+		},
+	}
+
+	// Capture slog output (GetLogger falls back to slog.Default in tests)
+	var logBuf bytes.Buffer
+	oldDefault := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logBuf, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	defer slog.SetDefault(oldDefault)
+
+	ctx := testCtx(mock)
+	r := &Route{}
+	resp, err := r.Create(ctx, infer.CreateRequest[RouteArgs]{
+		Inputs: RouteArgs{ProjectName: "p", Domain: "example.com", MonitoringPath: &mp},
+	})
+	if err != nil {
+		t.Fatalf("expected create to succeed despite monitoringPath failure, got: %v", err)
+	}
+	if !updateCalled {
+		t.Error("expected UpdateRouteOnProject to be called for monitoringPath")
+	}
+	if resp.Output.MonitoringPath != nil {
+		t.Errorf("expected monitoringPath to be nil in state, got %v", *resp.Output.MonitoringPath)
+	}
+	if resp.Output.LagoonID != 5 {
+		t.Errorf("expected LagoonID 5, got %d", resp.Output.LagoonID)
+	}
+	if resp.ID != "5" {
+		t.Errorf("expected ID '5', got %s", resp.ID)
+	}
+
+	logOutput := logBuf.String()
+	if !strings.Contains(logOutput, "failed to set monitoringPath") {
+		t.Errorf("expected warning about monitoringPath failure in log output, got: %s", logOutput)
 	}
 }
 

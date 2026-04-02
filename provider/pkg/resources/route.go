@@ -151,9 +151,13 @@ func (r *Route) Create(ctx context.Context, req infer.CreateRequest[RouteArgs]) 
 		return infer.CreateResponse[RouteState]{}, fmt.Errorf("failed to create route: %w", err)
 	}
 
-	// monitoringPath is not in AddRouteToProjectInput — apply via follow-up update.
-	// If the update fails, clear monitoringPath from args so state reflects reality
-	// and the next apply retries setting the field.
+	// monitoringPath is not in AddRouteToProjectInput (Lagoon API limitation) — apply
+	// via follow-up update. If the update fails, warn the user and clear monitoringPath
+	// from state so the next apply detects a diff and retries setting the field.
+	//
+	// Note: unlike Update (which fails hard on UpdateRouteOnProject errors), Create
+	// returns success with partial state to avoid orphaning the already-created route
+	// — the infer framework does not persist state when Create returns an error.
 	if args.MonitoringPath != nil {
 		patch := map[string]any{
 			"domain":  args.Domain,
@@ -161,6 +165,10 @@ func (r *Route) Create(ctx context.Context, req infer.CreateRequest[RouteArgs]) 
 			"patch":   map[string]any{"monitoringPath": *args.MonitoringPath},
 		}
 		if _, err := c.UpdateRouteOnProject(ctx, route.ID, patch); err != nil {
+			p.GetLogger(ctx).Warningf(
+				"Route %s on project %s created but failed to set monitoringPath: %v. "+
+					"The next `pulumi up` will retry.",
+				args.Domain, args.ProjectName, err)
 			args.MonitoringPath = nil
 		}
 	}
