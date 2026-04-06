@@ -46,7 +46,8 @@ export LAGOON_TOKEN=YOUR_TOKEN
 
 ```python
 import pulumi
-from pulumi_lagoon.lagoon import Project, Environment, Variable, Group
+from pulumi_lagoon import Project, Environment, Variable, Group  # top-level re-exports
+# The submodule path also works: from pulumi_lagoon.lagoon import ...
 
 project = Project("my-site",
     name="my-drupal-site",
@@ -90,7 +91,7 @@ pulumi import lagoon:lagoon:Group my-team my-team
 
 ## Multi-Language Support
 
-This provider also has SDKs for [TypeScript/JavaScript](https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon) and [Go](https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon).
+This provider also has SDKs for [TypeScript/JavaScript](https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon), [Go](https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon), and [.NET/C#](https://www.nuget.org/packages/Tag1Consulting.Lagoon).
 
 ## Documentation
 

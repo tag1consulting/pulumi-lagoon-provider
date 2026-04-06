@@ -1,1 +1,103 @@
-Manage Lagoon hosting platform resources as infrastructure-as-code.
+# Pulumi Lagoon Provider — Node.js SDK
+
+[![npm version](https://img.shields.io/npm/v/@tag1consulting/pulumi-lagoon.svg)](https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/tag1consulting/pulumi-lagoon-provider/blob/main/LICENSE)
+
+A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as infrastructure-as-code.
+
+## Installation
+
+```bash
+npm install @tag1consulting/pulumi-lagoon
+```
+
+## Configuration
+
+```bash
+pulumi config set lagoon:apiUrl https://api.lagoon.example.com/graphql
+pulumi config set --secret lagoon:token YOUR_TOKEN
+```
+
+Or via environment variables:
+
+```bash
+export LAGOON_API_URL=https://api.lagoon.example.com/graphql
+export LAGOON_TOKEN=YOUR_TOKEN
+```
+
+## Supported Resources
+
+| Resource | Description |
+|----------|-------------|
+| `Project` | Lagoon projects (applications/sites) |
+| `Environment` | Environments (branch/PR deployments) |
+| `Variable` | Project and environment variables |
+| `DeployTarget` | Kubernetes cluster deploy targets |
+| `DeployTargetConfig` | Branch-pattern routing to deploy targets |
+| `NotificationSlack` | Slack deployment notifications |
+| `NotificationRocketChat` | RocketChat deployment notifications |
+| `NotificationEmail` | Email deployment notifications |
+| `NotificationMicrosoftTeams` | Microsoft Teams deployment notifications |
+| `ProjectNotification` | Link notifications to projects |
+| `Task` | Advanced task definitions (command and image types) |
+| `Group` | Groups for organizing projects and users |
+
+## Usage
+
+```typescript
+import * as pulumi from "@pulumi/pulumi";
+import * as lagoon from "@tag1consulting/pulumi-lagoon";
+
+const project = new lagoon.Project("my-site", {
+    name: "my-drupal-site",
+    gitUrl: "git@github.com:org/repo.git",
+    deploytargetId: 1,
+    productionEnvironment: "main",
+    branches: "^(main|develop|stage)$",
+});
+
+const prodEnv = new lagoon.Environment("production", {
+    name: "main",
+    projectId: project.lagoonId,
+    deployType: "branch",
+    deployBaseRef: "main",
+    environmentType: "production",
+});
+
+const dbConfig = new lagoon.Variable("db-host", {
+    name: "DATABASE_HOST",
+    value: "mysql.production.example.com",
+    projectId: project.lagoonId,
+    environmentId: prodEnv.lagoonId,
+    scope: "runtime",
+});
+
+const team = new lagoon.Group("my-team", {
+    name: "my-team",
+});
+
+export const projectId = project.lagoonId;
+```
+
+## Importing Existing Resources
+
+```bash
+pulumi import lagoon:lagoon:Project my-site 123
+pulumi import lagoon:lagoon:Environment prod-env 123:main
+pulumi import lagoon:lagoon:Variable api-key 123::API_KEY
+pulumi import lagoon:lagoon:Group my-team my-team
+```
+
+## Multi-Language Support
+
+This provider also has SDKs for [Python](https://pypi.org/project/pulumi-lagoon/), [Go](https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon), and [.NET/C#](https://www.nuget.org/packages/Tag1Consulting.Lagoon).
+
+## Documentation
+
+- [GitHub Repository](https://github.com/tag1consulting/pulumi-lagoon-provider)
+- [Lagoon Documentation](https://docs.lagoon.sh/)
+- [Pulumi Documentation](https://www.pulumi.com/docs/)
+
+## License
+
+Apache License 2.0
