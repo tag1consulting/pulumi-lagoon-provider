@@ -1,0 +1,44 @@
+name: Feature Request
+description: Suggest an enhancement or new resource
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! Please describe your use case so we can understand the context.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What would you like the provider to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe the workflow or problem this would solve.
+    validations:
+      required: true
+
+  - type: textarea
+    id: lagoon-api
+    attributes:
+      label: Lagoon API Reference
+      description: |
+        If this involves a specific Lagoon GraphQL mutation/query, link to the relevant
+        [Lagoon API documentation](https://docs.lagoon.sh/) or describe the API capability.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you tried any workarounds or alternative approaches?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information, screenshots, or examples.
