@@ -331,6 +331,7 @@ Apache License 2.0 — See [LICENSE](LICENSE) for details.
 
 ## Resources
 
+- [Release Notes](RELEASE_NOTES.md)
 - [Pulumi Documentation](https://www.pulumi.com/docs/)
 - [Lagoon Documentation](https://docs.lagoon.sh/)
 - [Lagoon GraphQL API](https://api.lagoon.sh/graphql)
