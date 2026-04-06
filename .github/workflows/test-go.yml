@@ -64,3 +64,11 @@ jobs:
       - name: Build provider binary
         working-directory: provider
         run: CGO_ENABLED=0 go build -o bin/pulumi-resource-lagoon ./cmd/pulumi-resource-lagoon/
+
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check version consistency
+        run: bash scripts/check-version-consistency.sh
