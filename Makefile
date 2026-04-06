@@ -404,6 +404,9 @@ go-sdk-python: go-build
 	rm -rf $(SDK_TMP)
 	# Append __version__ so it survives SDK regeneration (generator does not emit it).
 	printf '\n# Expose the package version as the conventional __version__ attribute.\n# The code generator does not emit this; it is appended by the go-sdk-python\n# Makefile target after generation so it survives SDK regenerations.\n__version__: str = _utilities.get_version()\n' >> sdk/python/pulumi_lagoon/__init__.py
+	# Re-export resource classes at the top level so users can write
+	# "from pulumi_lagoon import Project" instead of "from pulumi_lagoon.lagoon import Project".
+	printf '\n# Re-export resource classes at the top level for convenience.\n# This is appended by the go-sdk-python Makefile target after generation.\nfrom .lagoon import *\n' >> sdk/python/pulumi_lagoon/__init__.py
 
 go-sdk-nodejs: go-build
 	rm -rf $(SDK_TMP)
@@ -418,6 +421,9 @@ go-sdk-nodejs: go-build
 	# Fix generated path: utilities.ts uses require('./package.json') but compiles to bin/
 	# where package.json is one level up, so patch it to require('../package.json').
 	sed -i "s|require('./package.json')|require('../package.json')|g" sdk/nodejs/utilities.ts
+	# Re-export resource classes at the top level so users can write
+	# import { Project } from "@tag1consulting/pulumi-lagoon".
+	printf '\n// Re-export resource classes at the top level for convenience.\n// This is appended by the go-sdk-nodejs Makefile target after generation.\nexport * from "./lagoon";\n' >> sdk/nodejs/index.ts
 	cp LICENSE sdk/nodejs/LICENSE
 	rm -rf $(SDK_TMP)
 
