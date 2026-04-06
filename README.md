@@ -319,6 +319,20 @@ Key properties:
 - All resources support `pulumi import`
 - JWT token generation is centralized and configurable (`jwtAudience` config field)
 
+## Troubleshooting
+
+### Authentication Errors
+
+- **"lagoon authentication required"** — Set `lagoon:token` via `pulumi config set --secret lagoon:token <TOKEN>` or export `LAGOON_TOKEN`.
+- **Token expired** — Lagoon JWT tokens expire after 1 hour. Generate a fresh token or use `jwtSecret` for automatic renewal.
+- **Self-signed certificates** — Set `lagoon:insecure` to `true` for development instances with self-signed TLS.
+
+### Common Issues
+
+- **"not found" on import** — Verify the resource exists in Lagoon. Import IDs are case-sensitive. See the [import reference table](#importing-existing-resources) for the correct format.
+- **Diff on unchanged resources** — If `pulumi preview` shows unexpected changes after import, ensure all required fields in your code match the Lagoon API values exactly.
+- **Provider version mismatch** — Run `pulumi plugin ls | grep lagoon` to verify the installed version matches your SDK version.
+
 ## Contributing
 
 Contributions, feedback, and bug reports are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding guidelines, and the pull request process.
