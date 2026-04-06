@@ -21,10 +21,20 @@ type RouteAnnotationInput struct {
 	Value string `pulumi:"value"`
 }
 
+func (a *RouteAnnotationInput) Annotate(an infer.Annotator) {
+	an.Describe(&a.Key, "The annotation key.")
+	an.Describe(&a.Value, "The annotation value.")
+}
+
 // RoutePathRouteInput is a path-based routing rule on a route.
 type RoutePathRouteInput struct {
 	Path      string `pulumi:"path"`
 	ToService string `pulumi:"toService"`
+}
+
+func (a *RoutePathRouteInput) Annotate(an infer.Annotator) {
+	an.Describe(&a.Path, "The URL path prefix to match (e.g., '/api').")
+	an.Describe(&a.ToService, "The service to route matching requests to.")
 }
 
 // RouteArgs defines the user-provided inputs for a LagoonRoute resource.
