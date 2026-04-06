@@ -306,8 +306,7 @@ pulumi-lagoon-provider/
 │   ├── single-cluster/          # Single Kind cluster deployment
 │   └── multi-cluster/           # Production-like multi-cluster deployment
 ├── scripts/                     # Shared operational scripts
-├── docs/                        # Additional documentation
-└── memory-bank/                 # Architecture and planning docs
+└── docs/                        # Additional documentation
 ```
 
 ## Architecture
