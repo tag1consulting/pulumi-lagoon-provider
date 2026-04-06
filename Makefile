@@ -22,7 +22,7 @@
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
         clean clean-all \
-        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet go-sdk-all go-install check-release-version release-prep go-proxy-warmup
+        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet go-sdk-all go-install check-release-version release-prep go-proxy-warmup check-versions
 
 # Variables
 PYTHON := python3
@@ -550,3 +550,6 @@ go-proxy-warmup: check-release-version
 		fi; \
 	done
 	@echo "=== Go module proxy warm-up complete ==="
+
+check-versions:
+	bash scripts/check-version-consistency.sh
