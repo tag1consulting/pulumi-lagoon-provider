@@ -15,7 +15,7 @@ Prerequisites:
 
 import pulumi
 import pulumi_lagoon
-from pulumi_lagoon.lagoon import (
+from pulumi_lagoon import (
     Environment,
     EnvironmentArgs,
     NotificationEmail,
