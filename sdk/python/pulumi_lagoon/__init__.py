@@ -64,3 +64,7 @@ _utilities.register(
 # The code generator does not emit this; it is appended by the go-sdk-python
 # Makefile target after generation so it survives SDK regenerations.
 __version__: str = _utilities.get_version()
+
+# Re-export resource classes at the top level for convenience.
+# This is appended by the go-sdk-python Makefile target after generation.
+from .lagoon import *

@@ -30,3 +30,7 @@ pulumi.runtime.registerResourcePackage("lagoon", {
         return new Provider(name, <any>undefined, { urn });
     },
 });
+
+// Re-export resource classes at the top level for convenience.
+// This is appended by the go-sdk-nodejs Makefile target after generation.
+export * from "./lagoon";

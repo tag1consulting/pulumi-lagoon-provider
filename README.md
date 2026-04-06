@@ -99,7 +99,8 @@ export LAGOON_TOKEN=YOUR_TOKEN
 ```python
 import pulumi
 import pulumi_lagoon as lagoon
-from pulumi_lagoon.lagoon import Project, ProjectArgs, Environment, EnvironmentArgs, Variable, VariableArgs
+from pulumi_lagoon import Project, ProjectArgs, Environment, EnvironmentArgs, Variable, VariableArgs
+# The submodule path also works: from pulumi_lagoon.lagoon import Project, ...
 
 project = Project("my-site",
     ProjectArgs(
@@ -139,8 +140,10 @@ pulumi.export("production_url", prod_env.route)
 
 ```typescript
 import * as lagoon from "@tag1consulting/pulumi-lagoon";
+// Resources are available directly: lagoon.Project, lagoon.Variable, etc.
+// The submodule path also works: lagoon.lagoon.Project
 
-const project = new lagoon.lagoon.Project("my-site", {
+const project = new lagoon.Project("my-site", {
     name: "my-drupal-site",
     gitUrl: "git@github.com:org/repo.git",
     deploytargetId: 1,
