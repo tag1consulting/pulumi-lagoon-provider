@@ -424,6 +424,10 @@ go-sdk-nodejs: go-build
 	# Re-export resource classes at the top level so users can write
 	# import { Project } from "@tag1consulting/pulumi-lagoon".
 	printf '\n// Re-export resource classes at the top level for convenience.\n// This is appended by the go-sdk-nodejs Makefile target after generation.\nexport * from "./lagoon";\n' >> sdk/nodejs/index.ts
+	# Inject description field into package.json (codegen does not emit it).
+	sed -i '/"name": "@tag1consulting\/pulumi-lagoon"/a\    "description": "Manage Lagoon hosting platform resources as infrastructure-as-code.",' sdk/nodejs/package.json
+	grep -q '"description"' sdk/nodejs/package.json || \
+		(echo "ERROR: description injection failed in package.json" >&2 && exit 1)
 	cp LICENSE sdk/nodejs/LICENSE
 	rm -rf $(SDK_TMP)
 
@@ -455,6 +459,10 @@ go-sdk-dotnet: go-build
 	sed -i '/<PackageIcon>logo.png<\/PackageIcon>/a\    <PackageReadmeFile>README.md</PackageReadmeFile>' sdk/dotnet/Tag1Consulting.Lagoon.csproj
 	grep -q '<PackageReadmeFile>README.md</PackageReadmeFile>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
 		(echo "ERROR: PackageReadmeFile patch failed in Tag1Consulting.Lagoon.csproj" >&2 && exit 1)
+	# Inject PackageTags and Authors properties (codegen does not emit them).
+	sed -i '/<PackageReadmeFile>README.md<\/PackageReadmeFile>/a\    <PackageTags>lagoon;pulumi;infrastructure-as-code;kubernetes;hosting</PackageTags>' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+	grep -q '<PackageTags>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
+		(echo "ERROR: PackageTags injection failed in Tag1Consulting.Lagoon.csproj" >&2 && exit 1)
 	# Pack README.md into the nupkg root (codegen does not include it).
 	sed -i '/<None Include="logo.png">/i\    <None Include="README.md" Pack="true" PackagePath="" />' sdk/dotnet/Tag1Consulting.Lagoon.csproj
 	# Replace the SVG-disguised-as-PNG that codegen copies with a real PNG.

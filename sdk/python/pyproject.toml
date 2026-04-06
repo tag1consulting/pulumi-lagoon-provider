@@ -2,11 +2,20 @@
   name = "pulumi_lagoon"
   description = "Manage Lagoon hosting platform resources as infrastructure-as-code."
   dependencies = ["parver>=0.2.1", "pulumi>=3.165.0,<4.0.0", "semver>=2.8.1", "typing-extensions>=4.11,<5; python_version < \"3.11\""]
-  keywords = ["lagoon", "hosting", "kubernetes", "pulumi"]
+  keywords = ["lagoon", "hosting", "kubernetes", "pulumi", "infrastructure-as-code"]
   readme = "README.md"
   requires-python = ">=3.9"
   version = "0.3.0"
   license = "Apache-2.0"
+  authors = [{name = "Tag1 Consulting", email = "info@tag1consulting.com"}]
+  classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Systems Administration",
+  ]
   [project.urls]
     Homepage = "https://github.com/tag1consulting/pulumi-lagoon-provider"
     Repository = "https://github.com/tag1consulting/pulumi-lagoon-provider"
