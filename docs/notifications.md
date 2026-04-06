@@ -306,13 +306,13 @@ for idx, project in enumerate([project_a, project_b, project_c]):
 
 ```bash
 # Import a Slack notification
-pulumi import lagoon:index:NotificationSlack my-slack deploy-alerts
+pulumi import lagoon:lagoon:NotificationSlack my-slack deploy-alerts
 
 # Import an Email notification
-pulumi import lagoon:index:NotificationEmail my-email ops-team
+pulumi import lagoon:lagoon:NotificationEmail my-email ops-team
 
 # Import a project notification association
-pulumi import lagoon:index:ProjectNotification my-assoc my-project:slack:deploy-alerts
+pulumi import lagoon:lagoon:ProjectNotification my-assoc my-project:slack:deploy-alerts
 ```
 
 After importing, add the corresponding resource definition to your Pulumi code:
