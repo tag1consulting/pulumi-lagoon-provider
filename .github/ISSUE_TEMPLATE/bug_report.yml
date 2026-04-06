@@ -40,7 +40,9 @@ body:
     id: error-output
     attributes:
       label: Error Output
-      description: Full error output from `pulumi up` or `pulumi preview`.
+      description: |
+        Full error output from `pulumi up` or `pulumi preview`.
+        **Important: redact any tokens, passwords, API keys, or other secrets before pasting.**
       render: shell
 
   - type: input
