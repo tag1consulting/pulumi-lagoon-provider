@@ -1,0 +1,19 @@
+version: "2"
+
+run:
+  go: "1.26"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+  exclusions:
+    rules:
+      # Test files: allow unchecked errors for test helpers (json.Encode,
+      # os.Setenv, w.Write, etc.) since test failures surface via t.Fatal.
+      - path: _test\.go
+        linters:
+          - errcheck

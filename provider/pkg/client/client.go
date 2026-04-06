@@ -188,7 +188,7 @@ func (c *Client) executeOnce(ctx context.Context, query string, variables map[st
 	if err != nil {
 		return nil, &LagoonConnectionError{Message: fmt.Sprintf("HTTP request failed: %s", err), Cause: err}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

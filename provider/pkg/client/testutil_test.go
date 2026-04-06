@@ -58,9 +58,3 @@ func mockGraphQLServerRaw(t *testing.T, handler func(w http.ResponseWriter, r *h
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(handler))
 }
-
-// intPtr returns a pointer to an int.
-func intPtr(i int) *int { return &i }
-
-// strPtr returns a pointer to a string.
-func strPtr(s string) *string { return &s }

@@ -384,6 +384,9 @@ go-test:
 go-vet:
 	cd provider && go vet ./...
 
+go-lint:
+	cd provider && golangci-lint run ./...
+
 go-schema: go-build
 	pulumi package get-schema ./$(PROVIDER_BIN) > provider/schema.json
 
