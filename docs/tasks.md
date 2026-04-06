@@ -91,11 +91,13 @@ database_backup = Task("db-backup",
 
 ### Task Scoping Rules
 
-**Exactly one** of the following must be set to define the task scope:
+Exactly one of the following should be set to define the task scope:
 - `project_id` - Task available to all environments in the project
 - `environment_id` - Task available only to the specified environment
 - `group_name` - Task available to all projects in the group
 - `system_wide=true` - Task available to all projects (admin only)
+
+> **Note:** The scope constraint is enforced by the Lagoon API, not by the provider. If you set multiple scopes (or none), the API will return an error. The exact validation may vary by Lagoon version.
 
 ### Task Arguments
 
@@ -300,6 +302,54 @@ mutation RunTask {
 }
 ```
 
+## GraphQL API Reference
+
+The provider uses these Lagoon GraphQL operations to manage task definitions.
+
+**Create a task definition:**
+
+```graphql
+mutation AddAdvancedTaskDefinition($input: AddAdvancedTaskDefinitionInput!) {
+    addAdvancedTaskDefinition(input: $input) {
+        id
+        name
+        description
+        type
+        service
+        command
+        image
+        permission
+        confirmationText
+        advancedTaskDefinitionArguments { id name displayName type }
+        project { id name }
+        environment { id name }
+        groupName
+    }
+}
+```
+
+**Query a task definition by ID:**
+
+```graphql
+query AdvancedTaskDefinitionById($id: Int!) {
+    advancedTaskDefinitionById(id: $id) {
+        id
+        name
+        description
+        type
+        service
+        command
+        image
+        permission
+        confirmationText
+        advancedTaskDefinitionArguments { id name displayName type }
+        project { id name }
+        environment { id name }
+        groupName
+    }
+}
+```
+
 ## Importing Existing Tasks
 
 ### Import ID Format
@@ -312,7 +362,7 @@ mutation RunTask {
 
 ```bash
 # Import an existing task
-pulumi import lagoon:index:Task drush-cr 456
+pulumi import lagoon:lagoon:Task drush-cr 456
 ```
 
 After importing, add the corresponding resource definition to your Pulumi code:
@@ -394,7 +444,7 @@ Valid values for `permission`:
 
 ### Scope Conflicts
 
-- **"Must specify exactly one scope"** - Set exactly one of: `project_id`, `environment_id`, `group_name`, or `system_wide=true`
+- **Scope conflict error from Lagoon API** - Set exactly one of: `project_id`, `environment_id`, `group_name`, or `system_wide=true`
 - **System-wide requires admin** - Only platform admins can create system-wide tasks
 
 ## Best Practices

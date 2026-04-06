@@ -311,6 +311,77 @@ eu_project = Project("eu-site",
 )
 ```
 
+## GraphQL API Reference
+
+The provider uses these Lagoon GraphQL operations under the hood.
+
+### DeployTarget Operations
+
+**Create a deploy target (Kubernetes cluster):**
+
+```graphql
+mutation AddKubernetes($input: AddKubernetesInput!) {
+    addKubernetes(input: $input) {
+        id
+        name
+        consoleUrl
+        sshHost
+        sshPort
+        routerPattern
+        created
+    }
+}
+```
+
+**Query all deploy targets:**
+
+```graphql
+query AllKubernetes {
+    allKubernetes {
+        id
+        name
+        consoleUrl
+        sshHost
+        sshPort
+        routerPattern
+    }
+}
+```
+
+### DeployTargetConfig Operations
+
+**Create a deploy target config (routing rule):**
+
+```graphql
+mutation AddDeployTargetConfig($input: AddDeployTargetConfigInput!) {
+    addDeployTargetConfig(input: $input) {
+        id
+        weight
+        branches
+        pullrequests
+        deployTarget { id name }
+        project { id name }
+    }
+}
+```
+
+**Query configs by project ID:**
+
+```graphql
+query DeployTargetConfigsByProjectId($project: Int!) {
+    deployTargetConfigsByProjectId(project: $project) {
+        id
+        weight
+        branches
+        pullrequests
+        deployTarget { id name }
+        project { id name }
+    }
+}
+```
+
+> **Import tip:** Use the query above to find config IDs. The import format is `{project_id}:{config_id}` (e.g., `123:5`).
+
 ## Importing Existing Deploy Targets
 
 ### Import ID Formats
@@ -324,10 +395,10 @@ eu_project = Project("eu-site",
 
 ```bash
 # Import a deploy target
-pulumi import lagoon:index:DeployTarget prod-cluster 1
+pulumi import lagoon:lagoon:DeployTarget prod-cluster 1
 
 # Import a deploy target config
-pulumi import lagoon:index:DeployTargetConfig prod-routing 123:5
+pulumi import lagoon:lagoon:DeployTargetConfig prod-routing 123:5
 ```
 
 After importing, add the corresponding resource definition to your Pulumi code:
