@@ -4,7 +4,7 @@ Contributions, bug reports, and feedback are welcome. Please follow our [Code of
 
 ## Prerequisites
 
-- Go 1.22+
+- Go 1.26+
 - [Pulumi CLI](https://www.pulumi.com/docs/install/)
 - A running Lagoon instance with API credentials (required for integration tests only; unit tests are self-contained)
 

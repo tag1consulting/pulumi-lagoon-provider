@@ -1,6 +1,6 @@
 ## Summary
 
-<!-- Briefly describe what this PR does -->
+<!-- Briefly describe what this PR does and link related issues (e.g. "Closes #123") -->
 
 ## Type of Change
 
@@ -10,13 +10,11 @@
 - [ ] Refactoring
 - [ ] Other (please describe)
 
+## Checklist
+
+- [ ] Tests pass (`make go-test`)
+- [ ] If schema changed: SDKs regenerated (`make go-sdk-all`) and included in this PR
+
 ## Test Plan
 
 <!-- How has this been tested? -->
-
----
-
-> **Note**: Please ensure your PR targets the `develop` branch, not `main`.
-> The `main` branch is reserved for releases only.
->
-> If your PR is targeting `main`, please change the base branch to `develop`.
