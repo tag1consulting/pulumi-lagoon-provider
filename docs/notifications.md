@@ -22,7 +22,7 @@ The notification workflow in Lagoon involves two steps:
 Creates a Slack notification configuration.
 
 ```python
-from pulumi_lagoon.lagoon import NotificationSlack, NotificationSlackArgs
+from pulumi_lagoon import NotificationSlack, NotificationSlackArgs
 
 slack_alerts = NotificationSlack("deploy-alerts",
     NotificationSlackArgs(
@@ -51,7 +51,7 @@ slack_alerts = NotificationSlack("deploy-alerts",
 Creates a RocketChat notification configuration.
 
 ```python
-from pulumi_lagoon.lagoon import NotificationRocketChat, NotificationRocketChatArgs
+from pulumi_lagoon import NotificationRocketChat, NotificationRocketChatArgs
 
 rocketchat_alerts = NotificationRocketChat("team-chat",
     NotificationRocketChatArgs(
@@ -74,7 +74,7 @@ rocketchat_alerts = NotificationRocketChat("team-chat",
 Creates an Email notification configuration.
 
 ```python
-from pulumi_lagoon.lagoon import NotificationEmail, NotificationEmailArgs
+from pulumi_lagoon import NotificationEmail, NotificationEmailArgs
 
 email_ops = NotificationEmail("ops-team",
     NotificationEmailArgs(
@@ -95,7 +95,7 @@ email_ops = NotificationEmail("ops-team",
 Creates a Microsoft Teams notification configuration.
 
 ```python
-from pulumi_lagoon.lagoon import NotificationMicrosoftTeams, NotificationMicrosoftTeamsArgs
+from pulumi_lagoon import NotificationMicrosoftTeams, NotificationMicrosoftTeamsArgs
 
 teams_alerts = NotificationMicrosoftTeams("teams-alerts",
     NotificationMicrosoftTeamsArgs(
@@ -117,7 +117,7 @@ Links a notification to a project. This enables the project to receive notificat
 
 ```python
 import pulumi
-from pulumi_lagoon.lagoon import (
+from pulumi_lagoon import (
     NotificationSlack, NotificationSlackArgs,
     Project, ProjectArgs,
     ProjectNotification, ProjectNotificationArgs,
@@ -171,7 +171,7 @@ Here's a complete example showing how to set up multiple notifications for a pro
 
 ```python
 import pulumi
-from pulumi_lagoon.lagoon import (
+from pulumi_lagoon import (
     NotificationEmail, NotificationEmailArgs,
     NotificationMicrosoftTeams, NotificationMicrosoftTeamsArgs,
     NotificationSlack, NotificationSlackArgs,
@@ -258,7 +258,7 @@ A single notification can be linked to multiple projects:
 
 ```python
 import pulumi
-from pulumi_lagoon.lagoon import (
+from pulumi_lagoon import (
     NotificationSlack, NotificationSlackArgs,
     Project, ProjectArgs,
     ProjectNotification, ProjectNotificationArgs,
@@ -319,7 +319,7 @@ After importing, add the corresponding resource definition to your Pulumi code:
 
 ```python
 import pulumi
-from pulumi_lagoon.lagoon import NotificationSlack, NotificationSlackArgs
+from pulumi_lagoon import NotificationSlack, NotificationSlackArgs
 
 # After importing "deploy-alerts"
 slack_alerts = NotificationSlack("my-slack",

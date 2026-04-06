@@ -51,7 +51,7 @@ from registry import install_harbor
 
 # Import pulumi_lagoon native provider for deploy targets and projects
 import pulumi_lagoon
-from pulumi_lagoon.lagoon import DeployTarget, DeployTargetArgs, Project, ProjectArgs
+from pulumi_lagoon import DeployTarget, DeployTargetArgs, Project, ProjectArgs
 
 # =============================================================================
 # Configuration

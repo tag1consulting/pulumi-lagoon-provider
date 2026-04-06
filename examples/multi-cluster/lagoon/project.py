@@ -13,7 +13,7 @@ from typing import Optional
 import pulumi
 import pulumi_lagoon
 from config import DomainConfig
-from pulumi_lagoon.lagoon import (
+from pulumi_lagoon import (
     DeployTarget,
     DeployTargetArgs,
     DeployTargetConfig,

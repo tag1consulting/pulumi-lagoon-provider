@@ -30,7 +30,7 @@ const provider = new lagoon.Provider("lagoon", {
     token: "your-lagoon-jwt-token",
 });
 
-const project = new lagoon.lagoon.Project("my-project", {
+const project = new lagoon.Project("my-project", {
     name: "my-project",
     gitUrl: "git@github.com:my-org/my-repo.git",
     deploytargetId: 1,
@@ -50,7 +50,7 @@ provider = lagoon.Provider("lagoon",
     token="your-lagoon-jwt-token",
 )
 
-project = lagoon.lagoon.Project("my-project",
+project = lagoon.Project("my-project",
     name="my-project",
     git_url="git@github.com:my-org/my-repo.git",
     deploytarget_id=1,
