@@ -50,6 +50,23 @@ jobs:
         working-directory: provider
         run: go vet ./...
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache-dependency-path: provider/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.11
+          working-directory: provider
+
   build:
     runs-on: ubuntu-latest
     steps:

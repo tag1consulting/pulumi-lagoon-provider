@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Lagoon Documentation
+    url: https://docs.lagoon.sh/
+    about: For questions about the Lagoon platform itself (not this Pulumi provider)
+  - name: Pulumi Documentation
+    url: https://www.pulumi.com/docs/
+    about: For general Pulumi questions not specific to the Lagoon provider

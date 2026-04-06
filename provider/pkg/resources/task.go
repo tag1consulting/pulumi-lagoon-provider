@@ -22,6 +22,12 @@ type TaskArgumentInput struct {
 	Type        string `pulumi:"type"`
 }
 
+func (a *TaskArgumentInput) Annotate(an infer.Annotator) {
+	an.Describe(&a.Name, "The argument identifier (used as the variable name).")
+	an.Describe(&a.DisplayName, "The human-readable label shown in the Lagoon UI.")
+	an.Describe(&a.Type, "The argument type: STRING, ENVIRONMENT_SOURCE_NAME, or ENVIRONMENT_SOURCE_NAME_EXCLUDE_SELF.")
+}
+
 type TaskArgs struct {
 	Name             string              `pulumi:"name"`
 	Type             string              `pulumi:"type"`

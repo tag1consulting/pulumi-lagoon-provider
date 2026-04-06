@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -97,8 +98,8 @@ func TestGenerateAdminTokenFromSecret_Expiry(t *testing.T) {
 
 	// Token should expire ~1 hour from now
 	expectedExpiry := before.Add(1 * time.Hour)
-	if exp.Time.Before(before) || exp.Time.After(expectedExpiry.Add(5*time.Second)) {
-		t.Errorf("token expiry %v is not within expected range", exp.Time)
+	if exp.Before(before) || exp.After(expectedExpiry.Add(5*time.Second)) {
+		t.Errorf("token expiry %v is not within expected range", exp)
 	}
 }
 
@@ -108,7 +109,7 @@ func TestConfigure_WithToken(t *testing.T) {
 		Token:  "pre-set-token",
 	}
 
-	if err := cfg.Configure(nil); err != nil {
+	if err := cfg.Configure(context.TODO()); err != nil {
 		t.Fatalf("Configure failed: %v", err)
 	}
 
@@ -124,7 +125,7 @@ func TestConfigure_WithJWTSecret(t *testing.T) {
 		JWTAudience: "api.test",
 	}
 
-	if err := cfg.Configure(nil); err != nil {
+	if err := cfg.Configure(context.TODO()); err != nil {
 		t.Fatalf("Configure failed: %v", err)
 	}
 
@@ -161,7 +162,7 @@ func TestConfigure_NoAuth(t *testing.T) {
 		APIUrl: "https://api.test/graphql",
 	}
 
-	err := cfg.Configure(nil)
+	err := cfg.Configure(context.TODO())
 	if err == nil {
 		t.Fatal("expected error when no authentication is configured")
 	}
@@ -191,7 +192,7 @@ func TestConfigure_EnvVarToken(t *testing.T) {
 		APIUrl: "https://api.test/graphql",
 	}
 
-	if err := cfg.Configure(nil); err != nil {
+	if err := cfg.Configure(context.TODO()); err != nil {
 		t.Fatalf("Configure failed: %v", err)
 	}
 
@@ -223,7 +224,7 @@ func TestConfigure_EnvVarJWTSecret(t *testing.T) {
 		JWTAudience: "api.dev",
 	}
 
-	if err := cfg.Configure(nil); err != nil {
+	if err := cfg.Configure(context.TODO()); err != nil {
 		t.Fatalf("Configure failed: %v", err)
 	}
 
@@ -281,7 +282,7 @@ func TestConfigure_TokenPrecedence(t *testing.T) {
 		JWTSecret: "some-secret",
 	}
 
-	if err := cfg.Configure(nil); err != nil {
+	if err := cfg.Configure(context.TODO()); err != nil {
 		t.Fatalf("Configure failed: %v", err)
 	}
 
@@ -313,7 +314,7 @@ func TestConfigure_JWTSecretGeneratesToken(t *testing.T) {
 		JWTAudience: "api.dev",
 	}
 
-	if err := cfg.Configure(nil); err != nil {
+	if err := cfg.Configure(context.TODO()); err != nil {
 		t.Fatalf("Configure failed: %v", err)
 	}
 
