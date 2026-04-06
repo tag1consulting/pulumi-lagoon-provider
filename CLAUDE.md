@@ -93,7 +93,6 @@ pulumi-lagoon-provider/
 │
 ├── docs/                   # Additional documentation
 │   └── notifications.md    # Notification resource documentation
-├── memory-bank/            # Documentation and planning
 ├── RELEASE_NOTES.md        # Version changelog
 ├── Makefile                # Development workflow automation
 └── README.md               # Project documentation
