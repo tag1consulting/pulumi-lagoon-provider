@@ -36,7 +36,7 @@ jobs:
         working-directory: sdk/python
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dist
           path: sdk/python/dist/
@@ -61,7 +61,7 @@ jobs:
         working-directory: sdk/nodejs
 
       - name: Upload Node.js artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dist-nodejs
           path: |
@@ -84,7 +84,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
@@ -112,7 +112,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: dist-nodejs
           path: sdk/nodejs/
@@ -151,7 +151,7 @@ jobs:
         working-directory: sdk/dotnet
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dist-dotnet
           path: sdk/dotnet/dist/
@@ -167,7 +167,7 @@ jobs:
           dotnet-version: '8.0'
 
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: dist-dotnet
           path: dist/
