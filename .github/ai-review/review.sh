@@ -52,30 +52,61 @@ echo "Mode: ${REVIEW_MODE}" >&2
 # Ensure we have the base branch for diffing
 git fetch origin "${BASE_REF}" --depth=50 2>/dev/null || echo "WARNING: git fetch failed; diff may be incomplete." >&2
 
+# ---------------------------------------------------------------------------
+# Incremental diff: only review commits since the last review run.
+# Fall back to the full PR diff on first run or if the last SHA is unreachable.
+# ---------------------------------------------------------------------------
+LAST_REVIEWED_SHA=$("${SCRIPT_DIR}/post-review.sh" --get-last-sha 2>/dev/null || true)
+DIFF_BASE=""
+DIFF_LABEL=""
+
+if [[ -n "$LAST_REVIEWED_SHA" && "$LAST_REVIEWED_SHA" != "$HEAD_SHA" ]]; then
+  # Verify the SHA is reachable in the local clone
+  if git cat-file -e "${LAST_REVIEWED_SHA}^{commit}" 2>/dev/null; then
+    DIFF_BASE="$LAST_REVIEWED_SHA"
+    DIFF_LABEL="incremental (${LAST_REVIEWED_SHA:0:7}..${HEAD_SHA:0:7})"
+    echo "Incremental review: diffing ${LAST_REVIEWED_SHA:0:7}..${HEAD_SHA:0:7}" >&2
+  else
+    echo "Last-reviewed SHA ${LAST_REVIEWED_SHA:0:7} not reachable; falling back to full PR diff." >&2
+  fi
+fi
+
+if [[ -z "$DIFF_BASE" ]]; then
+  DIFF_LABEL="full PR diff"
+  echo "Full PR review: diffing origin/${BASE_REF}...${HEAD_SHA}" >&2
+fi
+
 # Compute the diff
 DIFF_FILE=$(mktemp_tracked /tmp/ai-review-diff-XXXXXXXX.txt)
-git diff "origin/${BASE_REF}...${HEAD_SHA}" -- \
-  ':!*lock.json' ':!*lock.yaml' ':!vendor/*' ':!*.sum' ':!node_modules/*' \
-  > "$DIFF_FILE" 2>/dev/null || true
+EXCL=(':!*lock.json' ':!*lock.yaml' ':!vendor/*' ':!*.sum' ':!node_modules/*')
+if [[ -n "$DIFF_BASE" ]]; then
+  git diff "${DIFF_BASE}...${HEAD_SHA}" -- "${EXCL[@]}" > "$DIFF_FILE" 2>/dev/null || true
+else
+  git diff "origin/${BASE_REF}...${HEAD_SHA}" -- "${EXCL[@]}" > "$DIFF_FILE" 2>/dev/null || true
+fi
 
 # Check for empty diff
 DIFF_LINES=$(wc -l < "$DIFF_FILE" | tr -d ' ')
 if [[ "$DIFF_LINES" -eq 0 ]]; then
-  echo "No changes detected. Skipping review." >&2
+  echo "No new changes since last review. Skipping." >&2
   exit 0
 fi
 
-echo "Diff: ${DIFF_LINES} lines" >&2
+echo "Diff: ${DIFF_LINES} lines (${DIFF_LABEL})" >&2
 
-# Build file manifest
-CHANGED_FILES=$(git diff --name-only "origin/${BASE_REF}...${HEAD_SHA}" -- \
-  ':!*lock.json' ':!*lock.yaml' ':!vendor/*' ':!*.sum' ':!node_modules/*' 2>/dev/null || true)
+# Build file manifest (same range as diff)
+if [[ -n "$DIFF_BASE" ]]; then
+  CHANGED_FILES=$(git diff --name-only "${DIFF_BASE}...${HEAD_SHA}" -- "${EXCL[@]}" 2>/dev/null || true)
+  DIFF_STAT=$(git diff --stat "${DIFF_BASE}...${HEAD_SHA}" -- "${EXCL[@]}" 2>/dev/null | tail -1)
+else
+  CHANGED_FILES=$(git diff --name-only "origin/${BASE_REF}...${HEAD_SHA}" -- "${EXCL[@]}" 2>/dev/null || true)
+  DIFF_STAT=$(git diff --stat "origin/${BASE_REF}...${HEAD_SHA}" -- "${EXCL[@]}" 2>/dev/null | tail -1)
+fi
+
 if [[ -z "$CHANGED_FILES" ]]; then
   echo "No changed files after exclusions. Skipping review." >&2
   exit 0
 fi
-DIFF_STAT=$(git diff --stat "origin/${BASE_REF}...${HEAD_SHA}" -- \
-  ':!*lock.json' ':!*lock.yaml' ':!vendor/*' ':!*.sum' ':!node_modules/*' 2>/dev/null | tail -1)
 FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
 
 # Detect languages from extensions
@@ -140,7 +171,7 @@ while IFS= read -r file; do
 done <<< "$CHANGED_FILES"
 
 # Build manifest text
-MANIFEST="BASE: ${BASE_REF} | LANGUAGES: ${LANGUAGES:-unknown} | FILES: ${FILE_COUNT} | ${DIFF_STAT}"
+MANIFEST="BASE: ${BASE_REF} | DIFF: ${DIFF_LABEL} | LANGUAGES: ${LANGUAGES:-unknown} | FILES: ${FILE_COUNT} | ${DIFF_STAT}"
 if [[ -n "$SOURCE_FILES" ]]; then
   MANIFEST="${MANIFEST}\n\nSource: $(echo -e "$SOURCE_FILES" | head -20 | tr '\n' ', ' | sed 's/,$//')"
 fi
@@ -154,8 +185,12 @@ if [[ -n "$DOC_FILES" ]]; then
   MANIFEST="${MANIFEST}\nDocs: $(echo -e "$DOC_FILES" | head -10 | tr '\n' ', ' | sed 's/,$//')"
 fi
 
-# Commit log
-COMMIT_LOG=$(git log --oneline "origin/${BASE_REF}..${HEAD_SHA}" 2>/dev/null | head -20)
+# Commit log — scoped to the same range as the diff
+if [[ -n "$DIFF_BASE" ]]; then
+  COMMIT_LOG=$(git log --oneline "${DIFF_BASE}..${HEAD_SHA}" 2>/dev/null | head -20)
+else
+  COMMIT_LOG=$(git log --oneline "origin/${BASE_REF}..${HEAD_SHA}" 2>/dev/null | head -20)
+fi
 
 # Determine review mode
 TOTAL_CHANGED=$(echo "$DIFF_STAT" | grep -oE '[0-9]+ insertions?' | grep -o '[0-9]*' || echo "0")
@@ -472,7 +507,7 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   {
     echo "## AI PR Review Results"
     echo ""
-    echo "**Mode:** ${REVIEW_MODE}"
+    echo "**Mode:** ${REVIEW_MODE} | **Diff:** ${DIFF_LABEL}"
     echo "**Files:** ${FILE_COUNT}"
     echo "**Languages:** ${LANGUAGES:-none detected}"
     echo "**Agents:** ${AGENT_COUNT} finding agents"
