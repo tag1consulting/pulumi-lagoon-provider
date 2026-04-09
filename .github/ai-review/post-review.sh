@@ -182,8 +182,8 @@ parse_valid_lines() {
     if [[ "$line" =~ ^diff\ --git\ a/(.+)\ b/(.+) ]]; then
       current_file="${BASH_REMATCH[2]}"
       new_line=0
-    elif [[ "$new_line" -eq 0 ]] && [[ "$line" =~ ^\+\+\+\  || "$line" =~ ^---\  ]]; then
-      # Skip diff file headers — only match before the first hunk (@@ line)
+    elif [[ "$line" =~ ^\+\+\+\  || "$line" =~ ^---\  ]]; then
+      # Skip diff file headers (+++ b/file, --- a/file) — never treat as content
       continue
     elif [[ "$line" =~ ^@@\ -[0-9]+(,[0-9]+)?\ \+([0-9]+)(,[0-9]+)?\ @@ ]]; then
       new_line="${BASH_REMATCH[2]}"
@@ -236,16 +236,19 @@ post_findings() {
   local inline_count=0
   local max_inline=25
 
-  local total
-  total=$(echo "$findings_json" | jq 'length')
+  # Extract findings as newline-delimited JSON objects for safe iteration
+  # (avoids seq 0 $((total-1)) which breaks on BSD when total=0)
+  local findings_ndjson
+  findings_ndjson=$(echo "$findings_json" | jq -c '.[]' 2>/dev/null || true)
 
-  for i in $(seq 0 $((total - 1))); do
+  while IFS= read -r finding_obj; do
+    [[ -z "$finding_obj" ]] && continue
     local file line severity finding remediation
-    file=$(echo "$findings_json" | jq -r ".[$i].file // empty")
-    line=$(echo "$findings_json" | jq -r ".[$i].line // empty")
-    severity=$(echo "$findings_json" | jq -r ".[$i].severity // \"Medium\"")
-    finding=$(echo "$findings_json" | jq -r ".[$i].finding // empty")
-    remediation=$(echo "$findings_json" | jq -r ".[$i].remediation // empty")
+    file=$(echo "$finding_obj" | jq -r '.file // empty')
+    line=$(echo "$finding_obj" | jq -r '.line // empty')
+    severity=$(echo "$finding_obj" | jq -r '.severity // "Medium"')
+    finding=$(echo "$finding_obj" | jq -r '.finding // empty')
+    remediation=$(echo "$finding_obj" | jq -r '.remediation // empty')
 
     if [[ -z "$file" || -z "$line" || -z "$finding" ]]; then
       continue
@@ -278,7 +281,7 @@ post_findings() {
       body_findings="${body_findings}
 - **[${severity}]** ${finding} — \`${file}:${line}\`"
     fi
-  done
+  done <<< "$findings_ndjson"
 
   # Determine overall risk and review event from highest severity found
   #   No findings          → APPROVE

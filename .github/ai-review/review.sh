@@ -312,8 +312,8 @@ call_agent() {
 
   if [[ -n "$token_line" ]]; then
     local input_tokens output_tokens
-    input_tokens=$(echo "$token_line" | grep -oP 'input=\K[0-9]+' || echo "?")
-    output_tokens=$(echo "$token_line" | grep -oP 'output=\K[0-9]+' || echo "?")
+    input_tokens=$(echo "$token_line" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "?")
+    output_tokens=$(echo "$token_line" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "?")
     echo "  tokens: input=${input_tokens} output=${output_tokens}" >&2
     TOKEN_LOG+=("${name}: input=${input_tokens} output=${output_tokens}")
   fi
@@ -321,7 +321,7 @@ call_agent() {
 
 # --- Detect conditional agent triggers ---
 HAS_ERROR_PATTERNS=0
-if grep -qE '(catch|if err|try \{|rescue|Result<|unwrap|except|\.catch\(||| true)' "$DIFF_FILE" 2>/dev/null; then
+if grep -qE '(catch|if err|try \{|rescue|Result<|unwrap|except|\.catch\()' "$DIFF_FILE" 2>/dev/null; then
   HAS_ERROR_PATTERNS=1
 fi
 
@@ -391,8 +391,8 @@ if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
   TOTAL_OUTPUT=0
   for entry in "${TOKEN_LOG[@]}"; do
     echo "  ${entry}" >&2
-    in_tok=$(echo "$entry" | grep -oP 'input=\K[0-9]+' || echo "0")
-    out_tok=$(echo "$entry" | grep -oP 'output=\K[0-9]+' || echo "0")
+    in_tok=$(echo "$entry" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "0")
+    out_tok=$(echo "$entry" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "0")
     TOTAL_INPUT=$(( TOTAL_INPUT + in_tok ))
     TOTAL_OUTPUT=$(( TOTAL_OUTPUT + out_tok ))
   done
@@ -402,7 +402,7 @@ fi
 # --- Run shellcheck if shell files changed ---
 SHELLCHECK_JSON="[]"
 if [[ -n "$CHANGED_FILES" ]]; then
-  SHELLCHECK_JSON=$("${SCRIPT_DIR}/run-shellcheck.sh" "$CHANGED_FILES" 2>&1 || echo "[]")
+  SHELLCHECK_JSON=$("${SCRIPT_DIR}/run-shellcheck.sh" "$CHANGED_FILES" || echo "[]")
   SC_COUNT=$(echo "$SHELLCHECK_JSON" | jq 'length' 2>/dev/null || echo "0")
   if [[ "$SC_COUNT" -gt 0 ]]; then
     echo "Shellcheck: ${SC_COUNT} findings" >&2
@@ -527,8 +527,8 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
       local_total_out=0
       for entry in "${TOKEN_LOG[@]}"; do
         agent_name="${entry%%:*}"
-        in_tok=$(echo "$entry" | grep -oP 'input=\K[0-9]+' || echo "0")
-        out_tok=$(echo "$entry" | grep -oP 'output=\K[0-9]+' || echo "0")
+        in_tok=$(echo "$entry" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "0")
+        out_tok=$(echo "$entry" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "0")
         row_total=$(( in_tok + out_tok ))
         echo "| ${agent_name} | ${in_tok} | ${out_tok} | ${row_total} |"
         local_total_in=$(( local_total_in + in_tok ))
