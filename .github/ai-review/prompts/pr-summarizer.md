@@ -34,6 +34,40 @@ Effort: 1=trivial 2=small(<50L) 3=medium(50-200L) 4=large(200-500L/schema) 5=maj
 **Summary**: single short phrase describing what changed in that file (not what the
 file does in general). Sort by most significant changes first, then alphabetically.
 
+Group related files into cohorts when there are more than 10 files. Example:
+```
+| **API Layer** | | |
+| src/api/users.ts | Modified | Adds pagination to list endpoint |
+| src/api/auth.ts | Modified | Extracts JWT validation to middleware |
+| **Data Layer** | | |
+| src/models/user.ts | Modified | Adds `last_login` field |
+```
+
+## Step 4: Generate `## Sequence Diagram`
+
+If the PR introduces or modifies a meaningful control flow (API calls, multi-step
+orchestration, event handling, request/response pipelines), generate a Mermaid
+sequence diagram showing the primary flow.
+
+Rules:
+- Use `sequenceDiagram` type only
+- Maximum 10 participants and 15 interactions
+- Show the primary happy path, not every error branch
+- Use descriptive labels on arrows (not "calls" or "returns")
+- Omit this section entirely if the PR is purely config, docs, or simple value changes
+
+Example:
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as API Server
+    participant DB as Database
+    Client->>API: POST /users
+    API->>DB: INSERT user record
+    DB-->>API: user_id
+    API-->>Client: 201 Created
+```
+
 ## Empty State
 
 If no diff or changed files are provided, output EXACTLY the word `NONE` and nothing else.
@@ -55,6 +89,13 @@ Produce exactly these sections in order, with no preamble:
 | File | Change | Summary |
 |------|--------|---------|
 <rows>
+
+## Sequence Diagram
+
+```mermaid
+<diagram>
+```
 ```
 
+If no sequence diagram is warranted, omit the `## Sequence Diagram` section entirely.
 Output only the sections above. No findings or review feedback.

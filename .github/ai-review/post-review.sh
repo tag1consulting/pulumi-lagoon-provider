@@ -105,6 +105,8 @@ parse_valid_lines() {
         new_line=$((new_line + 1))
       elif [[ "$line" =~ ^- ]]; then
         : # deleted line — don't increment new_line
+      elif [[ "$line" =~ ^\\ ]]; then
+        : # "\ No newline at end of file" — don't increment new_line
       else
         new_line=$((new_line + 1))
       fi
@@ -200,11 +202,13 @@ post_findings() {
     overall_risk="Medium"
   fi
 
-  # Build review body
+  # Build review body — list finding count and overall risk
+  local finding_total
+  finding_total=$(echo "$findings_json" | jq 'length')
+
   local review_body="## AI Review Findings
 
-**Overall Risk:** ${overall_risk}
-**Agents:** pr-summarizer, code-reviewer"
+**Overall Risk:** ${overall_risk} | **Findings:** ${finding_total} (${inline_count} inline)"
 
   if [[ -n "$body_findings" ]]; then
     review_body="${review_body}

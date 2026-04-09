@@ -44,6 +44,8 @@ ENCODED_MODEL_ID=$(printf '%s' "$MODEL_ID" | jq -sRr @uri)
 URL="${BEDROCK_API_URL}/model/${ENCODED_MODEL_ID}/invoke"
 
 RESPONSE_FILE=$(mktemp /tmp/bedrock-response-XXXXXXXX.json)
+trap 'rm -f "$RESPONSE_FILE"' EXIT
+
 # Use -s (silent, no progress bar) but NOT -f (fail) so we always capture
 # the response body for diagnostics on error.
 HTTP_CODE=$(curl -s -w "%{http_code}" -o "$RESPONSE_FILE" \
@@ -58,14 +60,12 @@ HTTP_CODE=$(curl -s -w "%{http_code}" -o "$RESPONSE_FILE" \
       echo "Response body:" >&2
       cat "$RESPONSE_FILE" >&2
     fi
-    rm -f "$RESPONSE_FILE"
     exit 1
   }
 
 if [[ "$HTTP_CODE" -lt 200 || "$HTTP_CODE" -ge 300 ]]; then
   echo "ERROR: Bedrock API returned HTTP ${HTTP_CODE}" >&2
   cat "$RESPONSE_FILE" >&2
-  rm -f "$RESPONSE_FILE"
   exit 1
 fi
 
@@ -76,9 +76,7 @@ if [[ -z "$RESPONSE_TEXT" ]]; then
   echo "ERROR: Could not extract response text from API response" >&2
   echo "Raw response:" >&2
   cat "$RESPONSE_FILE" >&2
-  rm -f "$RESPONSE_FILE"
   exit 1
 fi
 
-rm -f "$RESPONSE_FILE"
 printf '%s\n' "$RESPONSE_TEXT"

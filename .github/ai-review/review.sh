@@ -23,8 +23,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REVIEW_MODE="${AI_REVIEW_MODE:-auto}"
 
-# Model IDs
-MODEL_SONNET="us.anthropic.claude-sonnet-4-20250514-v1:0"
+# Model IDs — use latest available on the Bedrock proxy
+MODEL_HAIKU="us.anthropic.claude-3-5-haiku-20241022-v1:0"
+MODEL_SONNET="us.anthropic.claude-sonnet-4-6"
+MODEL_OPUS="global.anthropic.claude-opus-4-6-v1"
 
 # Temp files — cleaned up on exit
 TMPFILES=()
@@ -194,15 +196,14 @@ if [[ -f "CLAUDE.md" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Phase 1: Call agents
+# Phase 1: Prepare agent messages and call agents
 # ---------------------------------------------------------------------------
 echo "--- Calling agents ---" >&2
 
-# Prepare user messages for each agent
-SUMMARIZER_MSG_FILE=$(mktemp_tracked /tmp/ai-review-summarizer-msg-XXXXXXXX.md)
-REVIEWER_MSG_FILE=$(mktemp_tracked /tmp/ai-review-reviewer-msg-XXXXXXXX.md)
+# --- Build shared message files ---
 
-# pr-summarizer gets: manifest + commit log + diff
+# Full context message: manifest + commit log + project context + language context + diff
+FULL_CONTEXT_MSG=$(mktemp_tracked /tmp/ai-review-full-ctx-XXXXXXXX.md)
 {
   echo "## File Manifest"
   echo -e "$MANIFEST"
@@ -215,11 +216,16 @@ REVIEWER_MSG_FILE=$(mktemp_tracked /tmp/ai-review-reviewer-msg-XXXXXXXX.md)
     echo "$PROJECT_CONTEXT"
     echo ""
   fi
+  if [[ -n "$LANGUAGE_CONTEXT" ]]; then
+    echo -e "$LANGUAGE_CONTEXT"
+    echo ""
+  fi
   echo "## Diff"
   cat "$DIFF_FILE"
-} > "$SUMMARIZER_MSG_FILE"
+} > "$FULL_CONTEXT_MSG"
 
-# code-reviewer gets: manifest + language context + diff
+# Code context message: manifest + language context + diff (no commit log/project context)
+CODE_CONTEXT_MSG=$(mktemp_tracked /tmp/ai-review-code-ctx-XXXXXXXX.md)
 {
   echo "## File Manifest"
   echo -e "$MANIFEST"
@@ -230,53 +236,161 @@ REVIEWER_MSG_FILE=$(mktemp_tracked /tmp/ai-review-reviewer-msg-XXXXXXXX.md)
   fi
   echo "## Diff"
   cat "$DIFF_FILE"
-} > "$REVIEWER_MSG_FILE"
+} > "$CODE_CONTEXT_MSG"
 
+# Blind message: ONLY the raw diff (zero context — this is intentional)
+BLIND_MSG=$(mktemp_tracked /tmp/ai-review-blind-XXXXXXXX.md)
+cat "$DIFF_FILE" > "$BLIND_MSG"
+
+# --- Helper: call agent and handle failure ---
+call_agent() {
+  local name="$1" model="$2" prompt="$3" msg="$4" output="$5" max_tokens="${6:-4096}"
+  echo "Calling ${name} (${model##*.claude-})..." >&2
+  "${SCRIPT_DIR}/bedrock-call.sh" "$model" "$prompt" "$msg" "$max_tokens" > "$output" || {
+    echo "WARNING: ${name} failed. Continuing without its output." >&2
+    echo "NONE" > "$output"
+  }
+}
+
+# --- Detect conditional agent triggers ---
+HAS_ERROR_PATTERNS=0
+if grep -qE '(catch|if err|try \{|rescue|Result<|unwrap|except|\.catch\(||| true)' "$DIFF_FILE" 2>/dev/null; then
+  HAS_ERROR_PATTERNS=1
+fi
+
+HAS_TEST_FILES=0
+if [[ -n "$TEST_FILES" ]]; then
+  HAS_TEST_FILES=1
+fi
+
+# --- Output files ---
 SUMMARY_FILE=$(mktemp_tracked /tmp/ai-review-summary-XXXXXXXX.md)
 FINDINGS_FILE=$(mktemp_tracked /tmp/ai-review-findings-XXXXXXXX.md)
 
-# Call both agents (sequentially for PoC; parallel in future phases)
-echo "Calling pr-summarizer (sonnet)..." >&2
-"${SCRIPT_DIR}/bedrock-call.sh" "$MODEL_SONNET" \
-  "${SCRIPT_DIR}/prompts/pr-summarizer.md" \
-  "$SUMMARIZER_MSG_FILE" \
-  4096 > "$SUMMARY_FILE" || {
-    echo "WARNING: pr-summarizer failed. Continuing without summary." >&2
-    echo "NONE" > "$SUMMARY_FILE"
-  }
+# --- Agent roster ---
+# Tier 1: Always run (quick + full)
+AGENT_OUTPUTS=()
 
-echo "Calling code-reviewer (sonnet)..." >&2
-"${SCRIPT_DIR}/bedrock-call.sh" "$MODEL_SONNET" \
-  "${SCRIPT_DIR}/prompts/code-reviewer.md" \
-  "$REVIEWER_MSG_FILE" \
-  4096 > "$FINDINGS_FILE" || {
-    echo "WARNING: code-reviewer failed. Continuing without findings." >&2
-    echo "NONE" > "$FINDINGS_FILE"
-  }
+call_agent "pr-summarizer" "$MODEL_SONNET" \
+  "${SCRIPT_DIR}/prompts/pr-summarizer.md" "$FULL_CONTEXT_MSG" "$SUMMARY_FILE"
 
-echo "Agents complete." >&2
+call_agent "code-reviewer" "$MODEL_SONNET" \
+  "${SCRIPT_DIR}/prompts/code-reviewer.md" "$CODE_CONTEXT_MSG" "$FINDINGS_FILE"
+AGENT_OUTPUTS+=("$FINDINGS_FILE")
 
-# ---------------------------------------------------------------------------
-# Phase 2: Parse findings JSON
-# ---------------------------------------------------------------------------
-FINDINGS_JSON_FILE=$(mktemp_tracked /tmp/ai-review-findings-json-XXXXXXXX.json)
-
-# Extract json-findings block from code-reviewer output
-if grep -q '```json-findings' "$FINDINGS_FILE"; then
-  sed -n '/```json-findings/,/```/p' "$FINDINGS_FILE" | \
-    sed '1d;$d' > "$FINDINGS_JSON_FILE"
-  # Validate JSON
-  if ! jq -e 'type == "array"' "$FINDINGS_JSON_FILE" > /dev/null 2>&1; then
-    echo "WARNING: Could not parse findings JSON. Inline comments will not be posted." >&2
-    echo "[]" > "$FINDINGS_JSON_FILE"
-  fi
-else
-  echo "[]" > "$FINDINGS_JSON_FILE"
+# Tier 1 conditional: run in both quick and full when triggered
+if [[ "$HAS_ERROR_PATTERNS" -eq 1 ]]; then
+  SFH_FILE=$(mktemp_tracked /tmp/ai-review-sfh-XXXXXXXX.md)
+  call_agent "silent-failure-hunter" "$MODEL_SONNET" \
+    "${SCRIPT_DIR}/prompts/silent-failure-hunter.md" "$CODE_CONTEXT_MSG" "$SFH_FILE"
+  AGENT_OUTPUTS+=("$SFH_FILE")
 fi
 
-# Strip the json-findings block from the findings markdown
+# Tier 2: Full mode only
+if [[ "$REVIEW_MODE" == "full" ]]; then
+  ARCH_FILE=$(mktemp_tracked /tmp/ai-review-arch-XXXXXXXX.md)
+  call_agent "architecture-reviewer" "$MODEL_OPUS" \
+    "${SCRIPT_DIR}/prompts/architecture-reviewer.md" "$FULL_CONTEXT_MSG" "$ARCH_FILE"
+  AGENT_OUTPUTS+=("$ARCH_FILE")
+
+  SEC_FILE=$(mktemp_tracked /tmp/ai-review-sec-XXXXXXXX.md)
+  call_agent "security-reviewer" "$MODEL_OPUS" \
+    "${SCRIPT_DIR}/prompts/security-reviewer.md" "$CODE_CONTEXT_MSG" "$SEC_FILE"
+  AGENT_OUTPUTS+=("$SEC_FILE")
+
+  BLIND_FILE=$(mktemp_tracked /tmp/ai-review-blind-XXXXXXXX.md)
+  call_agent "blind-hunter" "$MODEL_SONNET" \
+    "${SCRIPT_DIR}/prompts/blind-hunter.md" "$BLIND_MSG" "$BLIND_FILE"
+  AGENT_OUTPUTS+=("$BLIND_FILE")
+
+  EDGE_FILE=$(mktemp_tracked /tmp/ai-review-edge-XXXXXXXX.md)
+  call_agent "edge-case-hunter" "$MODEL_SONNET" \
+    "${SCRIPT_DIR}/prompts/edge-case-hunter.md" "$CODE_CONTEXT_MSG" "$EDGE_FILE"
+  AGENT_OUTPUTS+=("$EDGE_FILE")
+
+  ADV_FILE=$(mktemp_tracked /tmp/ai-review-adv-XXXXXXXX.md)
+  call_agent "adversarial-general" "$MODEL_SONNET" \
+    "${SCRIPT_DIR}/prompts/adversarial-general.md" "$CODE_CONTEXT_MSG" "$ADV_FILE"
+  AGENT_OUTPUTS+=("$ADV_FILE")
+fi
+
+AGENT_COUNT=${#AGENT_OUTPUTS[@]}
+echo "Agents complete. (${AGENT_COUNT} finding agents ran)" >&2
+
+# --- Run shellcheck if shell files changed ---
+SHELLCHECK_JSON="[]"
+if [[ -n "$CHANGED_FILES" ]]; then
+  SHELLCHECK_JSON=$("${SCRIPT_DIR}/run-shellcheck.sh" "$CHANGED_FILES" 2>/dev/null || echo "[]")
+  SC_COUNT=$(echo "$SHELLCHECK_JSON" | jq 'length' 2>/dev/null || echo "0")
+  if [[ "$SC_COUNT" -gt 0 ]]; then
+    echo "Shellcheck: ${SC_COUNT} findings" >&2
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Phase 2: Parse and merge findings JSON from all agents
+# ---------------------------------------------------------------------------
+FINDINGS_JSON_FILE=$(mktemp_tracked /tmp/ai-review-findings-json-XXXXXXXX.json)
+echo "[]" > "$FINDINGS_JSON_FILE"
+
+# Extract json-findings from each agent output and merge
+extract_findings() {
+  local agent_file="$1"
+  if grep -q '```json-findings' "$agent_file" 2>/dev/null; then
+    local extracted
+    extracted=$(sed -n '/```json-findings/,/```/p' "$agent_file" | sed '1d;$d')
+    if echo "$extracted" | jq -e 'type == "array"' > /dev/null 2>&1; then
+      printf '%s' "$extracted"
+      return
+    fi
+  fi
+  echo "[]"
+}
+
+for agent_output in "${AGENT_OUTPUTS[@]}"; do
+  AGENT_JSON=$(extract_findings "$agent_output")
+  if [[ "$AGENT_JSON" != "[]" ]]; then
+    jq -s '.[0] + .[1]' "$FINDINGS_JSON_FILE" <(echo "$AGENT_JSON") > "${FINDINGS_JSON_FILE}.tmp"
+    mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+  fi
+done
+
+# Merge shellcheck findings
+if [[ "$SHELLCHECK_JSON" != "[]" ]]; then
+  jq -s '.[0] + .[1]' "$FINDINGS_JSON_FILE" <(echo "$SHELLCHECK_JSON") > "${FINDINGS_JSON_FILE}.tmp"
+  mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+fi
+
+# Filter out findings below confidence threshold (75)
+PRE_FILTER_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE")
+jq '[.[] | select((.confidence // 0) >= 75)]' "$FINDINGS_JSON_FILE" > "${FINDINGS_JSON_FILE}.tmp"
+mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+POST_FILTER_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE")
+if [[ "$PRE_FILTER_COUNT" -ne "$POST_FILTER_COUNT" ]]; then
+  echo "Filtered findings: ${PRE_FILTER_COUNT} → ${POST_FILTER_COUNT} (confidence >= 75)" >&2
+fi
+
+# Deduplicate findings on same file:line (keep highest severity)
+jq '
+  def sev_rank: if . == "Critical" then 4 elif . == "High" then 3
+    elif . == "Medium" then 2 else 1 end;
+  group_by(.file + ":" + (.line | tostring))
+  | map(sort_by(.severity | sev_rank) | reverse | .[0])
+' "$FINDINGS_JSON_FILE" > "${FINDINGS_JSON_FILE}.tmp"
+mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+DEDUP_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE")
+echo "Total findings after dedup: ${DEDUP_COUNT}" >&2
+
+# Build merged findings markdown from all agent outputs (strip json-findings blocks)
 FINDINGS_CLEAN_FILE=$(mktemp_tracked /tmp/ai-review-findings-clean-XXXXXXXX.md)
-sed '/```json-findings/,/```/d' "$FINDINGS_FILE" > "$FINDINGS_CLEAN_FILE"
+: > "$FINDINGS_CLEAN_FILE"
+for agent_output in "${AGENT_OUTPUTS[@]}"; do
+  AGENT_CONTENT=$(sed '/```json-findings/,/```/d' "$agent_output")
+  if [[ -n "$AGENT_CONTENT" && "$AGENT_CONTENT" != "NONE" ]]; then
+    echo "$AGENT_CONTENT" >> "$FINDINGS_CLEAN_FILE"
+    echo "" >> "$FINDINGS_CLEAN_FILE"
+  fi
+done
 
 # ---------------------------------------------------------------------------
 # Phase 3: Post to GitHub
@@ -301,6 +415,7 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     echo "**Mode:** ${REVIEW_MODE}"
     echo "**Files:** ${FILE_COUNT}"
     echo "**Languages:** ${LANGUAGES:-none detected}"
+    echo "**Agents:** ${AGENT_COUNT} finding agents"
     echo ""
     FINDING_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE" 2>/dev/null || echo "0")
     echo "**Findings:** ${FINDING_COUNT}"
