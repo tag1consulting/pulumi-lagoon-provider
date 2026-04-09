@@ -79,4 +79,9 @@ if [[ -z "$RESPONSE_TEXT" ]]; then
   exit 1
 fi
 
+# Log token usage to stderr for orchestrator to capture
+INPUT_TOKENS=$(jq -r '.usage.input_tokens // "?"' "$RESPONSE_FILE" 2>/dev/null)
+OUTPUT_TOKENS=$(jq -r '.usage.output_tokens // "?"' "$RESPONSE_FILE" 2>/dev/null)
+echo "TOKENS: input=${INPUT_TOKENS} output=${OUTPUT_TOKENS} model=${MODEL_ID}" >&2
+
 printf '%s\n' "$RESPONSE_TEXT"

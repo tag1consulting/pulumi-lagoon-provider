@@ -242,18 +242,46 @@ CODE_CONTEXT_MSG=$(mktemp_tracked /tmp/ai-review-code-ctx-XXXXXXXX.md)
 BLIND_MSG=$(mktemp_tracked /tmp/ai-review-blind-XXXXXXXX.md)
 cat "$DIFF_FILE" > "$BLIND_MSG"
 
-# Track agents that fail
+# Track agents that fail and their token usage
 FAILED_AGENTS=()
+TOKEN_LOG=()  # entries: "agent_name input=N output=N"
 
 # --- Helper: call agent and handle failure ---
+# Intercepts TOKENS: lines from bedrock-call.sh stderr for usage tracking;
+# forwards all other stderr to the workflow log.
 call_agent() {
   local name="$1" model="$2" prompt="$3" msg="$4" output="$5" max_tokens="${6:-4096}"
   echo "Calling ${name} (${model##*.claude-})..." >&2
-  "${SCRIPT_DIR}/bedrock-call.sh" "$model" "$prompt" "$msg" "$max_tokens" > "$output" || {
+
+  local agent_stderr
+  agent_stderr=$(mktemp_tracked /tmp/ai-review-stderr-XXXXXXXX.txt)
+
+  "${SCRIPT_DIR}/bedrock-call.sh" "$model" "$prompt" "$msg" "$max_tokens" \
+    > "$output" 2> "$agent_stderr" || {
     echo "WARNING: ${name} failed. Continuing without its output." >&2
+    cat "$agent_stderr" >&2
     FAILED_AGENTS+=("$name")
     echo "" > "$output"
+    return
   }
+
+  # Parse token usage line; forward remaining stderr to workflow log
+  local token_line=""
+  while IFS= read -r line; do
+    if [[ "$line" == TOKENS:* ]]; then
+      token_line="$line"
+    else
+      echo "$line" >&2
+    fi
+  done < "$agent_stderr"
+
+  if [[ -n "$token_line" ]]; then
+    local input_tokens output_tokens
+    input_tokens=$(echo "$token_line" | grep -oP 'input=\K[0-9]+' || echo "?")
+    output_tokens=$(echo "$token_line" | grep -oP 'output=\K[0-9]+' || echo "?")
+    echo "  tokens: input=${input_tokens} output=${output_tokens}" >&2
+    TOKEN_LOG+=("${name}: input=${input_tokens} output=${output_tokens}")
+  fi
 }
 
 # --- Detect conditional agent triggers ---
@@ -319,6 +347,21 @@ if [[ "$FAILED_COUNT" -gt 0 ]]; then
   echo "Agents complete. (${AGENT_COUNT} finding agents ran, ${FAILED_COUNT} failed: ${FAILED_AGENTS[*]})" >&2
 else
   echo "Agents complete. (${AGENT_COUNT} finding agents ran)" >&2
+fi
+
+# Log token usage summary
+if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
+  echo "--- Token usage ---" >&2
+  TOTAL_INPUT=0
+  TOTAL_OUTPUT=0
+  for entry in "${TOKEN_LOG[@]}"; do
+    echo "  ${entry}" >&2
+    in_tok=$(echo "$entry" | grep -oP 'input=\K[0-9]+' || echo "0")
+    out_tok=$(echo "$entry" | grep -oP 'output=\K[0-9]+' || echo "0")
+    TOTAL_INPUT=$(( TOTAL_INPUT + in_tok ))
+    TOTAL_OUTPUT=$(( TOTAL_OUTPUT + out_tok ))
+  done
+  echo "  TOTAL: input=${TOTAL_INPUT} output=${TOTAL_OUTPUT} (combined=$(( TOTAL_INPUT + TOTAL_OUTPUT )))" >&2
 fi
 
 # --- Run shellcheck if shell files changed ---
@@ -440,6 +483,25 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     FINDING_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE" 2>/dev/null || echo "0")
     echo "**Findings:** ${FINDING_COUNT}"
     echo ""
+    if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
+      echo "### Token Usage"
+      echo ""
+      echo "| Agent | Input | Output | Total |"
+      echo "|-------|------:|-------:|------:|"
+      local_total_in=0
+      local_total_out=0
+      for entry in "${TOKEN_LOG[@]}"; do
+        agent_name="${entry%%:*}"
+        in_tok=$(echo "$entry" | grep -oP 'input=\K[0-9]+' || echo "0")
+        out_tok=$(echo "$entry" | grep -oP 'output=\K[0-9]+' || echo "0")
+        row_total=$(( in_tok + out_tok ))
+        echo "| ${agent_name} | ${in_tok} | ${out_tok} | ${row_total} |"
+        local_total_in=$(( local_total_in + in_tok ))
+        local_total_out=$(( local_total_out + out_tok ))
+      done
+      echo "| **Total** | **${local_total_in}** | **${local_total_out}** | **$(( local_total_in + local_total_out ))** |"
+      echo ""
+    fi
     echo "### Summary"
     cat "$SUMMARY_FILE"
   } >> "$GITHUB_STEP_SUMMARY"
