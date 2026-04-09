@@ -21,26 +21,25 @@ if ! command -v shellcheck &> /dev/null; then
 fi
 
 # Filter to .sh and .bash files
-SHELL_FILES=""
+SHELL_FILES=()
 while IFS= read -r file; do
   case "$file" in
-    *.sh|*.bash) SHELL_FILES="${SHELL_FILES}${file}\n" ;;
+    *.sh|*.bash) SHELL_FILES+=("$file") ;;
   esac
 done <<< "$CHANGED_FILES"
 
-if [[ -z "$SHELL_FILES" ]]; then
+if [[ ${#SHELL_FILES[@]} -eq 0 ]]; then
   echo "[]"
   exit 0
 fi
 
 # Run shellcheck on each file, collect JSON output
 FINDINGS="[]"
-while IFS= read -r file; do
-  [[ -z "$file" ]] && continue
+for file in "${SHELL_FILES[@]}"; do
   [[ ! -f "$file" ]] && continue
 
   # shellcheck outputs JSON with -f json1
-  SC_OUTPUT=$(shellcheck -f json1 -S warning "$file" 2>/dev/null || true)
+  SC_OUTPUT=$(shellcheck -f json1 -S warning -- "$file" 2>/dev/null || true)
 
   if [[ -z "$SC_OUTPUT" ]]; then
     continue
@@ -59,6 +58,6 @@ while IFS= read -r file; do
   ' 2>/dev/null || echo "[]")
 
   FINDINGS=$(echo "$FINDINGS" "$FILE_FINDINGS" | jq -s '.[0] + .[1]')
-done <<< "$(printf '%b' "$SHELL_FILES")"
+done
 
 printf '%s\n' "$FINDINGS"

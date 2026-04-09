@@ -61,7 +61,8 @@ security implications of gaps, architecture/coupling, test coverage.
 
 ## Empty State
 
-If no gaps survive Pass 2, output EXACTLY the word `NONE` and nothing else.
+If no gaps survive Pass 2, output a brief summary ("All branching paths handled")
+followed by an empty json-findings block. Do NOT output the bare word `NONE`.
 
 ## Severity Classification
 
@@ -108,8 +109,9 @@ Omit any severity section that has no findings. If no gaps survive Pass 2:
 
 After your markdown output, emit a JSON block fenced with ```json-findings:
 ```json-findings
-[{"severity":"Critical|High|Medium|Low","confidence":85,"file":"path/to/file","line":42,"finding":"description","remediation":"how to fix"}]
+[{"severity":"High","confidence":85,"file":"path/to/file","line":42,"finding":"description","remediation":"how to fix"}]
 ```
+`severity` must be exactly one of: `Critical`, `High`, `Medium`, `Low`.
 If no findings, emit an empty array: `[]`
 
 ---

@@ -66,7 +66,8 @@ test coverage.
 
 ## Empty State
 
-If you find no issues, output EXACTLY the word `NONE` and nothing else.
+If you find no issues, output "No issues identified from a context-free reading of this
+diff." followed by an empty json-findings block. Do NOT output the bare word `NONE`.
 
 ## Severity Classification
 
@@ -109,8 +110,9 @@ Omit any severity section that has no findings.
 
 After your markdown output, emit a JSON block fenced with ```json-findings:
 ```json-findings
-[{"severity":"Critical|High|Medium|Low","confidence":85,"file":"path/to/file","line":42,"finding":"description","remediation":"how to fix"}]
+[{"severity":"High","confidence":85,"file":"path/to/file","line":42,"finding":"description","remediation":"how to fix"}]
 ```
+`severity` must be exactly one of: `Critical`, `High`, `Medium`, `Low`.
 If no findings, emit an empty array: `[]`
 
 ---

@@ -86,8 +86,9 @@ to security, architecture, or error handling — you review the whole change hol
 After your markdown output, emit a JSON block fenced with ```json-findings containing
 ONLY findings with confidence >= 75:
 ```json-findings
-[{"severity":"Critical|High|Medium|Low","confidence":85,"file":"path/to/file","line":42,"finding":"description","remediation":"how to fix"}]
+[{"severity":"High","confidence":85,"file":"path/to/file","line":42,"finding":"description","remediation":"how to fix"}]
 ```
+`severity` must be exactly one of: `Critical`, `High`, `Medium`, `Low`.
 If no findings meet the threshold, emit an empty array: `[]`
 
 ---

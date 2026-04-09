@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REVIEW_MODE="${AI_REVIEW_MODE:-auto}"
 
 # Model IDs — use latest available on the Bedrock proxy
-MODEL_HAIKU="us.anthropic.claude-3-5-haiku-20241022-v1:0"
+MODEL_HAIKU="us.anthropic.claude-3-5-haiku-20241022-v1:0"  # issue-linker, classification (Phase B)
 MODEL_SONNET="us.anthropic.claude-sonnet-4-6"
 MODEL_OPUS="global.anthropic.claude-opus-4-6-v1"
 
@@ -50,7 +50,7 @@ echo "PR: #${PR_NUMBER} | Base: ${BASE_REF} | Head: ${HEAD_SHA}" >&2
 echo "Mode: ${REVIEW_MODE}" >&2
 
 # Ensure we have the base branch for diffing
-git fetch origin "${BASE_REF}" --depth=50 2>/dev/null || true
+git fetch origin "${BASE_REF}" --depth=50 2>/dev/null || echo "WARNING: git fetch failed; diff may be incomplete." >&2
 
 # Compute the diff
 DIFF_FILE=$(mktemp_tracked /tmp/ai-review-diff-XXXXXXXX.txt)
@@ -242,13 +242,17 @@ CODE_CONTEXT_MSG=$(mktemp_tracked /tmp/ai-review-code-ctx-XXXXXXXX.md)
 BLIND_MSG=$(mktemp_tracked /tmp/ai-review-blind-XXXXXXXX.md)
 cat "$DIFF_FILE" > "$BLIND_MSG"
 
+# Track agents that fail
+FAILED_AGENTS=()
+
 # --- Helper: call agent and handle failure ---
 call_agent() {
   local name="$1" model="$2" prompt="$3" msg="$4" output="$5" max_tokens="${6:-4096}"
   echo "Calling ${name} (${model##*.claude-})..." >&2
   "${SCRIPT_DIR}/bedrock-call.sh" "$model" "$prompt" "$msg" "$max_tokens" > "$output" || {
     echo "WARNING: ${name} failed. Continuing without its output." >&2
-    echo "NONE" > "$output"
+    FAILED_AGENTS+=("$name")
+    echo "" > "$output"
   }
 }
 
@@ -256,11 +260,6 @@ call_agent() {
 HAS_ERROR_PATTERNS=0
 if grep -qE '(catch|if err|try \{|rescue|Result<|unwrap|except|\.catch\(||| true)' "$DIFF_FILE" 2>/dev/null; then
   HAS_ERROR_PATTERNS=1
-fi
-
-HAS_TEST_FILES=0
-if [[ -n "$TEST_FILES" ]]; then
-  HAS_TEST_FILES=1
 fi
 
 # --- Output files ---
@@ -315,12 +314,17 @@ if [[ "$REVIEW_MODE" == "full" ]]; then
 fi
 
 AGENT_COUNT=${#AGENT_OUTPUTS[@]}
-echo "Agents complete. (${AGENT_COUNT} finding agents ran)" >&2
+FAILED_COUNT=${#FAILED_AGENTS[@]}
+if [[ "$FAILED_COUNT" -gt 0 ]]; then
+  echo "Agents complete. (${AGENT_COUNT} finding agents ran, ${FAILED_COUNT} failed: ${FAILED_AGENTS[*]})" >&2
+else
+  echo "Agents complete. (${AGENT_COUNT} finding agents ran)" >&2
+fi
 
 # --- Run shellcheck if shell files changed ---
 SHELLCHECK_JSON="[]"
 if [[ -n "$CHANGED_FILES" ]]; then
-  SHELLCHECK_JSON=$("${SCRIPT_DIR}/run-shellcheck.sh" "$CHANGED_FILES" 2>/dev/null || echo "[]")
+  SHELLCHECK_JSON=$("${SCRIPT_DIR}/run-shellcheck.sh" "$CHANGED_FILES" 2>&1 || echo "[]")
   SC_COUNT=$(echo "$SHELLCHECK_JSON" | jq 'length' 2>/dev/null || echo "0")
   if [[ "$SC_COUNT" -gt 0 ]]; then
     echo "Shellcheck: ${SC_COUNT} findings" >&2
@@ -347,18 +351,26 @@ extract_findings() {
   echo "[]"
 }
 
+merge_findings() {
+  local incoming="$1"
+  if jq -s '.[0] + .[1]' "$FINDINGS_JSON_FILE" <(echo "$incoming") > "${FINDINGS_JSON_FILE}.tmp" 2>/dev/null; then
+    mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+  else
+    echo "WARNING: Failed to merge findings JSON; skipping batch." >&2
+    rm -f "${FINDINGS_JSON_FILE}.tmp"
+  fi
+}
+
 for agent_output in "${AGENT_OUTPUTS[@]}"; do
   AGENT_JSON=$(extract_findings "$agent_output")
   if [[ "$AGENT_JSON" != "[]" ]]; then
-    jq -s '.[0] + .[1]' "$FINDINGS_JSON_FILE" <(echo "$AGENT_JSON") > "${FINDINGS_JSON_FILE}.tmp"
-    mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+    merge_findings "$AGENT_JSON"
   fi
 done
 
 # Merge shellcheck findings
 if [[ "$SHELLCHECK_JSON" != "[]" ]]; then
-  jq -s '.[0] + .[1]' "$FINDINGS_JSON_FILE" <(echo "$SHELLCHECK_JSON") > "${FINDINGS_JSON_FILE}.tmp"
-  mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+  merge_findings "$SHELLCHECK_JSON"
 fi
 
 # Filter out findings below confidence threshold (75)
@@ -386,11 +398,16 @@ FINDINGS_CLEAN_FILE=$(mktemp_tracked /tmp/ai-review-findings-clean-XXXXXXXX.md)
 : > "$FINDINGS_CLEAN_FILE"
 for agent_output in "${AGENT_OUTPUTS[@]}"; do
   AGENT_CONTENT=$(sed '/```json-findings/,/```/d' "$agent_output")
-  if [[ -n "$AGENT_CONTENT" && "$AGENT_CONTENT" != "NONE" ]]; then
+  if [[ -n "$AGENT_CONTENT" ]]; then
     echo "$AGENT_CONTENT" >> "$FINDINGS_CLEAN_FILE"
     echo "" >> "$FINDINGS_CLEAN_FILE"
   fi
 done
+
+# Append failed agent notice if any agents failed
+if [[ "${#FAILED_AGENTS[@]}" -gt 0 ]]; then
+  echo "> **Note:** The following agents failed and their output is excluded: ${FAILED_AGENTS[*]}" >> "$FINDINGS_CLEAN_FILE"
+fi
 
 # ---------------------------------------------------------------------------
 # Phase 3: Post to GitHub
@@ -416,6 +433,9 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     echo "**Files:** ${FILE_COUNT}"
     echo "**Languages:** ${LANGUAGES:-none detected}"
     echo "**Agents:** ${AGENT_COUNT} finding agents"
+    if [[ "${#FAILED_AGENTS[@]}" -gt 0 ]]; then
+      echo "**Failed agents:** ${FAILED_AGENTS[*]}"
+    fi
     echo ""
     FINDING_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE" 2>/dev/null || echo "0")
     echo "**Findings:** ${FINDING_COUNT}"

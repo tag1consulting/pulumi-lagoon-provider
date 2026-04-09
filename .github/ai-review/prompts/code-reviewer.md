@@ -79,7 +79,8 @@ Rate each issue from 0-100:
 
 ## Empty State
 
-If you find no issues at confidence >= 75, output EXACTLY the word `NONE` and nothing else.
+If you find no issues at confidence >= 75, output a brief "No issues found" statement
+followed by an empty json-findings block. Do NOT output the bare word `NONE`.
 
 ## Output Format
 
@@ -109,6 +110,7 @@ After your markdown output, emit a JSON block fenced with ```json-findings that 
 structured findings for inline comment posting. Each finding MUST include its numeric
 confidence score — findings below 75 will be automatically filtered out:
 ```json-findings
-[{"severity":"Critical|High|Medium","confidence":85,"file":"path/to/file.go","line":42,"finding":"description","remediation":"how to fix"}]
+[{"severity":"High","confidence":85,"file":"path/to/file.go","line":42,"finding":"description","remediation":"how to fix"}]
 ```
+`severity` must be exactly one of: `Critical`, `High`, `Medium`.
 If no findings, emit an empty array: `[]`

@@ -70,11 +70,11 @@ sequenceDiagram
 
 ## Empty State
 
-If no diff or changed files are provided, output EXACTLY the word `NONE` and nothing else.
+If no diff or changed files are provided, output a brief "No changes to summarize." statement and nothing else.
 
 ## Output Format
 
-Produce exactly these sections in order, with no preamble:
+Produce these sections in order, with no preamble:
 
 ```markdown
 ## Summary
@@ -89,7 +89,11 @@ Produce exactly these sections in order, with no preamble:
 | File | Change | Summary |
 |------|--------|---------|
 <rows>
+```
 
+If the PR introduces or modifies a meaningful control flow, also include:
+
+```markdown
 ## Sequence Diagram
 
 ```mermaid
@@ -97,5 +101,5 @@ Produce exactly these sections in order, with no preamble:
 ```
 ```
 
-If no sequence diagram is warranted, omit the `## Sequence Diagram` section entirely.
+Omit `## Sequence Diagram` for config-only, docs-only, or simple value-change PRs.
 Output only the sections above. No findings or review feedback.

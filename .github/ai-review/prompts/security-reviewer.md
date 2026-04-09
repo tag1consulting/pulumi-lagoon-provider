@@ -74,7 +74,9 @@ a security vulnerability (e.g., swallowed auth failures, stack traces leaked to 
 
 ## Empty State
 
-If you find no security vulnerabilities at Medium or higher, output EXACTLY the word `NONE` and nothing else.
+If you find no security vulnerabilities at Medium or higher, output a brief statement
+("No security vulnerabilities identified") followed by an empty json-findings block.
+Do NOT output the bare word `NONE`.
 
 ## Severity Classification
 
@@ -121,6 +123,7 @@ Omit any severity section that has no findings.
 
 After your markdown output, emit a JSON block fenced with ```json-findings:
 ```json-findings
-[{"severity":"Critical|High|Medium","confidence":90,"file":"path/to/file","line":42,"finding":"description","remediation":"how to fix"}]
+[{"severity":"High","confidence":90,"file":"path/to/file","line":42,"finding":"description","remediation":"how to fix"}]
 ```
+`severity` must be exactly one of: `Critical`, `High`, `Medium`.
 If no findings, emit an empty array: `[]`

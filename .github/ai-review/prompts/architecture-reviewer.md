@@ -62,7 +62,9 @@ Do NOT assess: security implications (security-reviewer), code-level style/forma
 
 ## Empty State
 
-If you have no findings at Medium or higher, output EXACTLY the word `NONE` and nothing else.
+If you have no findings at Medium or higher, output "This change is architecturally
+sound. No significant concerns identified." followed by an empty json-findings block.
+Do NOT output the bare word `NONE`.
 
 ## Severity Classification
 
@@ -114,6 +116,7 @@ architecturally sound. No significant concerns identified."
 
 After your markdown output, emit a JSON block fenced with ```json-findings:
 ```json-findings
-[{"severity":"Critical|High|Medium","confidence":85,"file":"path/to/file","line":42,"finding":"description","remediation":"how to fix"}]
+[{"severity":"High","confidence":85,"file":"path/to/file","line":42,"finding":"description","remediation":"how to fix"}]
 ```
+`severity` must be exactly one of: `Critical`, `High`, `Medium`.
 If no findings, emit an empty array: `[]`
