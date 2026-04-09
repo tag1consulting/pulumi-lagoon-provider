@@ -1,0 +1,34 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.actor != 'dependabot[bot]' &&
+      github.actor != 'renovate[bot]'
+    runs-on: ubuntu-latest
+    env:
+      BEDROCK_API_URL: https://openwebui-proxy.tag1.io/bedrock
+      BEDROCK_API_KEY: ${{ secrets.TAG1_BEDROCK_API_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run AI review
+        run: bash .github/ai-review/review.sh
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
