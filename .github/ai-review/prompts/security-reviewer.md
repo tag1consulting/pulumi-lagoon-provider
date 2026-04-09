@@ -60,11 +60,12 @@ Detect which languages are present and apply these additional checks:
 ## Trust Boundary Awareness
 
 When evaluating injection and input validation findings, distinguish between:
-- **Trusted internal data**: hardcoded constants, git-generated output, CI environment variables, `mktemp` paths
-- **Untrusted external data**: LLM/API response content, user-authored PR content, dependency version strings
+- **Trusted**: hardcoded constants in scripts; git-generated line numbers and SHAs; runner-set env vars (`GITHUB_REPOSITORY`, `GITHUB_SHA`, `GITHUB_RUN_ID`); `mktemp`-generated paths.
+- **Untrusted**: LLM/API response content; user-authored PR content (titles, descriptions, comments); dependency version strings from lock files; git diff file *paths* (PR authors control filenames); env vars that carry PR-author content (`PR_TITLE`, `PR_BODY`, `GITHUB_HEAD_REF` on forks).
 
 Do NOT flag injection risks on trusted internal data flows. DO flag anywhere untrusted
-data crosses a trust boundary without validation.
+data crosses a trust boundary without validation — including PR-author-controlled
+filenames used in command arguments or unquoted shell expansions.
 
 ## Scope Boundaries
 
