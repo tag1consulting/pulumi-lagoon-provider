@@ -669,11 +669,10 @@ model_pricing() {
     # Claude Haiku 4.5 — $0.80/M in, $4/M out
     *claude-haiku-4-5*|*claude-haiku-4.5*)
       echo "800000 4000000" ;;
+    # GPT-4o-mini — $0.15/M in, $0.60/M out (listed before gpt-4o to avoid shadowing)
+    *gpt-4o-mini*) echo "150000 600000" ;;
     # GPT-4o — $2.50/M in, $10/M out
-    *gpt-4o-mini*)
-      echo "150000 600000" ;;
-    *gpt-4o*)
-      echo "2500000 10000000" ;;
+    *gpt-4o*)      echo "2500000 10000000" ;;
     # Gemini 2.5 Pro — $1.25/M in, $10/M out
     *gemini-2.5-pro*)
       echo "1250000 10000000" ;;
@@ -717,6 +716,46 @@ format_cost() {
   printf '$%d.%04d' "$whole" "$frac"
 }
 
+# ---------------------------------------------------------------------------
+# Emit token usage table rows to stdout.
+# Shared by the PR comment <details> block and the step summary.
+# Uses awk for cost arithmetic to avoid bash integer overflow on large
+# token counts multiplied by rate constants (up to 75,000,000).
+# ---------------------------------------------------------------------------
+emit_token_table_rows() {
+  local total_in=0 total_out=0 total_cost=0 any_unknown=0
+  for entry in "${TOKEN_LOG[@]}"; do
+    local agent_name in_tok out_tok model_id row_total in_rate out_rate cost_display model_short
+    agent_name="${entry%%:*}"
+    in_tok=$(echo "$entry" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "0")
+    out_tok=$(echo "$entry" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "0")
+    model_id=$(echo "$entry" | grep -oE 'model=[^ ]+' | sed 's/model=//' || echo "unknown")
+    row_total=$(( in_tok + out_tok ))
+    read -r in_rate out_rate <<< "$(model_pricing "$model_id")"
+    if [[ "$in_rate" -eq 0 && "$out_rate" -eq 0 ]]; then
+      cost_display="n/a"
+      any_unknown=1
+    else
+      # Use awk to avoid bash integer overflow (in_tok * in_rate can exceed 2^63 for large runs)
+      local cost_units
+      cost_units=$(awk "BEGIN {printf \"%d\", ($in_tok * $in_rate + $out_tok * $out_rate) / 100000000}")
+      cost_display=$(format_cost "$cost_units")
+      total_cost=$(( total_cost + cost_units ))
+    fi
+    model_short=$(model_display_name "$model_id")
+    echo "| ${agent_name} | ${model_short} | ${in_tok} | ${out_tok} | ${row_total} | ${cost_display} |"
+    total_in=$(( total_in + in_tok ))
+    total_out=$(( total_out + out_tok ))
+  done
+  local total_cost_display
+  if [[ "$any_unknown" -eq 1 ]]; then
+    total_cost_display="$(format_cost "$total_cost")+"
+  else
+    total_cost_display="$(format_cost "$total_cost")"
+  fi
+  echo "| **Total** | | **${total_in}** | **${total_out}** | **$(( total_in + total_out ))** | **${total_cost_display}** |"
+}
+
 # Build token usage table as a collapsed details block
 TOKEN_TABLE_FILE=$(mktemp_tracked /tmp/ai-review-token-table-XXXXXXXX.md)
 if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
@@ -726,43 +765,7 @@ if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
     echo ""
     echo "| Agent | Model | Input | Output | Total | Est. Cost |"
     echo "|-------|-------|------:|-------:|------:|----------:|"
-    local_total_in=0
-    local_total_out=0
-    local_total_cost=0
-    any_unknown_price=0
-    for entry in "${TOKEN_LOG[@]}"; do
-      agent_name="${entry%%:*}"
-      in_tok=$(echo "$entry" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "0")
-      out_tok=$(echo "$entry" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "0")
-      model_id=$(echo "$entry" | grep -oE 'model=[^ ]+' | sed 's/model=//' || echo "unknown")
-      row_total=$(( in_tok + out_tok ))
-
-      # Compute cost: rates are in nanodollars per token (i.e. dollars/million * 1000)
-      # cost_units = tokens * rate_nanodollars / 1_000_000_000 * 10000  (to get $0.0001 units)
-      #            = tokens * rate / 100_000
-      read -r in_rate out_rate <<< "$(model_pricing "$model_id")"
-      if [[ "$in_rate" -eq 0 && "$out_rate" -eq 0 ]]; then
-        cost_display="n/a"
-        any_unknown_price=1
-      else
-        cost_units=$(( (in_tok * in_rate + out_tok * out_rate) / 100000000 ))
-        cost_display=$(format_cost "$cost_units")
-        local_total_cost=$(( local_total_cost + cost_units ))
-      fi
-
-      model_short=$(model_display_name "$model_id")
-
-      echo "| ${agent_name} | ${model_short} | ${in_tok} | ${out_tok} | ${row_total} | ${cost_display} |"
-      local_total_in=$(( local_total_in + in_tok ))
-      local_total_out=$(( local_total_out + out_tok ))
-    done
-
-    if [[ "$any_unknown_price" -eq 1 ]]; then
-      total_cost_display="$(format_cost "$local_total_cost")+"
-    else
-      total_cost_display="$(format_cost "$local_total_cost")"
-    fi
-    echo "| **Total** | | **${local_total_in}** | **${local_total_out}** | **$(( local_total_in + local_total_out ))** | **${total_cost_display}** |"
+    emit_token_table_rows
     echo ""
     echo "_Prices are public list rates and do not reflect discounts, commitments, or proxy markups._"
     echo ""
@@ -818,36 +821,7 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
       echo ""
       echo "| Agent | Model | Input | Output | Total | Est. Cost |"
       echo "|-------|-------|------:|-------:|------:|----------:|"
-      local_total_in=0
-      local_total_out=0
-      local_total_cost=0
-      any_unknown_price=0
-      for entry in "${TOKEN_LOG[@]}"; do
-        agent_name="${entry%%:*}"
-        in_tok=$(echo "$entry" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "0")
-        out_tok=$(echo "$entry" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "0")
-        model_id=$(echo "$entry" | grep -oE 'model=[^ ]+' | sed 's/model=//' || echo "unknown")
-        row_total=$(( in_tok + out_tok ))
-        read -r in_rate out_rate <<< "$(model_pricing "$model_id")"
-        if [[ "$in_rate" -eq 0 && "$out_rate" -eq 0 ]]; then
-          cost_display="n/a"
-          any_unknown_price=1
-        else
-          cost_units=$(( (in_tok * in_rate + out_tok * out_rate) / 100000000 ))
-          cost_display=$(format_cost "$cost_units")
-          local_total_cost=$(( local_total_cost + cost_units ))
-        fi
-        model_short=$(model_display_name "$model_id")
-        echo "| ${agent_name} | ${model_short} | ${in_tok} | ${out_tok} | ${row_total} | ${cost_display} |"
-        local_total_in=$(( local_total_in + in_tok ))
-        local_total_out=$(( local_total_out + out_tok ))
-      done
-      if [[ "$any_unknown_price" -eq 1 ]]; then
-        total_cost_display="$(format_cost "$local_total_cost")+"
-      else
-        total_cost_display="$(format_cost "$local_total_cost")"
-      fi
-      echo "| **Total** | | **${local_total_in}** | **${local_total_out}** | **$(( local_total_in + local_total_out ))** | **${total_cost_display}** |"
+      emit_token_table_rows
       echo ""
       echo "_Prices are public list rates and do not reflect discounts, commitments, or proxy markups._"
       echo ""

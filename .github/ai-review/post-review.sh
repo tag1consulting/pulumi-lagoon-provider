@@ -222,8 +222,12 @@ dismiss_stale_reviews() {
       --jq "[.data.repository.pullRequest.reviewThreads.nodes[] |
              select(.comments.nodes[0].pullRequestReview.databaseId == ${review_id} and .isResolved == false)] | length" \
       2>/dev/null) || unresolved_count=1  # assume not safe to dismiss on error
+    # Guard against non-integer output (null, float, error string) from jq
+    if ! [[ "${unresolved_count:-}" =~ ^[0-9]+$ ]]; then
+      unresolved_count=1
+    fi
 
-    if [[ "${unresolved_count:-1}" -eq 0 ]]; then
+    if [[ "$unresolved_count" -eq 0 ]]; then
       local dismiss_result
       dismiss_result=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews/${review_id}/dismissals" \
         --method PUT \
