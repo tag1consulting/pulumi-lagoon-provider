@@ -168,10 +168,13 @@ call_google() {
     exit 1
   }
 
+  local encoded_model_id
+  encoded_model_id=$(printf '%s' "$MODEL_ID" | jq -sRr @uri)
+
   local http_code
   http_code=$(curl -s -w "%{http_code}" -o "$RESPONSE_FILE" \
     --max-time 180 \
-    -X POST "https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent" \
+    -X POST "https://generativelanguage.googleapis.com/v1beta/models/${encoded_model_id}:generateContent" \
     -H "x-goog-api-key: ${GOOGLE_API_KEY}" \
     -H "Content-Type: application/json" \
     -d "$request_body") || {

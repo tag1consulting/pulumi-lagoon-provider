@@ -345,7 +345,7 @@ call_agent() {
     > "$output" 2> "$agent_stderr" || exit_code=$?
   if [[ "$exit_code" -ne 0 ]]; then
     local last_err
-    last_err=$(tail -1 "$agent_stderr" 2>/dev/null)
+    last_err=$(grep -m1 'ERROR:' "$agent_stderr" 2>/dev/null || tail -1 "$agent_stderr" 2>/dev/null)
     echo "WARNING: ${name} failed (exit ${exit_code}): ${last_err:-no stderr output}. Continuing without its output." >&2
     cat "$agent_stderr" >&2
     FAILED_AGENTS+=("$name")
@@ -601,14 +601,14 @@ SUPPRESSED_COUNT=0
 apply_suppressions
 
 # Filter out findings below confidence threshold (75)
-PRE_FILTER_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE")
+PRE_FILTER_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE" 2>/dev/null || echo "0")
 if jq '[.[] | select((.confidence // 0) >= 75)]' "$FINDINGS_JSON_FILE" > "${FINDINGS_JSON_FILE}.tmp"; then
   mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
 else
   echo "WARNING: Confidence filter jq failed; keeping all findings unfiltered." >&2
   rm -f "${FINDINGS_JSON_FILE}.tmp"
 fi
-POST_FILTER_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE")
+POST_FILTER_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE" 2>/dev/null || echo "0")
 if [[ "$PRE_FILTER_COUNT" -ne "$POST_FILTER_COUNT" ]]; then
   echo "Filtered findings: ${PRE_FILTER_COUNT} → ${POST_FILTER_COUNT} (confidence >= 75)" >&2
 fi
@@ -617,7 +617,7 @@ fi
 if jq '
   def sev_rank: if . == "Critical" then 4 elif . == "High" then 3
     elif . == "Medium" then 2 else 1 end;
-  group_by(.file + ":" + (.line | tostring))
+  group_by((.file // "unknown") + ":" + ((.line // 0) | tostring))
   | map(sort_by(.severity | sev_rank) | reverse | .[0])
 ' "$FINDINGS_JSON_FILE" > "${FINDINGS_JSON_FILE}.tmp"; then
   mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
@@ -625,7 +625,7 @@ else
   echo "WARNING: Dedup jq failed; findings may contain duplicates." >&2
   rm -f "${FINDINGS_JSON_FILE}.tmp"
 fi
-DEDUP_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE")
+DEDUP_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE" 2>/dev/null || echo "0")
 echo "Total findings after dedup: ${DEDUP_COUNT}" >&2
 
 # Build merged findings markdown from all agent outputs (strip json-findings blocks)

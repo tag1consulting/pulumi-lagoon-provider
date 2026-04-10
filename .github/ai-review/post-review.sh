@@ -556,5 +556,5 @@ ${token_table}"
 
 resolve_stale_threads
 dismiss_stale_reviews
-post_summary || echo "WARNING: Summary posting failed; continuing to post findings." >&2
+post_summary || echo "WARNING: Summary posting failed; continuing to post findings. The SHA marker will not be updated, so the next run will fall back to a full PR diff." >&2
 post_findings || exit 1

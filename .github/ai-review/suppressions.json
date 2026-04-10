@@ -33,5 +33,19 @@
     "match": {
       "pattern": "MARKER_PREFIX.*jq|jq.*MARKER_PREFIX|marker.*interpolat|interpolat.*marker|fragile.*marker|marker.*fragile"
     }
+  },
+  {
+    "id": "review-id-jq-interpolation-integer-safe",
+    "reason": "review_id always originates from gh api JSON output as an integer. Shell-interpolating an integer into a jq filter is safe; no string quoting or metacharacter risk applies to integer values.",
+    "match": {
+      "pattern": "review_id.*interpolat|interpolat.*review_id|review_id.*jq.*express|jq.*review_id.*shell"
+    }
+  },
+  {
+    "id": "get-last-sha-api-failure-fallback-intentional",
+    "reason": "Intentional: get_last_reviewed_sha emits a WARNING on API failure and returns empty, triggering a full PR diff. This is the safe fallback — a full re-review is correct behavior when the last SHA is unknown, and the WARNING distinguishes it from a genuine first run.",
+    "match": {
+      "pattern": "get_last_reviewed_sha.*indistinguishable|indistinguishable.*first.run|api.failure.*full.re-review|transient.*api.*full"
+    }
   }
 ]
