@@ -364,11 +364,12 @@ call_agent() {
   done < "$agent_stderr"
 
   if [[ -n "$token_line" ]]; then
-    local input_tokens output_tokens
+    local input_tokens output_tokens model_id
     input_tokens=$(echo "$token_line" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "0")
     output_tokens=$(echo "$token_line" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "0")
-    echo "  tokens: input=${input_tokens} output=${output_tokens}" >&2
-    TOKEN_LOG+=("${name}: input=${input_tokens} output=${output_tokens}")
+    model_id=$(echo "$token_line" | grep -oE 'model=[^ ]+' | sed 's/model=//' || echo "unknown")
+    echo "  tokens: input=${input_tokens} output=${output_tokens} model=${model_id}" >&2
+    TOKEN_LOG+=("${name}: input=${input_tokens} output=${output_tokens} model=${model_id}")
   fi
 }
 
@@ -644,6 +645,61 @@ if [[ "${#FAILED_AGENTS[@]}" -gt 0 ]]; then
   echo "> **Note:** The following agents failed and their output is excluded: ${FAILED_AGENTS[*]}" >> "$FINDINGS_CLEAN_FILE"
 fi
 
+# ---------------------------------------------------------------------------
+# Pricing lookup: returns "input_millicents_per_token output_millicents_per_token"
+# Rates are in USD per million tokens × 1000 (millicents/token × 1000 = nanodollars/token)
+# to avoid floating point in bash. We store as microdollars per million tokens, i.e.
+# integer cents-per-million × 100.
+# All rates are public list prices as of 2026-04; bedrock/proxy marked as estimate (~).
+# ---------------------------------------------------------------------------
+# Returns two integers: IN_RATE OUT_RATE (in units of $0.001 per million tokens = $0.000000001/tok)
+# Callers compute: cost_microdollars = tokens * rate / 1_000_000
+# Then format as: $X.XXXXXX
+model_pricing() {
+  local model="$1"
+  # Normalize: strip region prefixes (us., global., eu.) and version suffixes for matching
+  local m
+  m=$(echo "$model" | sed 's/^[a-z][a-z]\.\|^global\.\|^eu\.//; s/-[0-9]*$//; s/_/-/g' | tr '[:upper:]' '[:lower:]')
+  case "$m" in
+    # Claude Sonnet 4.6 — $3/M in, $15/M out
+    *claude-sonnet-4-6*|*claude-sonnet-4.6*|*claude-sonnet-4-5*|*claude-sonnet-4.5*)
+      echo "3000000 15000000" ;;
+    # Claude Opus 4.6 — $15/M in, $75/M out
+    *claude-opus-4-6*|*claude-opus-4.6*|*claude-opus-4-5*|*claude-opus-4.5*)
+      echo "15000000 75000000" ;;
+    # Claude Haiku 4.5 — $0.80/M in, $4/M out
+    *claude-haiku-4-5*|*claude-haiku-4.5*)
+      echo "800000 4000000" ;;
+    # GPT-4o — $2.50/M in, $10/M out
+    *gpt-4o*)
+      echo "2500000 10000000" ;;
+    # GPT-4o-mini — $0.15/M in, $0.60/M out
+    *gpt-4o-mini*)
+      echo "150000 600000" ;;
+    # Gemini 2.5 Pro — $1.25/M in, $10/M out
+    *gemini-2.5-pro*)
+      echo "1250000 10000000" ;;
+    # Gemini 2.5 Flash — $0.15/M in, $3.50/M out
+    *gemini-2.5-flash*)
+      echo "150000 3500000" ;;
+    # Unknown — return zeros (no estimate)
+    *)
+      echo "0 0" ;;
+  esac
+}
+
+# Format microdollars (millionths of a dollar) as $X.XXXXXX
+format_cost() {
+  local microdollars="$1"
+  # microdollars = tokens * rate / 1_000_000, where rate is in nanodollars/token * 1e6
+  # Actually our unit: rate is in units of $0.000001 per token × 1e6 = dollars/token × 1e12
+  # Simpler: pass raw integer from calculation and format as dollars with 4 decimal places
+  # We work in units of $0.0001 (tenths of a cent) to keep integers manageable
+  local whole=$(( microdollars / 10000 ))
+  local frac=$(( microdollars % 10000 ))
+  printf '$%d.%04d' "$whole" "$frac"
+}
+
 # Build token usage table as a collapsed details block
 TOKEN_TABLE_FILE=$(mktemp_tracked /tmp/ai-review-token-table-XXXXXXXX.md)
 if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
@@ -651,20 +707,48 @@ if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
     echo "<details>"
     echo "<summary>Token usage by agent</summary>"
     echo ""
-    echo "| Agent | Input | Output | Total |"
-    echo "|-------|------:|-------:|------:|"
+    echo "| Agent | Model | Input | Output | Total | Est. Cost |"
+    echo "|-------|-------|------:|-------:|------:|----------:|"
     local_total_in=0
     local_total_out=0
+    local_total_cost=0
+    any_unknown_price=0
     for entry in "${TOKEN_LOG[@]}"; do
       agent_name="${entry%%:*}"
       in_tok=$(echo "$entry" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "0")
       out_tok=$(echo "$entry" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "0")
+      model_id=$(echo "$entry" | grep -oE 'model=[^ ]+' | sed 's/model=//' || echo "unknown")
       row_total=$(( in_tok + out_tok ))
-      echo "| ${agent_name} | ${in_tok} | ${out_tok} | ${row_total} |"
+
+      # Compute cost: rates are in nanodollars per token (i.e. dollars/million * 1000)
+      # cost_units = tokens * rate_nanodollars / 1_000_000_000 * 10000  (to get $0.0001 units)
+      #            = tokens * rate / 100_000
+      read -r in_rate out_rate <<< "$(model_pricing "$model_id")"
+      if [[ "$in_rate" -eq 0 && "$out_rate" -eq 0 ]]; then
+        cost_display="n/a"
+        any_unknown_price=1
+      else
+        cost_units=$(( (in_tok * in_rate + out_tok * out_rate) / 100000000 ))
+        cost_display=$(format_cost "$cost_units")
+        local_total_cost=$(( local_total_cost + cost_units ))
+      fi
+
+      # Shorten model ID for display: strip long version/region prefixes
+      model_short=$(echo "$model_id" | sed 's/^[a-z][a-z]\.\|^global\.\|^eu\.//')
+
+      echo "| ${agent_name} | \`${model_short}\` | ${in_tok} | ${out_tok} | ${row_total} | ${cost_display} |"
       local_total_in=$(( local_total_in + in_tok ))
       local_total_out=$(( local_total_out + out_tok ))
     done
-    echo "| **Total** | **${local_total_in}** | **${local_total_out}** | **$(( local_total_in + local_total_out ))** |"
+
+    if [[ "$any_unknown_price" -eq 1 ]]; then
+      total_cost_display="$(format_cost "$local_total_cost")+"
+    else
+      total_cost_display="$(format_cost "$local_total_cost")"
+    fi
+    echo "| **Total** | | **${local_total_in}** | **${local_total_out}** | **$(( local_total_in + local_total_out ))** | **${total_cost_display}** |"
+    echo ""
+    echo "_Prices are public list rates and do not reflect discounts, commitments, or proxy markups._"
     echo ""
     echo "</details>"
   } > "$TOKEN_TABLE_FILE"
@@ -716,20 +800,40 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
       echo "### Token Usage"
       echo ""
-      echo "| Agent | Input | Output | Total |"
-      echo "|-------|------:|-------:|------:|"
+      echo "| Agent | Model | Input | Output | Total | Est. Cost |"
+      echo "|-------|-------|------:|-------:|------:|----------:|"
       local_total_in=0
       local_total_out=0
+      local_total_cost=0
+      any_unknown_price=0
       for entry in "${TOKEN_LOG[@]}"; do
         agent_name="${entry%%:*}"
         in_tok=$(echo "$entry" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "0")
         out_tok=$(echo "$entry" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "0")
+        model_id=$(echo "$entry" | grep -oE 'model=[^ ]+' | sed 's/model=//' || echo "unknown")
         row_total=$(( in_tok + out_tok ))
-        echo "| ${agent_name} | ${in_tok} | ${out_tok} | ${row_total} |"
+        read -r in_rate out_rate <<< "$(model_pricing "$model_id")"
+        if [[ "$in_rate" -eq 0 && "$out_rate" -eq 0 ]]; then
+          cost_display="n/a"
+          any_unknown_price=1
+        else
+          cost_units=$(( (in_tok * in_rate + out_tok * out_rate) / 100000000 ))
+          cost_display=$(format_cost "$cost_units")
+          local_total_cost=$(( local_total_cost + cost_units ))
+        fi
+        model_short=$(echo "$model_id" | sed 's/^[a-z][a-z]\.\|^global\.\|^eu\.//')
+        echo "| ${agent_name} | \`${model_short}\` | ${in_tok} | ${out_tok} | ${row_total} | ${cost_display} |"
         local_total_in=$(( local_total_in + in_tok ))
         local_total_out=$(( local_total_out + out_tok ))
       done
-      echo "| **Total** | **${local_total_in}** | **${local_total_out}** | **$(( local_total_in + local_total_out ))** |"
+      if [[ "$any_unknown_price" -eq 1 ]]; then
+        total_cost_display="$(format_cost "$local_total_cost")+"
+      else
+        total_cost_display="$(format_cost "$local_total_cost")"
+      fi
+      echo "| **Total** | | **${local_total_in}** | **${local_total_out}** | **$(( local_total_in + local_total_out ))** | **${total_cost_display}** |"
+      echo ""
+      echo "_Prices are public list rates and do not reflect discounts, commitments, or proxy markups._"
       echo ""
     fi
     echo "### Summary"
