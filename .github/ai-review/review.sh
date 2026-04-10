@@ -96,7 +96,7 @@ git fetch origin "${BASE_REF}" --depth=50 2>/dev/null || {
 # Incremental diff: only review commits since the last review run.
 # Fall back to the full PR diff on first run or if the last SHA is unreachable.
 # ---------------------------------------------------------------------------
-LAST_REVIEWED_SHA=$("${SCRIPT_DIR}/post-review.sh" --get-last-sha 2>/dev/null) || {
+LAST_REVIEWED_SHA=$("${SCRIPT_DIR}/post-review.sh" --get-last-sha "$PR_NUMBER" 2>/dev/null) || {
   echo "WARNING: Could not retrieve last-reviewed SHA; falling back to full PR diff." >&2
   LAST_REVIEWED_SHA=""
 }

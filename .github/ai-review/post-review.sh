@@ -14,6 +14,38 @@
 
 set -euo pipefail
 
+# ---------------------------------------------------------------------------
+# --get-last-sha mode: must be checked before positional param validation
+# because it is invoked with only one argument.
+# ---------------------------------------------------------------------------
+if [[ "${1:-}" == "--get-last-sha" ]]; then
+  : "${GH_TOKEN:?GH_TOKEN is required}"
+  : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
+  OWNER="${GITHUB_REPOSITORY%%/*}"
+  REPO="${GITHUB_REPOSITORY##*/}"
+  PR_NUMBER="${2:?--get-last-sha requires PR number as second argument}"
+  MARKER_PREFIX="<!-- ai-pr-review-summary"
+
+  get_last_reviewed_sha() {
+    local comment_body gh_err
+    gh_err=$(mktemp)
+    comment_body=$(gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
+      --paginate --jq ".[] | select(.body | contains(\"${MARKER_PREFIX}\")) | .body" \
+      2>"$gh_err" | head -1) || {
+      echo "WARNING: get_last_reviewed_sha: GitHub API error (treating as first run): $(cat "$gh_err")" >&2
+      rm -f "$gh_err"
+      return 0
+    }
+    rm -f "$gh_err"
+    if [[ -n "$comment_body" ]]; then
+      echo "$comment_body" | grep -oE 'sha=[0-9a-f]+' | sed 's/sha=//' | head -1 || true
+    fi
+  }
+
+  get_last_reviewed_sha
+  exit 0
+fi
+
 PR_NUMBER="${1:?Usage: post-review.sh <pr_number> <summary_file> <findings_file> <findings_json_file> <diff_file> <head_sha> [token_table_file]}"
 SUMMARY_FILE="${2:?Missing summary file}"
 FINDINGS_FILE="${3:?Missing findings file}"
@@ -455,13 +487,6 @@ ${token_table}"
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-
-# If called with --get-last-sha, just return the last reviewed SHA and exit.
-# Used by review.sh to determine the incremental diff base.
-if [[ "${1:-}" == "--get-last-sha" ]]; then
-  get_last_reviewed_sha
-  exit 0
-fi
 
 resolve_stale_threads
 post_summary || echo "WARNING: Summary posting failed; continuing to post findings." >&2
