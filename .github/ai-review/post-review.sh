@@ -30,7 +30,8 @@ if [[ "${1:-}" == "--get-last-sha" ]]; then
     local comment_body gh_err
     gh_err=$(mktemp)
     comment_body=$(gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
-      --paginate --jq ".[] | select(.body | contains(\"${MARKER_PREFIX}\")) | .body" \
+      --paginate --arg marker "$MARKER_PREFIX" \
+      --jq '.[] | select(.body | contains($marker)) | .body' \
       2>"$gh_err" | head -1) || {
       echo "WARNING: get_last_reviewed_sha: GitHub API error (treating as first run): $(cat "$gh_err")" >&2
       rm -f "$gh_err"
@@ -174,6 +175,70 @@ resolve_stale_threads() {
 }
 
 # ---------------------------------------------------------------------------
+# Dismiss stale CHANGES_REQUESTED reviews from github-actions[bot] whose
+# threads are all resolved. Prevents old blocking reviews from accumulating.
+# ---------------------------------------------------------------------------
+dismiss_stale_reviews() {
+  echo "Checking for stale CHANGES_REQUESTED reviews to dismiss..." >&2
+
+  # Find all CHANGES_REQUESTED reviews submitted by github-actions[bot]
+  local reviews_json
+  reviews_json=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews" \
+    --paginate --jq '[.[] | select(.state == "CHANGES_REQUESTED" and .user.login == "github-actions[bot]") | {id: .id}]' \
+    2>/dev/null) || {
+    echo "WARNING: Could not fetch reviews for dismissal check." >&2
+    return 0
+  }
+
+  local review_ids
+  review_ids=$(echo "$reviews_json" | jq -r '.[].id' 2>/dev/null) || true
+
+  if [[ -z "$review_ids" ]]; then
+    echo "No stale CHANGES_REQUESTED reviews to dismiss." >&2
+    return 0
+  fi
+
+  local dismissed=0
+  while IFS= read -r review_id; do
+    [[ -z "$review_id" ]] && continue
+    # Check if all threads for this review are resolved by checking the review's comments
+    local unresolved_count
+    unresolved_count=$(gh api graphql -f query='
+      query($owner: String!, $repo: String!, $pr: Int!) {
+        repository(owner: $owner, name: $repo) {
+          pullRequest(number: $pr) {
+            reviewThreads(first: 100) {
+              nodes {
+                isResolved
+                comments(first: 1) {
+                  nodes { pullRequestReview { databaseId } }
+                }
+              }
+            }
+          }
+        }
+      }' \
+      -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER" \
+      --jq "[.data.repository.pullRequest.reviewThreads.nodes[] |
+             select(.comments.nodes[0].pullRequestReview.databaseId == ${review_id} and .isResolved == false)] | length" \
+      2>/dev/null) || unresolved_count=1  # assume not safe to dismiss on error
+
+    if [[ "${unresolved_count:-1}" -eq 0 ]]; then
+      local dismiss_result
+      dismiss_result=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews/${review_id}/dismissals" \
+        --method PUT \
+        --field message="Superseded by a subsequent review run." \
+        2>&1) && {
+        echo "Dismissed stale review #${review_id}." >&2
+        dismissed=$(( dismissed + 1 ))
+      } || echo "WARNING: Could not dismiss review #${review_id}: ${dismiss_result}" >&2
+    fi
+  done <<< "$review_ids"
+
+  echo "Dismissed ${dismissed} stale review(s)." >&2
+}
+
+# ---------------------------------------------------------------------------
 # Post Block A: Summary comment (idempotent via marker, embeds reviewed SHA)
 # ---------------------------------------------------------------------------
 post_summary() {
@@ -196,7 +261,8 @@ ${summary}
   # Find existing summary comment by marker prefix
   local existing_comment_id
   existing_comment_id=$(gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
-    --paginate --jq ".[] | select(.body | contains(\"${MARKER_PREFIX}\")) | .id" \
+    --paginate --arg marker "$MARKER_PREFIX" \
+    --jq '.[] | select(.body | contains($marker)) | .id' \
     2>/dev/null | head -1) || true
 
   if [[ -n "$existing_comment_id" ]]; then
@@ -489,5 +555,6 @@ ${token_table}"
 # ---------------------------------------------------------------------------
 
 resolve_stale_threads
+dismiss_stale_reviews
 post_summary || echo "WARNING: Summary posting failed; continuing to post findings." >&2
 post_findings || exit 1
