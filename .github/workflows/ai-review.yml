@@ -5,6 +5,10 @@ on:
     types: [opened, synchronize, ready_for_review]
   workflow_dispatch:
     inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: number
       review_mode:
         description: 'Review mode'
         default: 'quick'
@@ -70,9 +74,9 @@ jobs:
       - name: Run AI review
         run: bash .github/ai-review/review.sh
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           # Full mode: add "ai-review-full" label to the PR, or trigger via workflow_dispatch
           AI_REVIEW_MODE: >-
             ${{ contains(github.event.pull_request.labels.*.name, 'ai-review-full')

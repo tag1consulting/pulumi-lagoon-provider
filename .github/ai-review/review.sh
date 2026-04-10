@@ -84,7 +84,13 @@ echo "PR: #${PR_NUMBER} | Base: ${BASE_REF} | Head: ${HEAD_SHA}" >&2
 echo "Mode: ${REVIEW_MODE}" >&2
 
 # Ensure we have the base branch for diffing
-git fetch origin "${BASE_REF}" --depth=50 2>/dev/null || echo "WARNING: git fetch failed; diff may be incomplete." >&2
+git fetch origin "${BASE_REF}" --depth=50 2>/dev/null || {
+  echo "WARNING: git fetch failed; attempting to proceed with existing local refs." >&2
+  if ! git rev-parse --verify "origin/${BASE_REF}" > /dev/null 2>&1; then
+    echo "ERROR: origin/${BASE_REF} is not reachable. Cannot compute diff. Aborting." >&2
+    exit 1
+  fi
+}
 
 # ---------------------------------------------------------------------------
 # Incremental diff: only review commits since the last review run.
@@ -359,8 +365,8 @@ call_agent() {
 
   if [[ -n "$token_line" ]]; then
     local input_tokens output_tokens
-    input_tokens=$(echo "$token_line" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "?")
-    output_tokens=$(echo "$token_line" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "?")
+    input_tokens=$(echo "$token_line" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "0")
+    output_tokens=$(echo "$token_line" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "0")
     echo "  tokens: input=${input_tokens} output=${output_tokens}" >&2
     TOKEN_LOG+=("${name}: input=${input_tokens} output=${output_tokens}")
   fi
@@ -561,8 +567,12 @@ apply_suppressions() {
     return 0
   }
 
-  echo "$result" | jq '.kept' > "${FINDINGS_JSON_FILE}.tmp" && \
+  if echo "$result" | jq '.kept' > "${FINDINGS_JSON_FILE}.tmp"; then
     mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+  else
+    echo "WARNING: apply_suppressions failed to write filtered findings; keeping original." >&2
+    rm -f "${FINDINGS_JSON_FILE}.tmp"
+  fi
 
   local suppressed_count
   suppressed_count=$(echo "$result" | jq '.suppressed | length')
@@ -592,21 +602,29 @@ apply_suppressions
 
 # Filter out findings below confidence threshold (75)
 PRE_FILTER_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE")
-jq '[.[] | select((.confidence // 0) >= 75)]' "$FINDINGS_JSON_FILE" > "${FINDINGS_JSON_FILE}.tmp"
-mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+if jq '[.[] | select((.confidence // 0) >= 75)]' "$FINDINGS_JSON_FILE" > "${FINDINGS_JSON_FILE}.tmp"; then
+  mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+else
+  echo "WARNING: Confidence filter jq failed; keeping all findings unfiltered." >&2
+  rm -f "${FINDINGS_JSON_FILE}.tmp"
+fi
 POST_FILTER_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE")
 if [[ "$PRE_FILTER_COUNT" -ne "$POST_FILTER_COUNT" ]]; then
   echo "Filtered findings: ${PRE_FILTER_COUNT} → ${POST_FILTER_COUNT} (confidence >= 75)" >&2
 fi
 
 # Deduplicate findings on same file:line (keep highest severity)
-jq '
+if jq '
   def sev_rank: if . == "Critical" then 4 elif . == "High" then 3
     elif . == "Medium" then 2 else 1 end;
   group_by(.file + ":" + (.line | tostring))
   | map(sort_by(.severity | sev_rank) | reverse | .[0])
-' "$FINDINGS_JSON_FILE" > "${FINDINGS_JSON_FILE}.tmp"
-mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+' "$FINDINGS_JSON_FILE" > "${FINDINGS_JSON_FILE}.tmp"; then
+  mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+else
+  echo "WARNING: Dedup jq failed; findings may contain duplicates." >&2
+  rm -f "${FINDINGS_JSON_FILE}.tmp"
+fi
 DEDUP_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE")
 echo "Total findings after dedup: ${DEDUP_COUNT}" >&2
 
@@ -656,6 +674,13 @@ fi
 # Phase 3: Post to GitHub
 # ---------------------------------------------------------------------------
 echo "--- Posting to GitHub ---" >&2
+
+# Pass failed agents to post-review.sh so it can avoid a false APPROVE.
+# Use colon as delimiter (agent names never contain colons).
+if [[ "${#FAILED_AGENTS[@]}" -gt 0 ]]; then
+  export AI_REVIEW_FAILED_AGENTS
+  AI_REVIEW_FAILED_AGENTS=$(IFS=:; echo "${FAILED_AGENTS[*]}")
+fi
 
 "${SCRIPT_DIR}/post-review.sh" \
   "$PR_NUMBER" \

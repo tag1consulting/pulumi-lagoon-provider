@@ -34,6 +34,11 @@ MAX_TOKENS="${4:-4096}"
 
 : "${AI_PROVIDER:?AI_PROVIDER is required (anthropic|openai|openai-compatible|google|bedrock-proxy)}"
 TEMPERATURE="${AI_TEMPERATURE:-0.3}"
+# Validate temperature is a number in [0, 2]; fall back to 0.3 if not.
+if ! echo "$TEMPERATURE" | grep -qE '^[0-9]+(\.[0-9]+)?$'; then
+  echo "WARNING: AI_TEMPERATURE '${TEMPERATURE}' is not a valid number; defaulting to 0.3." >&2
+  TEMPERATURE="0.3"
+fi
 
 SYSTEM_PROMPT=$(cat "$SYSTEM_PROMPT_FILE")
 USER_MESSAGE=$(cat "$USER_MESSAGE_FILE")
@@ -157,7 +162,8 @@ call_google() {
   local http_code
   http_code=$(curl -s -w "%{http_code}" -o "$RESPONSE_FILE" \
     --max-time 180 \
-    -X POST "https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${GOOGLE_API_KEY}" \
+    -X POST "https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent" \
+    -H "x-goog-api-key: ${GOOGLE_API_KEY}" \
     -H "Content-Type: application/json" \
     -d "$request_body") || {
     echo "ERROR: Google Gemini API request failed" >&2
