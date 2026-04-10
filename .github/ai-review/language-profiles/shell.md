@@ -39,3 +39,26 @@ When reviewing shell scripts, pay particular attention to:
 - `sed -i` differs between GNU and BSD — use temp file + mv for portability
 - `readarray`/`mapfile` require bash 4+ — not available on macOS default bash 3.2
 - Process substitution `<(cmd)` requires bash, not POSIX sh
+
+### Project-Accepted Patterns (Do NOT Flag)
+
+These patterns appear in `.github/ai-review/*.sh` and have been explicitly accepted
+as intentional design decisions after review. Do not raise findings for them:
+
+- **`|| echo "0"` in arithmetic contexts**: Intentional safe default. When parsing
+  diff stats fails (e.g., `grep` finds no match), defaulting to 0 lines means the
+  orchestrator treats the PR as having zero changed lines — the conservative path
+  that does not suppress any review output.
+
+- **`merge_findings` skipping a batch with WARNING**: Intentional. When `jq` fails
+  to merge a findings batch (e.g., corrupt intermediate file), skipping that batch
+  and logging a WARNING is preferable to aborting the entire review. The WARNING is
+  surfaced in the workflow log for diagnosis. This is not a silent failure.
+
+- **`|| echo "[]"` on shellcheck failure in `run-shellcheck.sh`**: Intentional.
+  Shellcheck is a nice-to-have lint pass; its failure should not block the AI review.
+  The fallback to `[]` is explicit and documented inline.
+
+- **SC1072 shellcheck false positive in `run-shellcheck.sh`**: Shellcheck
+  misparses the heredoc inside the `if` condition. The script is syntactically
+  correct (`bash -n` passes). Do not re-flag SC1072 on this file.

@@ -3,30 +3,64 @@
 # review.sh — AI PR Review orchestrator.
 #
 # Computes the diff, builds a file manifest, detects languages, calls
-# pr-summarizer and code-reviewer agents via the Bedrock proxy, assembles
-# the results, and posts them to the PR.
+# review agents via the configured LLM provider, assembles the results,
+# and posts them to the PR.
 #
 # Environment (required):
-#   BEDROCK_API_URL   — Bedrock proxy base URL
-#   BEDROCK_API_KEY   — Bearer token for proxy auth
+#   AI_PROVIDER       — LLM provider: anthropic | openai | openai-compatible | google | bedrock-proxy
 #   GH_TOKEN          — GitHub token for posting reviews
 #   PR_NUMBER         — Pull request number
 #   BASE_REF          — Base branch name (e.g., main)
 #   HEAD_SHA          — Head commit SHA
 #   GITHUB_REPOSITORY — owner/repo
 #
+#   Provider credentials (one set required based on AI_PROVIDER):
+#     anthropic:          ANTHROPIC_API_KEY
+#     openai:             OPENAI_API_KEY
+#     openai-compatible:  OPENAI_API_KEY, OPENAI_BASE_URL
+#     google:             GOOGLE_API_KEY
+#     bedrock-proxy:      BEDROCK_API_URL, BEDROCK_API_KEY
+#
 # Environment (optional):
-#   AI_REVIEW_MODE    — "auto" (default), "quick", or "full"
+#   AI_REVIEW_MODE    — "quick" (default) or "full"
+#                       Add the "ai-review-full" label to a PR for full mode.
+#   AI_MODEL_STANDARD — Model for standard agents (pr-summarizer, code-reviewer, etc.)
+#                       Defaults are chosen per provider if not set.
+#   AI_MODEL_PREMIUM  — Model for deep agents (architecture-reviewer, security-reviewer)
+#                       Defaults to AI_MODEL_STANDARD if not set.
+#   AI_TEMPERATURE    — Sampling temperature (default: 0.3)
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REVIEW_MODE="${AI_REVIEW_MODE:-auto}"
+REVIEW_MODE="${AI_REVIEW_MODE:-quick}"
 
-# Model IDs — use latest available on the Bedrock proxy
-MODEL_HAIKU="us.anthropic.claude-3-5-haiku-20241022-v1:0"  # issue-linker, classification (Phase B)
-MODEL_SONNET="us.anthropic.claude-sonnet-4-6"
-MODEL_OPUS="global.anthropic.claude-opus-4-6-v1"
+: "${AI_PROVIDER:?AI_PROVIDER is required (anthropic|openai|openai-compatible|google|bedrock-proxy)}"
+
+# Set per-provider model defaults; user env vars take precedence.
+case "$AI_PROVIDER" in
+  anthropic)
+    AI_MODEL_STANDARD="${AI_MODEL_STANDARD:-claude-sonnet-4-6-20250514}"
+    AI_MODEL_PREMIUM="${AI_MODEL_PREMIUM:-claude-opus-4-6-20250514}"
+    ;;
+  openai|openai-compatible)
+    AI_MODEL_STANDARD="${AI_MODEL_STANDARD:-gpt-4o}"
+    AI_MODEL_PREMIUM="${AI_MODEL_PREMIUM:-${AI_MODEL_STANDARD}}"
+    ;;
+  google)
+    AI_MODEL_STANDARD="${AI_MODEL_STANDARD:-gemini-2.5-flash}"
+    AI_MODEL_PREMIUM="${AI_MODEL_PREMIUM:-gemini-2.5-pro}"
+    ;;
+  bedrock-proxy)
+    AI_MODEL_STANDARD="${AI_MODEL_STANDARD:-us.anthropic.claude-sonnet-4-6}"
+    AI_MODEL_PREMIUM="${AI_MODEL_PREMIUM:-global.anthropic.claude-opus-4-6-v1}"
+    ;;
+  *)
+    # openai-compatible without standard: user must set AI_MODEL_STANDARD
+    AI_MODEL_STANDARD="${AI_MODEL_STANDARD:?AI_MODEL_STANDARD is required for AI_PROVIDER=${AI_PROVIDER}}"
+    AI_MODEL_PREMIUM="${AI_MODEL_PREMIUM:-${AI_MODEL_STANDARD}}"
+    ;;
+esac
 
 # Temp files — cleaned up on exit
 TMPFILES=()
@@ -198,22 +232,21 @@ else
   COMMIT_LOG=$(git log --oneline "origin/${BASE_REF}..${HEAD_SHA}" 2>/dev/null | head -20)
 fi
 
-# Determine review mode
+# Validate and log review mode
+if [[ "$REVIEW_MODE" != "quick" && "$REVIEW_MODE" != "full" ]]; then
+  echo "WARNING: Unknown AI_REVIEW_MODE '${REVIEW_MODE}'. Defaulting to quick." >&2
+  REVIEW_MODE="quick"
+fi
+
+# Compute diff size for informational logging (and large-diff warning)
+# Note: || echo "0" here is intentional — parse failures default to 0 lines,
+# which is the safe direction (does not suppress any review output).
 TOTAL_CHANGED=$(echo "$DIFF_STAT" | grep -oE '[0-9]+ insertions?' | grep -o '[0-9]*' || echo "0")
 TOTAL_REMOVED=$(echo "$DIFF_STAT" | grep -oE '[0-9]+ deletions?' | grep -o '[0-9]*' || echo "0")
 TOTAL_LINES=$(( ${TOTAL_CHANGED:-0} + ${TOTAL_REMOVED:-0} ))
 
-if [[ "$REVIEW_MODE" == "auto" ]]; then
-  if [[ "$TOTAL_LINES" -gt 2000 ]]; then
-    echo "WARNING: Large diff (${TOTAL_LINES} lines). Forcing quick mode." >&2
-    REVIEW_MODE="quick"
-  elif [[ "$TOTAL_LINES" -lt 100 ]]; then
-    REVIEW_MODE="quick"
-    echo "Small diff (${TOTAL_LINES} lines). Using quick mode." >&2
-  else
-    REVIEW_MODE="full"
-    echo "Medium diff (${TOTAL_LINES} lines). Using full mode." >&2
-  fi
+if [[ "$TOTAL_LINES" -gt 2000 ]]; then
+  echo "WARNING: Large diff (${TOTAL_LINES} changed lines). Consider reviewing incrementally." >&2
 fi
 
 # Load language profile(s)
@@ -288,16 +321,16 @@ FAILED_AGENTS=()
 TOKEN_LOG=()  # entries: "agent_name input=N output=N"
 
 # --- Helper: call agent and handle failure ---
-# Intercepts TOKENS: lines from bedrock-call.sh stderr for usage tracking;
+# Intercepts TOKENS: lines from llm-call.sh stderr for usage tracking;
 # forwards all other stderr to the workflow log.
 call_agent() {
   local name="$1" model="$2" prompt="$3" msg="$4" output="$5" max_tokens="${6:-4096}"
-  echo "Calling ${name} (${model##*.claude-})..." >&2
+  echo "Calling ${name} (${model##*.})..." >&2
 
   local agent_stderr
   agent_stderr=$(mktemp_tracked /tmp/ai-review-stderr-XXXXXXXX.txt)
 
-  "${SCRIPT_DIR}/bedrock-call.sh" "$model" "$prompt" "$msg" "$max_tokens" \
+  "${SCRIPT_DIR}/llm-call.sh" "$model" "$prompt" "$msg" "$max_tokens" \
     > "$output" 2> "$agent_stderr" || {
     echo "WARNING: ${name} failed. Continuing without its output." >&2
     cat "$agent_stderr" >&2
@@ -339,17 +372,17 @@ FINDINGS_FILE=$(mktemp_tracked /tmp/ai-review-findings-XXXXXXXX.md)
 # Tier 1: Always run (quick + full)
 AGENT_OUTPUTS=()
 
-call_agent "pr-summarizer" "$MODEL_SONNET" \
+call_agent "pr-summarizer" "$AI_MODEL_STANDARD" \
   "${SCRIPT_DIR}/prompts/pr-summarizer.md" "$FULL_CONTEXT_MSG" "$SUMMARY_FILE"
 
-call_agent "code-reviewer" "$MODEL_SONNET" \
+call_agent "code-reviewer" "$AI_MODEL_STANDARD" \
   "${SCRIPT_DIR}/prompts/code-reviewer.md" "$CODE_CONTEXT_MSG" "$FINDINGS_FILE"
 AGENT_OUTPUTS+=("$FINDINGS_FILE")
 
 # Tier 1 conditional: run in both quick and full when triggered
 if [[ "$HAS_ERROR_PATTERNS" -eq 1 ]]; then
   SFH_FILE=$(mktemp_tracked /tmp/ai-review-sfh-XXXXXXXX.md)
-  call_agent "silent-failure-hunter" "$MODEL_SONNET" \
+  call_agent "silent-failure-hunter" "$AI_MODEL_STANDARD" \
     "${SCRIPT_DIR}/prompts/silent-failure-hunter.md" "$CODE_CONTEXT_MSG" "$SFH_FILE"
   AGENT_OUTPUTS+=("$SFH_FILE")
 fi
@@ -357,27 +390,27 @@ fi
 # Tier 2: Full mode only
 if [[ "$REVIEW_MODE" == "full" ]]; then
   ARCH_FILE=$(mktemp_tracked /tmp/ai-review-arch-XXXXXXXX.md)
-  call_agent "architecture-reviewer" "$MODEL_OPUS" \
+  call_agent "architecture-reviewer" "$AI_MODEL_PREMIUM" \
     "${SCRIPT_DIR}/prompts/architecture-reviewer.md" "$FULL_CONTEXT_MSG" "$ARCH_FILE"
   AGENT_OUTPUTS+=("$ARCH_FILE")
 
   SEC_FILE=$(mktemp_tracked /tmp/ai-review-sec-XXXXXXXX.md)
-  call_agent "security-reviewer" "$MODEL_OPUS" \
+  call_agent "security-reviewer" "$AI_MODEL_PREMIUM" \
     "${SCRIPT_DIR}/prompts/security-reviewer.md" "$CODE_CONTEXT_MSG" "$SEC_FILE"
   AGENT_OUTPUTS+=("$SEC_FILE")
 
   BLIND_FILE=$(mktemp_tracked /tmp/ai-review-blind-XXXXXXXX.md)
-  call_agent "blind-hunter" "$MODEL_SONNET" \
+  call_agent "blind-hunter" "$AI_MODEL_STANDARD" \
     "${SCRIPT_DIR}/prompts/blind-hunter.md" "$BLIND_MSG" "$BLIND_FILE"
   AGENT_OUTPUTS+=("$BLIND_FILE")
 
   EDGE_FILE=$(mktemp_tracked /tmp/ai-review-edge-XXXXXXXX.md)
-  call_agent "edge-case-hunter" "$MODEL_SONNET" \
+  call_agent "edge-case-hunter" "$AI_MODEL_STANDARD" \
     "${SCRIPT_DIR}/prompts/edge-case-hunter.md" "$CODE_CONTEXT_MSG" "$EDGE_FILE"
   AGENT_OUTPUTS+=("$EDGE_FILE")
 
   ADV_FILE=$(mktemp_tracked /tmp/ai-review-adv-XXXXXXXX.md)
-  call_agent "adversarial-general" "$MODEL_SONNET" \
+  call_agent "adversarial-general" "$AI_MODEL_STANDARD" \
     "${SCRIPT_DIR}/prompts/adversarial-general.md" "$CODE_CONTEXT_MSG" "$ADV_FILE"
   AGENT_OUTPUTS+=("$ADV_FILE")
 fi
