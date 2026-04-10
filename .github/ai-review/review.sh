@@ -90,7 +90,7 @@ git fetch origin "${BASE_REF}" --depth=50 2>/dev/null || echo "WARNING: git fetc
 # Incremental diff: only review commits since the last review run.
 # Fall back to the full PR diff on first run or if the last SHA is unreachable.
 # ---------------------------------------------------------------------------
-LAST_REVIEWED_SHA=$("${SCRIPT_DIR}/post-review.sh" --get-last-sha 2>&1) || {
+LAST_REVIEWED_SHA=$("${SCRIPT_DIR}/post-review.sh" --get-last-sha 2>/dev/null) || {
   echo "WARNING: Could not retrieve last-reviewed SHA; falling back to full PR diff." >&2
   LAST_REVIEWED_SHA=""
 }
@@ -118,11 +118,15 @@ fi
 DIFF_FILE=$(mktemp_tracked /tmp/ai-review-diff-XXXXXXXX.txt)
 EXCL=(':!*lock.json' ':!*lock.yaml' ':!vendor/*' ':!*.sum' ':!node_modules/*')
 if [[ -n "$DIFF_BASE" ]]; then
-  git diff "${DIFF_BASE}...${HEAD_SHA}" -- "${EXCL[@]}" > "$DIFF_FILE" 2>&1 || \
+  if ! git diff "${DIFF_BASE}...${HEAD_SHA}" -- "${EXCL[@]}" > "$DIFF_FILE" 2>/dev/null; then
+    : > "$DIFF_FILE"
     echo "WARNING: git diff failed; diff output may be empty or incomplete." >&2
+  fi
 else
-  git diff "origin/${BASE_REF}...${HEAD_SHA}" -- "${EXCL[@]}" > "$DIFF_FILE" 2>&1 || \
+  if ! git diff "origin/${BASE_REF}...${HEAD_SHA}" -- "${EXCL[@]}" > "$DIFF_FILE" 2>/dev/null; then
+    : > "$DIFF_FILE"
     echo "WARNING: git diff failed; diff output may be empty or incomplete." >&2
+  fi
 fi
 
 # Check for empty diff
@@ -330,14 +334,18 @@ call_agent() {
   local agent_stderr
   agent_stderr=$(mktemp_tracked /tmp/ai-review-stderr-XXXXXXXX.txt)
 
+  local exit_code=0
   "${SCRIPT_DIR}/llm-call.sh" "$model" "$prompt" "$msg" "$max_tokens" \
-    > "$output" 2> "$agent_stderr" || {
-    echo "WARNING: ${name} failed. Continuing without its output." >&2
+    > "$output" 2> "$agent_stderr" || exit_code=$?
+  if [[ "$exit_code" -ne 0 ]]; then
+    local last_err
+    last_err=$(tail -1 "$agent_stderr" 2>/dev/null)
+    echo "WARNING: ${name} failed (exit ${exit_code}): ${last_err:-no stderr output}. Continuing without its output." >&2
     cat "$agent_stderr" >&2
     FAILED_AGENTS+=("$name")
     echo "" > "$output"
     return
-  }
+  fi
 
   # Parse token usage line; forward remaining stderr to workflow log
   local token_line=""
@@ -473,7 +481,9 @@ extract_findings() {
       printf '%s' "$extracted"
       return
     else
-      echo "WARNING: $(basename "$agent_file") produced invalid or malformed json-findings; skipping." >&2
+      local preview
+      preview=$(printf '%s' "$extracted" | head -c 200)
+      echo "WARNING: $(basename "$agent_file") produced invalid or malformed json-findings; skipping. Preview: ${preview}" >&2
     fi
   fi
   echo "[]"
@@ -484,7 +494,9 @@ merge_findings() {
   if jq -s '.[0] + .[1]' "$FINDINGS_JSON_FILE" <(echo "$incoming") > "${FINDINGS_JSON_FILE}.tmp" 2>/dev/null; then
     mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
   else
-    echo "WARNING: Failed to merge findings JSON; skipping batch." >&2
+    local count
+    count=$(echo "$incoming" | jq 'length' 2>/dev/null || echo "?")
+    echo "WARNING: Failed to merge findings JSON; skipping batch of ${count} finding(s)." >&2
     rm -f "${FINDINGS_JSON_FILE}.tmp"
   fi
 }

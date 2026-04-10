@@ -413,4 +413,4 @@ fi
 
 resolve_stale_threads
 post_summary
-post_findings
+post_findings || exit 1
