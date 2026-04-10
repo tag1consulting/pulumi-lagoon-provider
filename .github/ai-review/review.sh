@@ -380,8 +380,15 @@ FINDINGS_FILE=$(mktemp_tracked /tmp/ai-review-findings-XXXXXXXX.md)
 # Tier 1: Always run (quick + full)
 AGENT_OUTPUTS=()
 
-call_agent "pr-summarizer" "$AI_MODEL_STANDARD" \
-  "${SCRIPT_DIR}/prompts/pr-summarizer.md" "$FULL_CONTEXT_MSG" "$SUMMARY_FILE"
+# pr-summarizer: only on the first run. Follow-up runs leave the existing
+# summary comment untouched — it describes the full PR; re-running it on an
+# incremental diff would replace a useful whole-PR overview with a partial one.
+if [[ -z "$LAST_REVIEWED_SHA" ]]; then
+  call_agent "pr-summarizer" "$AI_MODEL_STANDARD" \
+    "${SCRIPT_DIR}/prompts/pr-summarizer.md" "$FULL_CONTEXT_MSG" "$SUMMARY_FILE"
+else
+  echo "Skipping pr-summarizer (incremental run — summary already posted)." >&2
+fi
 
 call_agent "code-reviewer" "$AI_MODEL_STANDARD" \
   "${SCRIPT_DIR}/prompts/code-reviewer.md" "$CODE_CONTEXT_MSG" "$FINDINGS_FILE"
