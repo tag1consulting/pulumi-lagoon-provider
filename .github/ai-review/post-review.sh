@@ -30,8 +30,8 @@ if [[ "${1:-}" == "--get-last-sha" ]]; then
     local comment_body gh_err
     gh_err=$(mktemp)
     comment_body=$(gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
-      --paginate --arg marker "$MARKER_PREFIX" \
-      --jq '.[] | select(.body | contains($marker)) | .body' \
+      --paginate \
+      --jq ".[] | select(.body | contains(\"${MARKER_PREFIX}\")) | .body" \
       2>"$gh_err" | head -1) || {
       echo "WARNING: get_last_reviewed_sha: GitHub API error (treating as first run): $(cat "$gh_err")" >&2
       rm -f "$gh_err"
@@ -261,8 +261,8 @@ ${summary}
   # Find existing summary comment by marker prefix
   local existing_comment_id
   existing_comment_id=$(gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
-    --paginate --arg marker "$MARKER_PREFIX" \
-    --jq '.[] | select(.body | contains($marker)) | .id' \
+    --paginate \
+    --jq ".[] | select(.body | contains(\"${MARKER_PREFIX}\")) | .id" \
     2>/dev/null | head -1) || true
 
   if [[ -n "$existing_comment_id" ]]; then

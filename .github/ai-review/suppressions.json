@@ -26,5 +26,12 @@
     "match": {
       "pattern": "\\[\\].*shellcheck|shellcheck.*\\[\\]|shellcheck.*fallback|fallback.*shellcheck"
     }
+  },
+  {
+    "id": "marker-prefix-jq-interpolation",
+    "reason": "MARKER_PREFIX is a hardcoded constant (<!-- ai-pr-review-summary) containing no jq metacharacters. gh api does not support --arg, so shell interpolation into --jq is the only option. The interpolation is safe for this controlled value.",
+    "match": {
+      "pattern": "MARKER_PREFIX.*jq|jq.*MARKER_PREFIX|marker.*interpolat|interpolat.*marker|fragile.*marker|marker.*fragile"
+    }
   }
 ]
