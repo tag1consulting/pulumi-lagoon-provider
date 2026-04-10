@@ -1,0 +1,31 @@
+[
+  {
+    "id": "sc1072-run-shellcheck-heredoc",
+    "reason": "Shellcheck misparses the heredoc inside the if condition in run-shellcheck.sh; bash -n passes cleanly. False positive.",
+    "match": {
+      "code": "SC1072",
+      "file": "run-shellcheck.sh"
+    }
+  },
+  {
+    "id": "echo-zero-safe-default",
+    "reason": "Intentional: || echo '0' in arithmetic contexts provides a safe default when grep finds no match. Defaulting to 0 lines does not suppress any review output — it is the conservative path.",
+    "match": {
+      "pattern": "silently default.*0|default.*0.*echo|echo.*0.*safe|safe.*default.*0"
+    }
+  },
+  {
+    "id": "merge-findings-skip-intentional",
+    "reason": "Intentional: merge_findings skipping a corrupt batch with WARNING is by design. Aborting the entire review on one bad batch is worse than losing one agent's findings.",
+    "match": {
+      "pattern": "merge_findings.*skip|silently skip.*batch|skip.*batch.*warning"
+    }
+  },
+  {
+    "id": "shellcheck-empty-array-fallback",
+    "reason": "Intentional: || echo '[]' on shellcheck failure is graceful degradation. Shellcheck is a nice-to-have lint pass; its failure should not block the AI review.",
+    "match": {
+      "pattern": "\\[\\].*shellcheck|shellcheck.*\\[\\]|shellcheck.*fallback|fallback.*shellcheck"
+    }
+  }
+]

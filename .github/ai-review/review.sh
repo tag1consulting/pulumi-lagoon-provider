@@ -501,6 +501,72 @@ merge_findings() {
   fi
 }
 
+# Apply declarative suppressions from suppressions.json.
+# Runs after all findings are merged, before confidence filter and dedup.
+# Suppressed findings are removed from FINDINGS_JSON_FILE and logged to stderr.
+apply_suppressions() {
+  local suppressions_file="${SCRIPT_DIR}/suppressions.json"
+
+  if [[ ! -f "$suppressions_file" ]]; then
+    return 0
+  fi
+
+  if ! jq -e 'type == "array"' "$suppressions_file" > /dev/null 2>&1; then
+    echo "WARNING: suppressions.json is not a valid JSON array; skipping suppression filter." >&2
+    return 0
+  fi
+
+  local result
+  result=$(jq --slurpfile rules "$suppressions_file" '
+    ($rules[0]) as $active_rules |
+
+    def rule_matches(rule):
+      (if rule.match.code then
+        (.finding | startswith(rule.match.code))
+      else true end)
+      and
+      (if rule.match.file then
+        (.file // "" | contains(rule.match.file))
+      else true end)
+      and
+      (if rule.match.line then
+        (.line == rule.match.line)
+      else true end)
+      and
+      (if rule.match.pattern then
+        (.finding | test(rule.match.pattern; "i"))
+      else true end);
+
+    def find_rule_id:
+      . as $f |
+      ([$active_rules[] | select(. as $r | $f | rule_matches($r))][0].id // "?");
+
+    def is_suppressed:
+      . as $finding |
+      any($active_rules[]; . as $rule | $finding | rule_matches($rule));
+
+    {
+      kept: [.[] | select(is_suppressed | not)],
+      suppressed: [.[] | select(is_suppressed) | . + {suppression_id: find_rule_id}]
+    }
+  ' "$FINDINGS_JSON_FILE") || {
+    echo "WARNING: apply_suppressions jq failed; skipping suppression filter." >&2
+    return 0
+  }
+
+  echo "$result" | jq '.kept' > "${FINDINGS_JSON_FILE}.tmp" && \
+    mv "${FINDINGS_JSON_FILE}.tmp" "$FINDINGS_JSON_FILE"
+
+  local suppressed_count
+  suppressed_count=$(echo "$result" | jq '.suppressed | length')
+  SUPPRESSED_COUNT=$suppressed_count
+
+  if [[ "$suppressed_count" -gt 0 ]]; then
+    echo "Suppressed findings: ${suppressed_count}" >&2
+    echo "$result" | jq -r '.suppressed[] | "  SUPPRESSED [\(.suppression_id)] \(.file // "?"):\(.line // "?") — \(.finding | .[0:80])"' >&2
+  fi
+}
+
 for agent_output in "${AGENT_OUTPUTS[@]}"; do
   AGENT_JSON=$(extract_findings "$agent_output")
   if [[ "$AGENT_JSON" != "[]" ]]; then
@@ -512,6 +578,10 @@ done
 if [[ "$SHELLCHECK_JSON" != "[]" ]]; then
   merge_findings "$SHELLCHECK_JSON"
 fi
+
+# Apply declarative suppressions (won't-fix / false positives)
+SUPPRESSED_COUNT=0
+apply_suppressions
 
 # Filter out findings below confidence threshold (75)
 PRE_FILTER_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE")
@@ -549,6 +619,32 @@ if [[ "${#FAILED_AGENTS[@]}" -gt 0 ]]; then
   echo "> **Note:** The following agents failed and their output is excluded: ${FAILED_AGENTS[*]}" >> "$FINDINGS_CLEAN_FILE"
 fi
 
+# Build token usage table as a collapsed details block
+TOKEN_TABLE_FILE=$(mktemp_tracked /tmp/ai-review-token-table-XXXXXXXX.md)
+if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
+  {
+    echo "<details>"
+    echo "<summary>Token usage by agent</summary>"
+    echo ""
+    echo "| Agent | Input | Output | Total |"
+    echo "|-------|------:|-------:|------:|"
+    local_total_in=0
+    local_total_out=0
+    for entry in "${TOKEN_LOG[@]}"; do
+      agent_name="${entry%%:*}"
+      in_tok=$(echo "$entry" | grep -oE 'input=[0-9]+' | sed 's/input=//' || echo "0")
+      out_tok=$(echo "$entry" | grep -oE 'output=[0-9]+' | sed 's/output=//' || echo "0")
+      row_total=$(( in_tok + out_tok ))
+      echo "| ${agent_name} | ${in_tok} | ${out_tok} | ${row_total} |"
+      local_total_in=$(( local_total_in + in_tok ))
+      local_total_out=$(( local_total_out + out_tok ))
+    done
+    echo "| **Total** | **${local_total_in}** | **${local_total_out}** | **$(( local_total_in + local_total_out ))** |"
+    echo ""
+    echo "</details>"
+  } > "$TOKEN_TABLE_FILE"
+fi
+
 # ---------------------------------------------------------------------------
 # Phase 3: Post to GitHub
 # ---------------------------------------------------------------------------
@@ -560,7 +656,8 @@ echo "--- Posting to GitHub ---" >&2
   "$FINDINGS_CLEAN_FILE" \
   "$FINDINGS_JSON_FILE" \
   "$DIFF_FILE" \
-  "$HEAD_SHA"
+  "$HEAD_SHA" \
+  "$TOKEN_TABLE_FILE"
 
 # ---------------------------------------------------------------------------
 # Phase 4: Summary to step summary
@@ -578,7 +675,11 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     fi
     echo ""
     FINDING_COUNT=$(jq 'length' "$FINDINGS_JSON_FILE" 2>/dev/null || echo "0")
-    echo "**Findings:** ${FINDING_COUNT}"
+    if [[ "${SUPPRESSED_COUNT:-0}" -gt 0 ]]; then
+      echo "**Findings:** ${FINDING_COUNT} (${SUPPRESSED_COUNT} suppressed)"
+    else
+      echo "**Findings:** ${FINDING_COUNT}"
+    fi
     echo ""
     if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
       echo "### Token Usage"
