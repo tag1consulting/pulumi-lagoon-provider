@@ -30,8 +30,8 @@ jobs:
       # --- Required: choose ONE provider and uncomment its credentials ---
 
       # Option 1: Anthropic direct (https://console.anthropic.com)
-      AI_PROVIDER: anthropic
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # AI_PROVIDER: anthropic
+      # ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       # Option 2: OpenAI (https://platform.openai.com)
       # AI_PROVIDER: openai
@@ -48,9 +48,9 @@ jobs:
       # AI_MODEL_STANDARD: your-model-name
 
       # Option 5: Tag1 Bedrock proxy
-      # AI_PROVIDER: bedrock-proxy
-      # BEDROCK_API_URL: https://openwebui-proxy.tag1.io/bedrock
-      # BEDROCK_API_KEY: ${{ secrets.TAG1_BEDROCK_API_KEY }}
+      AI_PROVIDER: bedrock-proxy
+      BEDROCK_API_URL: https://openwebui-proxy.tag1.io/bedrock
+      BEDROCK_API_KEY: ${{ secrets.TAG1_BEDROCK_API_KEY }}
 
       # --- Optional: override model selection ---
       # AI_MODEL_STANDARD: claude-sonnet-4-6-20250514   # for standard agents

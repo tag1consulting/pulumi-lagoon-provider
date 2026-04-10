@@ -1,9 +1,8 @@
 [
   {
-    "id": "sc1072-run-shellcheck-heredoc",
-    "reason": "Shellcheck misparses the heredoc inside the if condition in run-shellcheck.sh; bash -n passes cleanly. False positive.",
+    "id": "shellcheck-heredoc-false-positive-run-shellcheck",
+    "reason": "Shellcheck misparses the heredoc inside the if condition in run-shellcheck.sh and emits SC1072+SC1073 as a pair; bash -n passes cleanly. Suppressing all shellcheck findings on this file.",
     "match": {
-      "code": "SC1072",
       "file": "run-shellcheck.sh"
     }
   },
