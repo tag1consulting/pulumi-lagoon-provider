@@ -56,18 +56,22 @@ git fetch origin "${BASE_REF}" --depth=50 2>/dev/null || echo "WARNING: git fetc
 # Incremental diff: only review commits since the last review run.
 # Fall back to the full PR diff on first run or if the last SHA is unreachable.
 # ---------------------------------------------------------------------------
-LAST_REVIEWED_SHA=$("${SCRIPT_DIR}/post-review.sh" --get-last-sha 2>/dev/null || true)
+LAST_REVIEWED_SHA=$("${SCRIPT_DIR}/post-review.sh" --get-last-sha 2>&1) || {
+  echo "WARNING: Could not retrieve last-reviewed SHA; falling back to full PR diff." >&2
+  LAST_REVIEWED_SHA=""
+}
 DIFF_BASE=""
 DIFF_LABEL=""
 
 if [[ -n "$LAST_REVIEWED_SHA" && "$LAST_REVIEWED_SHA" != "$HEAD_SHA" ]]; then
-  # Verify the SHA is reachable in the local clone
-  if git cat-file -e "${LAST_REVIEWED_SHA}^{commit}" 2>/dev/null; then
+  # Verify the SHA is reachable AND is an ancestor of HEAD (guards against force-push/rebase)
+  if git cat-file -e "${LAST_REVIEWED_SHA}^{commit}" 2>/dev/null && \
+     git merge-base --is-ancestor "$LAST_REVIEWED_SHA" "$HEAD_SHA" 2>/dev/null; then
     DIFF_BASE="$LAST_REVIEWED_SHA"
     DIFF_LABEL="incremental (${LAST_REVIEWED_SHA:0:7}..${HEAD_SHA:0:7})"
     echo "Incremental review: diffing ${LAST_REVIEWED_SHA:0:7}..${HEAD_SHA:0:7}" >&2
   else
-    echo "Last-reviewed SHA ${LAST_REVIEWED_SHA:0:7} not reachable; falling back to full PR diff." >&2
+    echo "Last-reviewed SHA ${LAST_REVIEWED_SHA:0:7} not reachable or not an ancestor; falling back to full PR diff." >&2
   fi
 fi
 
@@ -80,9 +84,11 @@ fi
 DIFF_FILE=$(mktemp_tracked /tmp/ai-review-diff-XXXXXXXX.txt)
 EXCL=(':!*lock.json' ':!*lock.yaml' ':!vendor/*' ':!*.sum' ':!node_modules/*')
 if [[ -n "$DIFF_BASE" ]]; then
-  git diff "${DIFF_BASE}...${HEAD_SHA}" -- "${EXCL[@]}" > "$DIFF_FILE" 2>/dev/null || true
+  git diff "${DIFF_BASE}...${HEAD_SHA}" -- "${EXCL[@]}" > "$DIFF_FILE" 2>&1 || \
+    echo "WARNING: git diff failed; diff output may be empty or incomplete." >&2
 else
-  git diff "origin/${BASE_REF}...${HEAD_SHA}" -- "${EXCL[@]}" > "$DIFF_FILE" 2>/dev/null || true
+  git diff "origin/${BASE_REF}...${HEAD_SHA}" -- "${EXCL[@]}" > "$DIFF_FILE" 2>&1 || \
+    echo "WARNING: git diff failed; diff output may be empty or incomplete." >&2
 fi
 
 # Check for empty diff
@@ -96,10 +102,10 @@ echo "Diff: ${DIFF_LINES} lines (${DIFF_LABEL})" >&2
 
 # Build file manifest (same range as diff)
 if [[ -n "$DIFF_BASE" ]]; then
-  CHANGED_FILES=$(git diff --name-only "${DIFF_BASE}...${HEAD_SHA}" -- "${EXCL[@]}" 2>/dev/null || true)
+  CHANGED_FILES=$(git diff --name-only -z "${DIFF_BASE}...${HEAD_SHA}" -- "${EXCL[@]}" 2>/dev/null | tr '\0' '\n' || true)
   DIFF_STAT=$(git diff --stat "${DIFF_BASE}...${HEAD_SHA}" -- "${EXCL[@]}" 2>/dev/null | tail -1)
 else
-  CHANGED_FILES=$(git diff --name-only "origin/${BASE_REF}...${HEAD_SHA}" -- "${EXCL[@]}" 2>/dev/null || true)
+  CHANGED_FILES=$(git diff --name-only -z "origin/${BASE_REF}...${HEAD_SHA}" -- "${EXCL[@]}" 2>/dev/null | tr '\0' '\n' || true)
   DIFF_STAT=$(git diff --stat "origin/${BASE_REF}...${HEAD_SHA}" -- "${EXCL[@]}" 2>/dev/null | tail -1)
 fi
 
@@ -173,16 +179,16 @@ done <<< "$CHANGED_FILES"
 # Build manifest text
 MANIFEST="BASE: ${BASE_REF} | DIFF: ${DIFF_LABEL} | LANGUAGES: ${LANGUAGES:-unknown} | FILES: ${FILE_COUNT} | ${DIFF_STAT}"
 if [[ -n "$SOURCE_FILES" ]]; then
-  MANIFEST="${MANIFEST}\n\nSource: $(echo -e "$SOURCE_FILES" | head -20 | tr '\n' ', ' | sed 's/,$//')"
+  MANIFEST="${MANIFEST}\n\nSource: $(printf '%b' "$SOURCE_FILES" | head -20 | tr '\n' ', ' | sed 's/,$//')"
 fi
 if [[ -n "$TEST_FILES" ]]; then
-  MANIFEST="${MANIFEST}\nTests: $(echo -e "$TEST_FILES" | head -10 | tr '\n' ', ' | sed 's/,$//')"
+  MANIFEST="${MANIFEST}\nTests: $(printf '%b' "$TEST_FILES" | head -10 | tr '\n' ', ' | sed 's/,$//')"
 fi
 if [[ -n "$CONFIG_FILES" ]]; then
-  MANIFEST="${MANIFEST}\nConfig: $(echo -e "$CONFIG_FILES" | head -10 | tr '\n' ', ' | sed 's/,$//')"
+  MANIFEST="${MANIFEST}\nConfig: $(printf '%b' "$CONFIG_FILES" | head -10 | tr '\n' ', ' | sed 's/,$//')"
 fi
 if [[ -n "$DOC_FILES" ]]; then
-  MANIFEST="${MANIFEST}\nDocs: $(echo -e "$DOC_FILES" | head -10 | tr '\n' ', ' | sed 's/,$//')"
+  MANIFEST="${MANIFEST}\nDocs: $(printf '%b' "$DOC_FILES" | head -10 | tr '\n' ', ' | sed 's/,$//')"
 fi
 
 # Commit log — scoped to the same range as the diff
@@ -402,7 +408,10 @@ fi
 # --- Run shellcheck if shell files changed ---
 SHELLCHECK_JSON="[]"
 if [[ -n "$CHANGED_FILES" ]]; then
-  SHELLCHECK_JSON=$("${SCRIPT_DIR}/run-shellcheck.sh" "$CHANGED_FILES" || echo "[]")
+  SHELLCHECK_JSON=$("${SCRIPT_DIR}/run-shellcheck.sh" "$CHANGED_FILES") || {
+    echo "WARNING: run-shellcheck.sh failed; shellcheck findings will be skipped." >&2
+    SHELLCHECK_JSON="[]"
+  }
   SC_COUNT=$(echo "$SHELLCHECK_JSON" | jq 'length' 2>/dev/null || echo "0")
   if [[ "$SC_COUNT" -gt 0 ]]; then
     echo "Shellcheck: ${SC_COUNT} findings" >&2
@@ -415,15 +424,23 @@ fi
 FINDINGS_JSON_FILE=$(mktemp_tracked /tmp/ai-review-findings-json-XXXXXXXX.json)
 echo "[]" > "$FINDINGS_JSON_FILE"
 
-# Extract json-findings from each agent output and merge
+# Extract json-findings from each agent output, validate shape, and return clean array.
 extract_findings() {
   local agent_file="$1"
   if grep -q '```json-findings' "$agent_file" 2>/dev/null; then
     local extracted
     extracted=$(sed -n '/```json-findings/,/```/p' "$agent_file" | sed '1d;$d')
-    if echo "$extracted" | jq -e 'type == "array"' > /dev/null 2>&1; then
+    # Validate it is an array and each item has required fields
+    if echo "$extracted" | jq -e '
+      type == "array" and
+      (if length > 0 then
+        all(.[]; has("severity") and has("finding") and has("confidence"))
+      else true end)
+    ' > /dev/null 2>&1; then
       printf '%s' "$extracted"
       return
+    else
+      echo "WARNING: $(basename "$agent_file") produced invalid or malformed json-findings; skipping." >&2
     fi
   fi
   echo "[]"

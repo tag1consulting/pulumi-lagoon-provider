@@ -27,8 +27,8 @@ HEAD_SHA="${6:?Missing head SHA}"
 OWNER="${GITHUB_REPOSITORY%%/*}"
 REPO="${GITHUB_REPOSITORY##*/}"
 MARKER_PREFIX="<!-- ai-pr-review-summary"
-# Full marker is MARKER_PREFIX + optional sha=... + " -->"
-MARKER="${MARKER_PREFIX} -->"
+# MARKER_PREFIX is embedded in comment bodies to identify our summary comments.
+# The full marker includes an optional sha= field: <!-- ai-pr-review-summary sha=<sha> -->
 
 # Temp files — cleaned up on exit
 TMPFILES=()
@@ -56,7 +56,7 @@ get_last_reviewed_sha() {
 
   if [[ -n "$comment_body" ]]; then
     # Extract sha= value from marker: <!-- ai-pr-review-summary sha=abc1234 -->
-    echo "$comment_body" | grep -oP "${MARKER_PREFIX} sha=\K[0-9a-f]+" | head -1 || true
+    echo "$comment_body" | grep -oE "${MARKER_PREFIX} sha=[0-9a-f]+" | sed "s|${MARKER_PREFIX} sha=||" | head -1 || true
   fi
 }
 
@@ -111,14 +111,15 @@ resolve_stale_threads() {
   local resolved=0
   while IFS= read -r thread_id; do
     [[ -z "$thread_id" ]] && continue
-    gh api graphql -f query='
+    local resolve_result
+    resolve_result=$(gh api graphql -f query='
       mutation($threadId: ID!) {
         resolveReviewThread(input: {threadId: $threadId}) {
           thread { id isResolved }
         }
       }' \
-      -f threadId="$thread_id" > /dev/null 2>&1 || {
-      echo "WARNING: Could not resolve thread ${thread_id}." >&2
+      -f threadId="$thread_id" 2>&1) || {
+      echo "WARNING: Could not resolve thread ${thread_id}: ${resolve_result}" >&2
       continue
     }
     resolved=$(( resolved + 1 ))
@@ -157,12 +158,18 @@ ${summary}
     echo "Updating existing summary comment #${existing_comment_id}..." >&2
     gh api "repos/${OWNER}/${REPO}/issues/comments/${existing_comment_id}" \
       --method PATCH \
-      --field body="$body" > /dev/null
+      --field body="$body" > /dev/null || {
+      echo "ERROR: Failed to update summary comment #${existing_comment_id}." >&2
+      return 1
+    }
   else
     echo "Posting new summary comment..." >&2
     gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
       --method POST \
-      --field body="$body" > /dev/null
+      --field body="$body" > /dev/null || {
+      echo "ERROR: Failed to post summary comment." >&2
+      return 1
+    }
   fi
 
   echo "Summary comment posted to PR #${PR_NUMBER}." >&2
@@ -373,7 +380,8 @@ All findings are attached as inline comments."
         echo "Falling back to posting as a PR comment..." >&2
         gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
           --method POST \
-          --field body="${review_body}" > /dev/null || true
+          --field body="${review_body}" > /dev/null || \
+          echo "ERROR: All three posting attempts failed (${review_event} → COMMENT → PR comment)." >&2
         return 1
       }
       echo "Review posted as COMMENT (${review_event} unavailable) to PR #${PR_NUMBER}." >&2
@@ -384,7 +392,8 @@ All findings are attached as inline comments."
     echo "Falling back to posting as a PR comment..." >&2
     gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
       --method POST \
-      --field body="${review_body}" > /dev/null || true
+      --field body="${review_body}" > /dev/null || \
+      echo "ERROR: All three posting attempts failed (${review_event} → COMMENT → PR comment)." >&2
     return 1
   }
 

@@ -43,9 +43,10 @@ on unchanged lines.
 - Missing TLS verification or certificate pinning bypass
 
 ### Supply Chain and Dependencies
-- New dependencies: check if from trusted sources
+- New dependencies from unknown or suspicious sources (check registry/namespace, not just name)
 - Unpinned dependency versions that could pull malicious updates
 - Use of `latest` image tags in container definitions
+- **Do NOT flag** `actions/*@vN` floating major-version tags in GitHub Actions workflows — this is the project's deliberate policy for receiving automatic security patches. Only flag third-party actions using `@latest` or no version at all.
 
 ## Language-Specific Checks
 
