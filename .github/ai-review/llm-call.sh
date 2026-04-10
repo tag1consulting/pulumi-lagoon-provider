@@ -84,7 +84,10 @@ call_anthropic() {
     --arg user "$USER_MESSAGE" \
     --argjson max_tokens "$MAX_TOKENS" \
     --argjson temperature "$TEMPERATURE" \
-    '{model: $model, system: $system, messages: [{role: "user", content: $user}], max_tokens: $max_tokens, temperature: $temperature}')
+    '{model: $model, system: $system, messages: [{role: "user", content: $user}], max_tokens: $max_tokens, temperature: $temperature}') || {
+    echo "ERROR: jq failed to build Anthropic request body" >&2
+    exit 1
+  }
 
   local http_code
   http_code=$(curl -s -w "%{http_code}" -o "$RESPONSE_FILE" \
@@ -120,7 +123,10 @@ call_openai() {
     --arg user "$USER_MESSAGE" \
     --argjson max_tokens "$MAX_TOKENS" \
     --argjson temperature "$TEMPERATURE" \
-    '{model: $model, messages: [{role: "system", content: $system}, {role: "user", content: $user}], max_tokens: $max_tokens, temperature: $temperature}')
+    '{model: $model, messages: [{role: "system", content: $system}, {role: "user", content: $user}], max_tokens: $max_tokens, temperature: $temperature}') || {
+    echo "ERROR: jq failed to build OpenAI request body" >&2
+    exit 1
+  }
 
   local http_code
   http_code=$(curl -s -w "%{http_code}" -o "$RESPONSE_FILE" \
@@ -157,7 +163,10 @@ call_google() {
       system_instruction: {parts: [{text: $system}]},
       contents: [{role: "user", parts: [{text: $user}]}],
       generationConfig: {maxOutputTokens: $max_tokens, temperature: $temperature}
-    }')
+    }') || {
+    echo "ERROR: jq failed to build Google request body" >&2
+    exit 1
+  }
 
   local http_code
   http_code=$(curl -s -w "%{http_code}" -o "$RESPONSE_FILE" \
@@ -197,7 +206,10 @@ call_bedrock_proxy() {
       messages: [{role: "user", content: $user}],
       max_tokens: $max_tokens,
       temperature: $temperature
-    }')
+    }') || {
+    echo "ERROR: jq failed to build Bedrock request body" >&2
+    exit 1
+  }
 
   local encoded_model_id
   encoded_model_id=$(printf '%s' "$MODEL_ID" | jq -sRr @uri)

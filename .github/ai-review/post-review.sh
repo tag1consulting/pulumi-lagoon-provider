@@ -116,7 +116,7 @@ resolve_stale_threads() {
     return 0
   fi
 
-  local resolved=0
+  local resolved=0 failed=0
   while IFS= read -r thread_id; do
     [[ -z "$thread_id" ]] && continue
     local resolve_result
@@ -128,12 +128,17 @@ resolve_stale_threads() {
       }' \
       -f threadId="$thread_id" 2>&1) || {
       echo "WARNING: Could not resolve thread ${thread_id}: ${resolve_result}" >&2
+      failed=$(( failed + 1 ))
       continue
     }
     resolved=$(( resolved + 1 ))
   done <<< "$thread_ids"
 
-  echo "Resolved ${resolved} stale review thread(s)." >&2
+  if [[ "$failed" -gt 0 ]]; then
+    echo "Resolved ${resolved} stale review thread(s); ${failed} failed to resolve." >&2
+  else
+    echo "Resolved ${resolved} stale review thread(s)." >&2
+  fi
 }
 
 # ---------------------------------------------------------------------------
