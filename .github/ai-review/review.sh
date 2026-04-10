@@ -657,25 +657,23 @@ fi
 # Then format as: $X.XXXXXX
 model_pricing() {
   local model="$1"
-  # Normalize: strip region prefixes (us., global., eu.) and version suffixes for matching
   local m
-  m=$(echo "$model" | sed 's/^[a-z][a-z]\.\|^global\.\|^eu\.//; s/-[0-9]*$//; s/_/-/g' | tr '[:upper:]' '[:lower:]')
+  m=$(echo "$model" | tr '[:upper:]' '[:lower:]')
   case "$m" in
-    # Claude Sonnet 4.6 — $3/M in, $15/M out
+    # Claude Sonnet 4.6 / 4.5 — $3/M in, $15/M out (public API list price)
     *claude-sonnet-4-6*|*claude-sonnet-4.6*|*claude-sonnet-4-5*|*claude-sonnet-4.5*)
       echo "3000000 15000000" ;;
-    # Claude Opus 4.6 — $15/M in, $75/M out
+    # Claude Opus 4.6 / 4.5 — $15/M in, $75/M out
     *claude-opus-4-6*|*claude-opus-4.6*|*claude-opus-4-5*|*claude-opus-4.5*)
       echo "15000000 75000000" ;;
     # Claude Haiku 4.5 — $0.80/M in, $4/M out
     *claude-haiku-4-5*|*claude-haiku-4.5*)
       echo "800000 4000000" ;;
     # GPT-4o — $2.50/M in, $10/M out
-    *gpt-4o*)
-      echo "2500000 10000000" ;;
-    # GPT-4o-mini — $0.15/M in, $0.60/M out
     *gpt-4o-mini*)
       echo "150000 600000" ;;
+    *gpt-4o*)
+      echo "2500000 10000000" ;;
     # Gemini 2.5 Pro — $1.25/M in, $10/M out
     *gemini-2.5-pro*)
       echo "1250000 10000000" ;;
@@ -685,6 +683,25 @@ model_pricing() {
     # Unknown — return zeros (no estimate)
     *)
       echo "0 0" ;;
+  esac
+}
+
+# Human-readable model display name: "Sonnet 4.6", "Opus 4.6", etc.
+model_display_name() {
+  local model="$1"
+  local m
+  m=$(echo "$model" | tr '[:upper:]' '[:lower:]')
+  case "$m" in
+    *claude-sonnet-4-6*|*claude-sonnet-4.6*) echo "Sonnet 4.6" ;;
+    *claude-sonnet-4-5*|*claude-sonnet-4.5*) echo "Sonnet 4.5" ;;
+    *claude-opus-4-6*|*claude-opus-4.6*)     echo "Opus 4.6" ;;
+    *claude-opus-4-5*|*claude-opus-4.5*)     echo "Opus 4.5" ;;
+    *claude-haiku-4-5*|*claude-haiku-4.5*)   echo "Haiku 4.5" ;;
+    *gpt-4o-mini*)                           echo "GPT-4o mini" ;;
+    *gpt-4o*)                                echo "GPT-4o" ;;
+    *gemini-2.5-pro*)                        echo "Gemini 2.5 Pro" ;;
+    *gemini-2.5-flash*)                      echo "Gemini 2.5 Flash" ;;
+    *)                                       echo "$model" ;;
   esac
 }
 
@@ -733,10 +750,9 @@ if [[ "${#TOKEN_LOG[@]}" -gt 0 ]]; then
         local_total_cost=$(( local_total_cost + cost_units ))
       fi
 
-      # Shorten model ID for display: strip long version/region prefixes
-      model_short=$(echo "$model_id" | sed 's/^[a-z][a-z]\.\|^global\.\|^eu\.//')
+      model_short=$(model_display_name "$model_id")
 
-      echo "| ${agent_name} | \`${model_short}\` | ${in_tok} | ${out_tok} | ${row_total} | ${cost_display} |"
+      echo "| ${agent_name} | ${model_short} | ${in_tok} | ${out_tok} | ${row_total} | ${cost_display} |"
       local_total_in=$(( local_total_in + in_tok ))
       local_total_out=$(( local_total_out + out_tok ))
     done
@@ -821,8 +837,8 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
           cost_display=$(format_cost "$cost_units")
           local_total_cost=$(( local_total_cost + cost_units ))
         fi
-        model_short=$(echo "$model_id" | sed 's/^[a-z][a-z]\.\|^global\.\|^eu\.//')
-        echo "| ${agent_name} | \`${model_short}\` | ${in_tok} | ${out_tok} | ${row_total} | ${cost_display} |"
+        model_short=$(model_display_name "$model_id")
+        echo "| ${agent_name} | ${model_short} | ${in_tok} | ${out_tok} | ${row_total} | ${cost_display} |"
         local_total_in=$(( local_total_in + in_tok ))
         local_total_out=$(( local_total_out + out_tok ))
       done
