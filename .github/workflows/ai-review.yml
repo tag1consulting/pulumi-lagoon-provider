@@ -27,34 +27,33 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-ai-review')
     runs-on: ubuntu-latest
     env:
-      # --- Required: choose ONE provider and uncomment its credentials ---
+      # --- Provider selection ---
+      # Set AI_REVIEW_PROVIDER as a repository variable (Settings → Variables)
+      # to switch providers without editing this file.
+      # Valid values: anthropic | openai | openai-compatible | google | bedrock-proxy
+      AI_PROVIDER: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
 
-      # Option 1: Anthropic direct (https://console.anthropic.com)
-      # AI_PROVIDER: anthropic
-      # ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # --- Provider credentials (set as repository secrets) ---
+      # Anthropic direct:        AI_REVIEW_API_KEY → ANTHROPIC_API_KEY
+      # OpenAI / compatible:     AI_REVIEW_API_KEY → OPENAI_API_KEY
+      # Google Gemini:           AI_REVIEW_API_KEY → GOOGLE_API_KEY
+      # Tag1 Bedrock proxy:      AI_REVIEW_API_KEY → BEDROCK_API_KEY
+      ANTHROPIC_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.OPENAI_API_KEY }}
+      GOOGLE_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.GOOGLE_API_KEY }}
+      BEDROCK_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
 
-      # Option 2: OpenAI (https://platform.openai.com)
-      # AI_PROVIDER: openai
-      # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # --- OpenAI-compatible endpoint URL ---
+      # Set AI_REVIEW_BASE_URL as a repository variable for custom endpoints.
+      # Also used as BEDROCK_API_URL for the bedrock-proxy provider.
+      OPENAI_BASE_URL: ${{ vars.AI_REVIEW_BASE_URL || '' }}
+      BEDROCK_API_URL: ${{ vars.AI_REVIEW_BASE_URL || 'https://openwebui-proxy.tag1.io/bedrock' }}
 
-      # Option 3: Google Gemini (https://aistudio.google.com)
-      # AI_PROVIDER: google
-      # GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-
-      # Option 4: OpenAI-compatible endpoint (vLLM, Ollama, Azure OpenAI, etc.)
-      # AI_PROVIDER: openai-compatible
-      # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      # OPENAI_BASE_URL: https://your-endpoint.example.com/v1
-      # AI_MODEL_STANDARD: your-model-name
-
-      # Option 5: Tag1 Bedrock proxy
-      AI_PROVIDER: bedrock-proxy
-      BEDROCK_API_URL: https://openwebui-proxy.tag1.io/bedrock
-      BEDROCK_API_KEY: ${{ secrets.TAG1_BEDROCK_API_KEY }}
-
-      # --- Optional: override model selection ---
-      # AI_MODEL_STANDARD: claude-sonnet-4-6-20250514   # for standard agents
-      # AI_MODEL_PREMIUM: claude-opus-4-6-20250514       # for deep analysis (full mode)
+      # --- Optional: model overrides (repository variables) ---
+      # AI_MODEL_STANDARD: standard agents (pr-summarizer, code-reviewer, etc.)
+      # AI_MODEL_PREMIUM:  deep-analysis agents in full mode (architecture, security)
+      AI_MODEL_STANDARD: ${{ vars.AI_REVIEW_MODEL_STANDARD || '' }}
+      AI_MODEL_PREMIUM: ${{ vars.AI_REVIEW_MODEL_PREMIUM || '' }}
 
       # --- GitHub (set automatically) ---
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
