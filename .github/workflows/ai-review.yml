@@ -34,9 +34,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
 
-      - uses: ./ai-pr-review
+      - uses: tag1consulting/ai-pr-review@main
         with:
           provider: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
           api-key: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
