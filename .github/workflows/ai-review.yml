@@ -30,56 +30,25 @@ jobs:
       github.actor != 'renovate[bot]' &&
       !contains(github.event.pull_request.labels.*.name, 'skip-ai-review')
     runs-on: ubuntu-latest
-    env:
-      # --- Provider selection ---
-      # Set AI_REVIEW_PROVIDER as a repository variable (Settings → Variables)
-      # to switch providers without editing this file.
-      # Valid values: anthropic | openai | openai-compatible | google | bedrock-proxy
-      AI_PROVIDER: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
-
-      # --- Provider credentials (set as repository secrets) ---
-      # Anthropic direct:        AI_REVIEW_API_KEY → ANTHROPIC_API_KEY
-      # OpenAI / compatible:     AI_REVIEW_API_KEY → OPENAI_API_KEY
-      # Google Gemini:           AI_REVIEW_API_KEY → GOOGLE_API_KEY
-      # Tag1 Bedrock proxy:      AI_REVIEW_API_KEY → BEDROCK_API_KEY
-      ANTHROPIC_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.ANTHROPIC_API_KEY }}
-      OPENAI_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.OPENAI_API_KEY }}
-      GOOGLE_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.GOOGLE_API_KEY }}
-      BEDROCK_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
-
-      # --- OpenAI-compatible endpoint URL ---
-      # Set AI_REVIEW_BASE_URL as a repository variable for custom endpoints.
-      # Also used as BEDROCK_API_URL for the bedrock-proxy provider.
-      OPENAI_BASE_URL: ${{ vars.AI_REVIEW_BASE_URL || '' }}
-      BEDROCK_API_URL: ${{ vars.AI_REVIEW_BASE_URL || 'https://openwebui-proxy.tag1.io/bedrock' }}
-
-      # --- Optional: model overrides (repository variables) ---
-      # AI_MODEL_STANDARD: standard agents (pr-summarizer, code-reviewer, etc.)
-      # AI_MODEL_PREMIUM:  deep-analysis agents in full mode (architecture, security)
-      AI_MODEL_STANDARD: ${{ vars.AI_REVIEW_MODEL_STANDARD || '' }}
-      AI_MODEL_PREMIUM: ${{ vars.AI_REVIEW_MODEL_PREMIUM || '' }}
-
-      # --- GitHub (set automatically) ---
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
-
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: true
 
-      - name: Install shellcheck
-        run: sudo apt-get install -y shellcheck
-
-      - name: Run AI review
-        run: bash .github/ai-review/review.sh
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
-          BASE_REF: ${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          # Full mode: add "ai-review-full" label to the PR, or trigger via workflow_dispatch
-          AI_REVIEW_MODE: >-
+      - uses: ./ai-pr-review
+        with:
+          provider: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
+          api-key: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
+          base-url: ${{ vars.AI_REVIEW_BASE_URL || '' }}
+          model-standard: ${{ vars.AI_REVIEW_MODEL_STANDARD || '' }}
+          model-premium: ${{ vars.AI_REVIEW_MODEL_PREMIUM || '' }}
+          review-mode: >-
             ${{ contains(github.event.pull_request.labels.*.name, 'ai-review-full')
                 && 'full'
                 || inputs.review_mode
                 || 'quick' }}
+          pr-number: ${{ github.event.pull_request.number || inputs.pr_number }}
+          base-ref: ${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
+          head-sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
