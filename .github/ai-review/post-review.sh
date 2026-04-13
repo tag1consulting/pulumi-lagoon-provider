@@ -27,17 +27,19 @@ if [[ "${1:-}" == "--get-last-sha" ]]; then
   MARKER_PREFIX="<!-- ai-pr-review-summary"
 
   get_last_reviewed_sha() {
-    local comment_body gh_err
+    local all_comments gh_err
     gh_err=$(mktemp)
-    comment_body=$(gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
+    all_comments=$(gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
       --paginate \
       --jq ".[] | select(.body | contains(\"${MARKER_PREFIX}\")) | .body" \
-      2>"$gh_err" | head -1) || {
+      2>"$gh_err") || {
       echo "WARNING: get_last_reviewed_sha: GitHub API error (treating as first run): $(cat "$gh_err")" >&2
       rm -f "$gh_err"
       return 0
     }
     rm -f "$gh_err"
+    local comment_body
+    comment_body=$(echo "$all_comments" | head -1)
     if [[ -n "$comment_body" ]]; then
       echo "$comment_body" | grep -oE 'sha=[0-9a-f]+' | sed 's/sha=//' | head -1 || true
     fi
@@ -83,17 +85,19 @@ mktemp_tracked() {
 # Returns the SHA via stdout, or empty string if no prior review.
 # ---------------------------------------------------------------------------
 get_last_reviewed_sha() {
-  local comment_body gh_err
+  local all_comments gh_err
   gh_err=$(mktemp)
-  comment_body=$(gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
+  all_comments=$(gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
     --paginate --jq ".[] | select(.body | contains(\"${MARKER_PREFIX}\")) | .body" \
-    2>"$gh_err" | head -1) || {
+    2>"$gh_err") || {
     echo "WARNING: get_last_reviewed_sha: GitHub API error (treating as first run): $(cat "$gh_err")" >&2
     rm -f "$gh_err"
     return 0
   }
   rm -f "$gh_err"
 
+  local comment_body
+  comment_body=$(echo "$all_comments" | head -1)
   if [[ -n "$comment_body" ]]; then
     # Extract sha= value from marker: <!-- ai-pr-review-summary sha=abc1234 -->
     # Use a fixed-string grep first, then extract the sha= portion with a safe pattern.
@@ -147,7 +151,10 @@ resolve_stale_threads() {
     }
 
     local page_nodes
-    page_nodes=$(echo "$page_result" | jq '.data.repository.pullRequest.reviewThreads.nodes' 2>/dev/null) || break
+    page_nodes=$(echo "$page_result" | jq '.data.repository.pullRequest.reviewThreads.nodes' 2>/dev/null) || {
+      echo "WARNING: jq parse failed on reviewThreads page; proceeding with partial data." >&2
+      break
+    }
     threads_json=$(echo "$threads_json" "$page_nodes" | jq -s '.[0] + .[1]')
 
     has_next=$(echo "$page_result" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' 2>/dev/null)
@@ -252,7 +259,10 @@ dismiss_stale_reviews() {
     }
 
     local page_nodes
-    page_nodes=$(echo "$page_result" | jq '.data.repository.pullRequest.reviewThreads.nodes' 2>/dev/null) || break
+    page_nodes=$(echo "$page_result" | jq '.data.repository.pullRequest.reviewThreads.nodes' 2>/dev/null) || {
+      echo "WARNING: jq parse failed on reviewThreads page; proceeding with partial data." >&2
+      break
+    }
     all_threads=$(echo "$all_threads" "$page_nodes" | jq -s '.[0] + .[1]')
 
     has_next=$(echo "$page_result" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' 2>/dev/null)
@@ -262,6 +272,10 @@ dismiss_stale_reviews() {
   local dismissed=0
   while IFS= read -r review_id; do
     [[ -z "$review_id" ]] && continue
+    if ! [[ "$review_id" =~ ^[0-9]+$ ]]; then
+      echo "WARNING: skipping non-numeric review_id: ${review_id}" >&2
+      continue
+    fi
     # Count unresolved threads belonging to this review from pre-fetched data
     local unresolved_count
     unresolved_count=$(echo "$all_threads" | jq \
@@ -616,6 +630,48 @@ ${token_table}"
 }
 
 # ---------------------------------------------------------------------------
+# Advance the SHA watermark in the existing summary comment so that the next
+# incremental review diffs from this HEAD, not the original first-review SHA.
+# Called unconditionally — even when post_summary is skipped (incremental runs).
+# ---------------------------------------------------------------------------
+update_sha_marker() {
+  local existing_comment_id existing_body
+  existing_comment_id=$(gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
+    --paginate \
+    --jq ".[] | select(.body | contains(\"${MARKER_PREFIX}\")) | .id" \
+    2>/dev/null | head -1) || true
+
+  if [[ -z "$existing_comment_id" ]]; then
+    echo "No existing summary comment found; SHA marker not updated." >&2
+    return 0
+  fi
+
+  existing_body=$(gh api "repos/${OWNER}/${REPO}/issues/comments/${existing_comment_id}" \
+    --jq '.body' 2>/dev/null) || {
+    echo "WARNING: Could not fetch summary comment body for SHA update." >&2
+    return 0
+  }
+
+  # Replace the sha= value in the marker line, preserving the rest of the comment
+  local updated_body
+  updated_body=$(echo "$existing_body" | sed "s|${MARKER_PREFIX} sha=[0-9a-f]* -->|${MARKER_PREFIX} sha=${HEAD_SHA} -->|")
+
+  if [[ "$updated_body" == "$existing_body" ]]; then
+    echo "SHA marker already at ${HEAD_SHA}; no update needed." >&2
+    return 0
+  fi
+
+  gh api "repos/${OWNER}/${REPO}/issues/comments/${existing_comment_id}" \
+    --method PATCH \
+    --field body="$updated_body" > /dev/null || {
+    echo "WARNING: Failed to update SHA marker in summary comment." >&2
+    return 0
+  }
+
+  echo "SHA marker advanced to ${HEAD_SHA}." >&2
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -623,3 +679,4 @@ resolve_stale_threads
 dismiss_stale_reviews
 post_summary || echo "WARNING: Summary posting failed; continuing to post findings. The SHA marker will not be updated, so the next run will fall back to a full PR diff." >&2
 post_findings || exit 1
+update_sha_marker
