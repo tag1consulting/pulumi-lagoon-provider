@@ -738,7 +738,8 @@ emit_token_table_rows() {
     else
       # Use awk to avoid bash integer overflow (in_tok * in_rate can exceed 2^63 for large runs)
       local cost_units
-      cost_units=$(awk "BEGIN {printf \"%d\", ($in_tok * $in_rate + $out_tok * $out_rate) / 100000000}")
+      cost_units=$(awk -v it="${in_tok:-0}" -v ir="${in_rate:-0}" -v ot="${out_tok:-0}" -v or_="${out_rate:-0}" \
+        'BEGIN {printf "%d", (it * ir + ot * or_) / 100000000}')
       cost_display=$(format_cost "$cost_units")
       total_cost=$(( total_cost + cost_units ))
     fi
