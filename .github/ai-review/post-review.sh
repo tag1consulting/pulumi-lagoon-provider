@@ -107,33 +107,52 @@ get_last_reviewed_sha() {
 resolve_stale_threads() {
   echo "Resolving stale review threads..." >&2
 
-  # Fetch all unresolved review threads on this PR with their author login
-  local threads_json
-  threads_json=$(gh api graphql -f query='
-    query($owner: String!, $repo: String!, $pr: Int!) {
-      repository(owner: $owner, name: $repo) {
-        pullRequest(number: $pr) {
-          reviewThreads(first: 100) {
-            nodes {
-              id
-              isResolved
-              comments(first: 1) {
-                nodes {
-                  author {
-                    login
+  # Fetch all review threads, paginating in batches of 100
+  local threads_json="[]"
+  local cursor=""
+  local has_next=true
+
+  while [[ "$has_next" == "true" ]]; do
+    local cursor_arg=()
+    if [[ -n "$cursor" ]]; then
+      cursor_arg=(-f after="$cursor")
+    fi
+
+    local page_result
+    page_result=$(gh api graphql -f query='
+      query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
+        repository(owner: $owner, name: $repo) {
+          pullRequest(number: $pr) {
+            reviewThreads(first: 100, after: $after) {
+              pageInfo { hasNextPage endCursor }
+              nodes {
+                id
+                isResolved
+                comments(first: 1) {
+                  nodes {
+                    author {
+                      login
+                    }
                   }
                 }
               }
             }
           }
         }
-      }
-    }' \
-    -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER" \
-    --jq '.data.repository.pullRequest.reviewThreads.nodes' 2>/dev/null) || {
-    echo "WARNING: Could not fetch review threads for resolution." >&2
-    return 0
-  }
+      }' \
+      -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER" \
+      "${cursor_arg[@]}" 2>/dev/null) || {
+      echo "WARNING: Could not fetch review threads for resolution." >&2
+      return 0
+    }
+
+    local page_nodes
+    page_nodes=$(echo "$page_result" | jq '.data.repository.pullRequest.reviewThreads.nodes' 2>/dev/null) || break
+    threads_json=$(echo "$threads_json" "$page_nodes" | jq -s '.[0] + .[1]')
+
+    has_next=$(echo "$page_result" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' 2>/dev/null)
+    cursor=$(echo "$page_result" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // empty' 2>/dev/null)
+  done
 
   # Filter to unresolved threads posted by github-actions[bot]
   local thread_ids
@@ -198,16 +217,24 @@ dismiss_stale_reviews() {
     return 0
   fi
 
-  local dismissed=0
-  while IFS= read -r review_id; do
-    [[ -z "$review_id" ]] && continue
-    # Check if all threads for this review are resolved by checking the review's comments
-    local unresolved_count
-    unresolved_count=$(gh api graphql -f query='
-      query($owner: String!, $repo: String!, $pr: Int!) {
+  # Fetch all review threads (paginated) to count unresolved threads per review
+  local all_threads="[]"
+  local cursor=""
+  local has_next=true
+
+  while [[ "$has_next" == "true" ]]; do
+    local cursor_arg=()
+    if [[ -n "$cursor" ]]; then
+      cursor_arg=(-f after="$cursor")
+    fi
+
+    local page_result
+    page_result=$(gh api graphql -f query='
+      query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
         repository(owner: $owner, name: $repo) {
           pullRequest(number: $pr) {
-            reviewThreads(first: 100) {
+            reviewThreads(first: 100, after: $after) {
+              pageInfo { hasNextPage endCursor }
               nodes {
                 isResolved
                 comments(first: 1) {
@@ -219,8 +246,27 @@ dismiss_stale_reviews() {
         }
       }' \
       -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER" \
-      --jq "[.data.repository.pullRequest.reviewThreads.nodes[] |
-             select(.comments.nodes[0].pullRequestReview.databaseId == ${review_id} and .isResolved == false)] | length" \
+      "${cursor_arg[@]}" 2>/dev/null) || {
+      echo "WARNING: Could not fetch review threads for dismissal check." >&2
+      return 0
+    }
+
+    local page_nodes
+    page_nodes=$(echo "$page_result" | jq '.data.repository.pullRequest.reviewThreads.nodes' 2>/dev/null) || break
+    all_threads=$(echo "$all_threads" "$page_nodes" | jq -s '.[0] + .[1]')
+
+    has_next=$(echo "$page_result" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' 2>/dev/null)
+    cursor=$(echo "$page_result" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // empty' 2>/dev/null)
+  done
+
+  local dismissed=0
+  while IFS= read -r review_id; do
+    [[ -z "$review_id" ]] && continue
+    # Count unresolved threads belonging to this review from pre-fetched data
+    local unresolved_count
+    unresolved_count=$(echo "$all_threads" | jq \
+      --argjson rid "$review_id" \
+      '[.[] | select(.comments.nodes[0].pullRequestReview.databaseId == $rid and .isResolved == false)] | length' \
       2>/dev/null) || unresolved_count=1  # assume not safe to dismiss on error
     # Guard against non-integer output (null, float, error string) from jq
     if ! [[ "${unresolved_count:-}" =~ ^[0-9]+$ ]]; then
@@ -325,6 +371,19 @@ parse_valid_lines() {
 }
 
 # ---------------------------------------------------------------------------
+# Map severity level to a color-coded icon for visual scanning.
+# ---------------------------------------------------------------------------
+severity_icon() {
+  case "${1,,}" in
+    critical) echo "🔴" ;;
+    high)     echo "🟠" ;;
+    medium)   echo "🟡" ;;
+    low)      echo "🔵" ;;
+    *)        echo "⚪" ;;
+  esac
+}
+
+# ---------------------------------------------------------------------------
 # Post Block B: Findings as a pull request review with inline comments
 # ---------------------------------------------------------------------------
 post_findings() {
@@ -380,13 +439,14 @@ post_findings() {
     if ! [[ "$line" =~ ^[0-9]+$ ]]; then
       echo "WARNING: Skipping finding with non-numeric line: ${file}:${line}" >&2
       body_findings="${body_findings}
-- **[${severity}]** ${finding} — \`${file}:${line}\`"
+- $(severity_icon "$severity") **[${severity}]** ${finding} — \`${file}:${line}\`"
       continue
     fi
 
     # Check if this line is a valid inline comment target (whole-line match)
     if grep -qxF "${file}:${line}" "$valid_lines_file" && [[ "$inline_count" -lt "$max_inline" ]]; then
-      local comment_body="**[${severity}]** ${finding}"
+      local comment_body
+      comment_body="$(severity_icon "$severity") **[${severity}]** ${finding}"
       if [[ -n "$remediation" ]]; then
         comment_body="${comment_body}
 
@@ -401,7 +461,7 @@ post_findings() {
       inline_count=$((inline_count + 1))
     else
       body_findings="${body_findings}
-- **[${severity}]** ${finding} — \`${file}:${line}\`"
+- $(severity_icon "$severity") **[${severity}]** ${finding} — \`${file}:${line}\`"
     fi
   done <<< "$findings_ndjson"
 
@@ -469,7 +529,7 @@ ${token_table}}
   else
     review_body="## AI Review Findings
 
-**Overall Risk:** ${overall_risk} | **Findings:** ${finding_total} (${inline_count} inline)"
+$(severity_icon "$overall_risk") **Overall Risk:** ${overall_risk} | **Findings:** ${finding_total} (${inline_count} inline)"
 
     if [[ -n "$body_findings" ]]; then
       review_body="${review_body}
