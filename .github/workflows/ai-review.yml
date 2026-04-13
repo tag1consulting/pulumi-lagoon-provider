@@ -22,13 +22,15 @@ permissions:
 jobs:
   review:
     concurrency:
-      group: ai-review-${{ github.event.pull_request.number }}
+      group: ai-review-${{ github.event.pull_request.number || inputs.pr_number || github.run_id }}
       cancel-in-progress: true
     if: >-
-      github.event.pull_request.draft == false &&
-      github.actor != 'dependabot[bot]' &&
-      github.actor != 'renovate[bot]' &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-ai-review')
+      github.event_name == 'workflow_dispatch' || (
+        github.event.pull_request.draft == false &&
+        github.actor != 'dependabot[bot]' &&
+        github.actor != 'renovate[bot]' &&
+        !contains(github.event.pull_request.labels.*.name, 'skip-ai-review')
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
