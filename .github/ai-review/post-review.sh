@@ -372,13 +372,14 @@ parse_valid_lines() {
 
 # ---------------------------------------------------------------------------
 # Map severity level to a color-coded icon for visual scanning.
+# Uses distinct shapes in addition to color for accessibility.
 # ---------------------------------------------------------------------------
 severity_icon() {
   case "${1,,}" in
-    critical) echo "🔴" ;;
-    high)     echo "🟠" ;;
-    medium)   echo "🟡" ;;
-    low)      echo "🔵" ;;
+    critical) echo "❌" ;;
+    high)     echo "🚨" ;;
+    medium)   echo "🔶" ;;
+    low)      echo "💬" ;;
     *)        echo "⚪" ;;
   esac
 }
