@@ -75,15 +75,24 @@ jobs:
           fi
 
       - name: Mask action repo token
+        if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
         run: echo "::add-mask::${{ secrets.AI_PR_REVIEW_TOKEN }}"
 
       - uses: actions/checkout@v4
+        if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
         with:
           repository: tag1consulting/ai-pr-review
+          ref: main
           token: ${{ secrets.AI_PR_REVIEW_TOKEN }}
+          persist-credentials: false
           path: .ai-pr-review
 
+      - name: Skip AI review (fork PR — AI_PR_REVIEW_TOKEN unavailable)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork
+        run: echo "Skipping AI review for fork PR — repository secrets are unavailable in this context."
+
       - uses: ./.ai-pr-review
+        if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
         with:
           provider: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
           api-key: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
