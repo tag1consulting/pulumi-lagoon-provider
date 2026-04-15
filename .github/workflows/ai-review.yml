@@ -43,8 +43,6 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
 
-      # For workflow_dispatch: resolve PR number from ref when not supplied directly.
-      # Resolves a branch name or SHA to the open PR targeting the default branch.
       - name: Resolve PR number
         id: resolve-pr
         if: github.event_name == 'workflow_dispatch'
@@ -60,13 +58,11 @@ jobs:
             echo "base_ref=${base_ref}" >> "$GITHUB_OUTPUT"
             echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
           else
-            # Resolve the ref to a commit SHA, then find the open PR for it
             head_sha=$(git rev-parse HEAD)
             echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
             pr_json=$(gh pr list --state open --json number,baseRefName,headRefOid \
               --jq ".[] | select(.headRefOid | startswith(\"${head_sha:0:7}\"))" | head -1)
             if [[ -z "$pr_json" ]]; then
-              # Fall back: find any open PR whose head branch matches the ref input
               pr_json=$(gh pr list --state open --head "$INPUT_REF" \
                 --json number,baseRefName,headRefOid | jq '.[0]')
             fi
@@ -78,7 +74,16 @@ jobs:
             echo "base_ref=$(echo "$pr_json" | jq -r '.baseRefName')" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: tag1consulting/ai-pr-review@main
+      - name: Mask action repo token
+        run: echo "::add-mask::${{ secrets.AI_PR_REVIEW_TOKEN }}"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: tag1consulting/ai-pr-review
+          token: ${{ secrets.AI_PR_REVIEW_TOKEN }}
+          path: .ai-pr-review
+
+      - uses: ./.ai-pr-review
         with:
           provider: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
           api-key: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
