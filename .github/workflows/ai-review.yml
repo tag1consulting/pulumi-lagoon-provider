@@ -80,7 +80,10 @@ jobs:
 
       - name: Mask action repo token
         if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
-        run: echo "::add-mask::${{ secrets.AI_PR_REVIEW_TOKEN }}"
+        env:
+          TOKEN: ${{ secrets.AI_PR_REVIEW_TOKEN }}
+        run: |
+          if [[ -n "$TOKEN" ]]; then echo "::add-mask::$TOKEN"; fi
 
       - uses: actions/checkout@v6
         if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
