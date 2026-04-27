@@ -11,6 +11,8 @@ import (
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 )
 
+const defaultTokenExpiry = 1 * time.Hour
+
 // LagoonConfig holds the provider configuration.
 // All resources access this via infer.GetConfig[LagoonConfig](ctx).
 type LagoonConfig struct {
@@ -136,7 +138,7 @@ func generateAdminTokenFromSecret(jwtSecret, audience string) (string, error) {
 		"sub":  "lagoonadmin",
 		"aud":  audience,
 		"iat":  now.Unix(),
-		"exp":  now.Add(1 * time.Hour).Unix(),
+		"exp":  now.Add(defaultTokenExpiry).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
