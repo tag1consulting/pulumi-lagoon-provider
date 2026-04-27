@@ -15,12 +15,13 @@ on:
         type: choice
         options: [quick, full]
 
-permissions:
-  contents: read
-  pull-requests: write
+permissions: {}
 
 jobs:
   review:
+    permissions:
+      contents: read
+      pull-requests: write
     concurrency:
       group: ai-review-${{ github.event.pull_request.number || inputs.pr_number }}
       cancel-in-progress: true
@@ -44,9 +45,10 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.pr_number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
         run: |
-          base_ref=$(gh pr view "${{ inputs.pr_number }}" --json baseRefName --jq '.baseRefName')
-          head_sha=$(gh pr view "${{ inputs.pr_number }}" --json headRefOid --jq '.headRefOid')
+          base_ref=$(gh pr view "$INPUT_PR_NUMBER" --json baseRefName --jq '.baseRefName')
+          head_sha=$(gh pr view "$INPUT_PR_NUMBER" --json headRefOid --jq '.headRefOid')
           echo "base_ref=${base_ref}" >> "$GITHUB_OUTPUT"
           echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
 
@@ -65,8 +67,9 @@ jobs:
       - name: Log in to GHCR
         env:
           REGISTRY_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_ACTOR: ${{ github.actor }}
         run: |
-          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
 
       - name: Run AI review in container
         env:
