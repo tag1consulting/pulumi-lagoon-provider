@@ -40,9 +40,15 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Require pr_number for workflow_dispatch
+        if: github.event_name == 'workflow_dispatch' && inputs.pr_number == ''
+        run: |
+          echo "::error::workflow_dispatch requires pr_number input" >&2
+          exit 1
+
       - name: Resolve PR refs (workflow_dispatch)
         id: resolve-pr
-        if: github.event_name == 'workflow_dispatch' && inputs.pr_number != ''
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_PR_NUMBER: ${{ inputs.pr_number }}
@@ -67,9 +73,9 @@ jobs:
       - name: Log in to GHCR
         env:
           REGISTRY_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          GH_ACTOR: ${{ github.actor }}
+          REGISTRY_USER: ${{ github.repository_owner }}
         run: |
-          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
 
       - name: Run AI review in container
         env:
