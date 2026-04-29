@@ -1,3 +1,44 @@
+# Release v0.4.0 (unreleased)
+
+Feature release adding User resource management: full CRUD for Lagoon users, group role assignments, and platform role assignments.
+
+## New Features
+
+### User Resource (`lagoon:lagoon:User`)
+
+Full CRUD for Lagoon users via the GraphQL API. Uses email as the primary identifier (Lagoon's native user key). Supports optional `firstName`, `lastName`, and `comment` fields with in-place updates.
+
+### UserGroupAssignment Resource (`lagoon:lagoon:UserGroupAssignment`)
+
+Assigns a user to a Lagoon group with a specific role (GUEST, REPORTER, DEVELOPER, MAINTAINER, or OWNER). Role changes are applied in-place via Lagoon's upsert semantics; changing the user email or group name triggers a replace.
+
+### UserPlatformRole Resource (`lagoon:lagoon:UserPlatformRole`)
+
+Assigns a platform-level role (OWNER or VIEWER) to a user via the Lagoon GraphQL API's native `addPlatformRoleToUser` / `removePlatformRoleFromUser` mutations. No separate Keycloak integration needed.
+
+### Example: Declarative `lagoonadmin` management
+
+```python
+admin_user = lagoon.User("lagoonadmin",
+    email="admin@lagoon.example.com",
+    first_name="Lagoon",
+    last_name="Admin",
+)
+
+lagoon.UserPlatformRole("lagoonadmin-platform-owner",
+    user_email=admin_user.email,
+    role="OWNER",
+)
+
+lagoon.UserGroupAssignment("lagoonadmin-team",
+    user_email=admin_user.email,
+    group_name="project-mysite",
+    role="MAINTAINER",
+)
+```
+
+---
+
 # Release v0.3.0 (2026-03-31)
 
 Minor release adding the .NET/C# SDK and a Makefile fix for the `check-release-version` regex.
