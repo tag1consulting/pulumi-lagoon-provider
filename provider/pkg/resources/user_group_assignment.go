@@ -22,14 +22,21 @@ var validGroupRoles = map[string]bool{
 // UserGroupAssignment assigns a user to a group with a specific role.
 type UserGroupAssignment struct{}
 
+// UserGroupAssignmentArgs defines the input properties for a user-to-group role binding.
 type UserGroupAssignmentArgs struct {
 	UserEmail string `pulumi:"userEmail"`
 	GroupName string `pulumi:"groupName"`
 	Role      string `pulumi:"role"`
 }
 
+// UserGroupAssignmentState is the persisted state of a UserGroupAssignment.
 type UserGroupAssignmentState struct {
 	UserGroupAssignmentArgs
+}
+
+// validGroupRoleList returns the allowed group role values for error messages.
+func validGroupRoleList() string {
+	return "GUEST, REPORTER, DEVELOPER, MAINTAINER, OWNER"
 }
 
 func (r *UserGroupAssignment) Annotate(a infer.Annotator) {
@@ -46,9 +53,15 @@ func (a *UserGroupAssignmentArgs) Annotate(an infer.Annotator) {
 func (r *UserGroupAssignment) Create(ctx context.Context, req infer.CreateRequest[UserGroupAssignmentArgs]) (infer.CreateResponse[UserGroupAssignmentState], error) {
 	c := clientFor(ctx)
 
+	if req.Inputs.UserEmail == "" {
+		return infer.CreateResponse[UserGroupAssignmentState]{}, fmt.Errorf("userEmail must not be empty")
+	}
+	if req.Inputs.GroupName == "" {
+		return infer.CreateResponse[UserGroupAssignmentState]{}, fmt.Errorf("groupName must not be empty")
+	}
 	role := strings.ToUpper(req.Inputs.Role)
 	if !validGroupRoles[role] {
-		return infer.CreateResponse[UserGroupAssignmentState]{}, fmt.Errorf("invalid group role %q: must be one of GUEST, REPORTER, DEVELOPER, MAINTAINER, OWNER", req.Inputs.Role)
+		return infer.CreateResponse[UserGroupAssignmentState]{}, fmt.Errorf("invalid group role %q: must be one of %s", req.Inputs.Role, validGroupRoleList())
 	}
 
 	id := fmt.Sprintf("%s:%s", req.Inputs.UserEmail, req.Inputs.GroupName)
@@ -61,6 +74,11 @@ func (r *UserGroupAssignment) Create(ctx context.Context, req infer.CreateReques
 	}
 
 	if err := c.AddUserToGroup(ctx, req.Inputs.UserEmail, req.Inputs.GroupName, role); err != nil {
+		if client.IsDuplicateEntry(err) {
+			return infer.CreateResponse[UserGroupAssignmentState]{}, fmt.Errorf(
+				"user %q is already assigned to group %q; use `pulumi import lagoon:lagoon:UserGroupAssignment <name> %s` to adopt it: %w",
+				req.Inputs.UserEmail, req.Inputs.GroupName, id, err)
+		}
 		return infer.CreateResponse[UserGroupAssignmentState]{}, fmt.Errorf("failed to add user to group: %w", err)
 	}
 
@@ -73,17 +91,9 @@ func (r *UserGroupAssignment) Create(ctx context.Context, req infer.CreateReques
 func (r *UserGroupAssignment) Read(ctx context.Context, req infer.ReadRequest[UserGroupAssignmentArgs, UserGroupAssignmentState]) (infer.ReadResponse[UserGroupAssignmentArgs, UserGroupAssignmentState], error) {
 	c := clientFor(ctx)
 
-	var email, groupName string
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) == 2 {
-		email = parts[0]
-		groupName = parts[1]
-	} else if req.State.UserEmail != "" {
-		email = req.State.UserEmail
-		groupName = req.State.GroupName
-	} else {
-		return infer.ReadResponse[UserGroupAssignmentArgs, UserGroupAssignmentState]{},
-			fmt.Errorf("invalid user group assignment ID '%s': expected format {email}:{groupName}", req.ID)
+	email, groupName, err := parseUserGroupAssignmentID(req.ID, req.State)
+	if err != nil {
+		return infer.ReadResponse[UserGroupAssignmentArgs, UserGroupAssignmentState]{}, err
 	}
 
 	roles, err := c.GetUserGroupRoles(ctx, email)
@@ -96,7 +106,8 @@ func (r *UserGroupAssignment) Read(ctx context.Context, req infer.ReadRequest[Us
 
 	for _, gr := range roles {
 		if gr.Name == groupName {
-			args := UserGroupAssignmentArgs{UserEmail: email, GroupName: groupName, Role: strings.ToUpper(gr.Role)}
+			role := strings.ToUpper(gr.Role)
+			args := UserGroupAssignmentArgs{UserEmail: email, GroupName: groupName, Role: role}
 			st := UserGroupAssignmentState{UserGroupAssignmentArgs: args}
 			return infer.ReadResponse[UserGroupAssignmentArgs, UserGroupAssignmentState]{
 				ID:     req.ID,
@@ -109,12 +120,33 @@ func (r *UserGroupAssignment) Read(ctx context.Context, req infer.ReadRequest[Us
 	return infer.ReadResponse[UserGroupAssignmentArgs, UserGroupAssignmentState]{}, nil
 }
 
+// parseUserGroupAssignmentID extracts email and groupName from a Pulumi resource ID.
+// The ID format is "{email}:{groupName}". Because email local-parts may contain colons
+// (RFC 5321 quoted strings), we split on the LAST colon rather than the first. If ID
+// parsing fails, we fall back to prior state (useful during refresh/update). Returns an
+// error when neither source yields non-empty email and groupName.
+func parseUserGroupAssignmentID(id string, state UserGroupAssignmentState) (email, groupName string, err error) {
+	if idx := strings.LastIndex(id, ":"); idx > 0 && idx < len(id)-1 {
+		email = id[:idx]
+		groupName = id[idx+1:]
+	} else if state.UserEmail != "" && state.GroupName != "" {
+		email = state.UserEmail
+		groupName = state.GroupName
+	} else {
+		return "", "", fmt.Errorf("invalid user group assignment ID %q: expected non-empty {email}:{groupName}", id)
+	}
+	if email == "" || groupName == "" {
+		return "", "", fmt.Errorf("invalid user group assignment ID %q: email and groupName must both be non-empty", id)
+	}
+	return email, groupName, nil
+}
+
 func (r *UserGroupAssignment) Update(ctx context.Context, req infer.UpdateRequest[UserGroupAssignmentArgs, UserGroupAssignmentState]) (infer.UpdateResponse[UserGroupAssignmentState], error) {
 	c := clientFor(ctx)
 
 	role := strings.ToUpper(req.Inputs.Role)
 	if !validGroupRoles[role] {
-		return infer.UpdateResponse[UserGroupAssignmentState]{}, fmt.Errorf("invalid group role %q: must be one of GUEST, REPORTER, DEVELOPER, MAINTAINER, OWNER", req.Inputs.Role)
+		return infer.UpdateResponse[UserGroupAssignmentState]{}, fmt.Errorf("invalid group role %q: must be one of %s", req.Inputs.Role, validGroupRoleList())
 	}
 
 	if req.DryRun {
@@ -123,6 +155,8 @@ func (r *UserGroupAssignment) Update(ctx context.Context, req infer.UpdateReques
 		}, nil
 	}
 
+	// addUserToGroup is upsert: re-adding the same user+group with a different role
+	// updates the role in place (no remove+add needed).
 	if err := c.AddUserToGroup(ctx, req.Inputs.UserEmail, req.Inputs.GroupName, role); err != nil {
 		return infer.UpdateResponse[UserGroupAssignmentState]{}, fmt.Errorf("failed to update user group role: %w", err)
 	}
@@ -155,5 +189,9 @@ func (r *UserGroupAssignment) Diff(ctx context.Context, req infer.DiffRequest[Us
 	if !strings.EqualFold(req.Inputs.Role, req.State.Role) {
 		diff["role"] = p.PropertyDiff{Kind: p.Update}
 	}
-	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil
+	// Note: DeleteBeforeReplace is intentionally false. Group assignments are
+	// independent (a user may hold a role in any number of groups), so creating the
+	// new binding before removing the old one avoids a window of dropped access if
+	// the create step fails mid-replace.
+	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff}, nil
 }

@@ -13,6 +13,7 @@ import (
 // User manages a Lagoon user.
 type User struct{}
 
+// UserArgs defines the input properties for a Lagoon User resource.
 type UserArgs struct {
 	Email     string  `pulumi:"email"`
 	FirstName *string `pulumi:"firstName,optional"`
@@ -20,6 +21,7 @@ type UserArgs struct {
 	Comment   *string `pulumi:"comment,optional"`
 }
 
+// UserState is the persisted state of a Lagoon User resource.
 type UserState struct {
 	UserArgs
 	LagoonID string `pulumi:"lagoonId"`
@@ -53,6 +55,11 @@ func (r *User) Create(ctx context.Context, req infer.CreateRequest[UserArgs]) (i
 
 	u, err := c.CreateUser(ctx, req.Inputs.Email, req.Inputs.FirstName, req.Inputs.LastName, req.Inputs.Comment)
 	if err != nil {
+		if client.IsDuplicateEntry(err) {
+			return infer.CreateResponse[UserState]{}, fmt.Errorf(
+				"user %q already exists in Lagoon; use `pulumi import lagoon:lagoon:User <name> %s` to adopt it: %w",
+				req.Inputs.Email, req.Inputs.Email, err)
+		}
 		return infer.CreateResponse[UserState]{}, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -96,16 +103,25 @@ func (r *User) Read(ctx context.Context, req infer.ReadRequest[UserArgs, UserSta
 func (r *User) Update(ctx context.Context, req infer.UpdateRequest[UserArgs, UserState]) (infer.UpdateResponse[UserState], error) {
 	c := clientFor(ctx)
 
+	// Build the patch. When an input transitions from non-nil to nil (user clears the
+	// field), we send explicit GraphQL null (Go nil in the map marshals to JSON null) so
+	// Lagoon actually clears the field server-side. If we used setOptional here, the key
+	// would be omitted and the stale value would persist in Lagoon, causing permanent
+	// drift on subsequent pulumi up runs.
 	patch := map[string]any{}
-	if ptrDiffers(req.Inputs.FirstName, req.State.FirstName) {
-		setOptional(patch, "firstName", req.Inputs.FirstName)
+	patchField := func(key string, input, state *string) {
+		if !ptrDiffers(input, state) {
+			return
+		}
+		if input == nil {
+			patch[key] = nil
+		} else {
+			patch[key] = *input
+		}
 	}
-	if ptrDiffers(req.Inputs.LastName, req.State.LastName) {
-		setOptional(patch, "lastName", req.Inputs.LastName)
-	}
-	if ptrDiffers(req.Inputs.Comment, req.State.Comment) {
-		setOptional(patch, "comment", req.Inputs.Comment)
-	}
+	patchField("firstName", req.Inputs.FirstName, req.State.FirstName)
+	patchField("lastName", req.Inputs.LastName, req.State.LastName)
+	patchField("comment", req.Inputs.Comment, req.State.Comment)
 
 	if req.DryRun || len(patch) == 0 {
 		return infer.UpdateResponse[UserState]{

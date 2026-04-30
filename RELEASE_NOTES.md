@@ -19,6 +19,9 @@ Assigns a platform-level role (OWNER or VIEWER) to a user via the Lagoon GraphQL
 ### Example: Declarative `lagoonadmin` management
 
 ```python
+import pulumi
+import pulumi_lagoon as lagoon
+
 admin_user = lagoon.User("lagoonadmin",
     email="admin@lagoon.example.com",
     first_name="Lagoon",
@@ -30,12 +33,33 @@ lagoon.UserPlatformRole("lagoonadmin-platform-owner",
     role="OWNER",
 )
 
+# If you manage the target group in the same stack, reference it explicitly so
+# Pulumi orders the group creation before the assignment:
+team_group = lagoon.Group("mysite-team", name="project-mysite")
+
 lagoon.UserGroupAssignment("lagoonadmin-team",
     user_email=admin_user.email,
-    group_name="project-mysite",
+    group_name=team_group.name,
     role="MAINTAINER",
 )
 ```
+
+If the target group is managed outside this stack (for example, the
+auto-generated per-project group), reference its name as a string literal and
+ensure it exists before `pulumi up` runs.
+
+### Limitations
+
+- **SSH keys are not managed by this provider.** Use the Lagoon UI/CLI or a
+  separate `pulumi-command` resource until a dedicated `SshKey` resource lands.
+- **Direct user-to-project role assignment is not supported.** Grant project
+  access by creating a project-scoped `lagoon.Group` and using
+  `UserGroupAssignment` — Lagoon's permission model binds users to projects via
+  groups.
+- **Clearing optional user fields** (`firstName`, `lastName`, `comment`) sends
+  an explicit GraphQL `null` to Lagoon. Lagoon accepts this as a clear
+  operation; if you see stale values persisting, confirm your Lagoon version
+  honours null in `UpdateUserInput.patch`.
 
 ---
 

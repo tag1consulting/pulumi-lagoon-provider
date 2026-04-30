@@ -16,14 +16,21 @@ var validPlatformRoles = map[string]bool{
 	"VIEWER": true,
 }
 
+// validPlatformRoleList returns the allowed platform role values for error messages.
+func validPlatformRoleList() string {
+	return "OWNER, VIEWER"
+}
+
 // UserPlatformRole assigns a platform-level role to a Lagoon user.
 type UserPlatformRole struct{}
 
+// UserPlatformRoleArgs defines the input properties for a platform role binding.
 type UserPlatformRoleArgs struct {
 	UserEmail string `pulumi:"userEmail"`
 	Role      string `pulumi:"role"`
 }
 
+// UserPlatformRoleState is the persisted state of a UserPlatformRole.
 type UserPlatformRoleState struct {
 	UserPlatformRoleArgs
 }
@@ -41,9 +48,12 @@ func (a *UserPlatformRoleArgs) Annotate(an infer.Annotator) {
 func (r *UserPlatformRole) Create(ctx context.Context, req infer.CreateRequest[UserPlatformRoleArgs]) (infer.CreateResponse[UserPlatformRoleState], error) {
 	c := clientFor(ctx)
 
+	if req.Inputs.UserEmail == "" {
+		return infer.CreateResponse[UserPlatformRoleState]{}, fmt.Errorf("userEmail must not be empty")
+	}
 	role := strings.ToUpper(req.Inputs.Role)
 	if !validPlatformRoles[role] {
-		return infer.CreateResponse[UserPlatformRoleState]{}, fmt.Errorf("invalid platform role %q: must be OWNER or VIEWER", req.Inputs.Role)
+		return infer.CreateResponse[UserPlatformRoleState]{}, fmt.Errorf("invalid platform role %q: must be %s", req.Inputs.Role, validPlatformRoleList())
 	}
 
 	id := fmt.Sprintf("%s:%s", req.Inputs.UserEmail, role)
@@ -56,6 +66,11 @@ func (r *UserPlatformRole) Create(ctx context.Context, req infer.CreateRequest[U
 	}
 
 	if err := c.AddPlatformRoleToUser(ctx, req.Inputs.UserEmail, role); err != nil {
+		if client.IsDuplicateEntry(err) {
+			return infer.CreateResponse[UserPlatformRoleState]{}, fmt.Errorf(
+				"user %q already has platform role %q; use `pulumi import lagoon:lagoon:UserPlatformRole <name> %s` to adopt it: %w",
+				req.Inputs.UserEmail, role, id, err)
+		}
 		return infer.CreateResponse[UserPlatformRoleState]{}, fmt.Errorf("failed to add platform role to user: %w", err)
 	}
 
@@ -68,17 +83,9 @@ func (r *UserPlatformRole) Create(ctx context.Context, req infer.CreateRequest[U
 func (r *UserPlatformRole) Read(ctx context.Context, req infer.ReadRequest[UserPlatformRoleArgs, UserPlatformRoleState]) (infer.ReadResponse[UserPlatformRoleArgs, UserPlatformRoleState], error) {
 	c := clientFor(ctx)
 
-	var email, role string
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) == 2 {
-		email = parts[0]
-		role = strings.ToUpper(parts[1])
-	} else if req.State.UserEmail != "" {
-		email = req.State.UserEmail
-		role = strings.ToUpper(req.State.Role)
-	} else {
-		return infer.ReadResponse[UserPlatformRoleArgs, UserPlatformRoleState]{},
-			fmt.Errorf("invalid user platform role ID '%s': expected format {email}:{role}", req.ID)
+	email, role, err := parseUserPlatformRoleID(req.ID, req.State)
+	if err != nil {
+		return infer.ReadResponse[UserPlatformRoleArgs, UserPlatformRoleState]{}, err
 	}
 
 	roles, err := c.GetUserPlatformRoles(ctx, email)
@@ -89,8 +96,8 @@ func (r *UserPlatformRole) Read(ctx context.Context, req infer.ReadRequest[UserP
 		return infer.ReadResponse[UserPlatformRoleArgs, UserPlatformRoleState]{}, fmt.Errorf("failed to read user platform roles: %w", err)
 	}
 
-	for _, r := range roles {
-		if strings.EqualFold(r, role) {
+	for _, platformRole := range roles {
+		if strings.EqualFold(platformRole, role) {
 			args := UserPlatformRoleArgs{UserEmail: email, Role: role}
 			st := UserPlatformRoleState{UserPlatformRoleArgs: args}
 			return infer.ReadResponse[UserPlatformRoleArgs, UserPlatformRoleState]{
@@ -104,7 +111,33 @@ func (r *UserPlatformRole) Read(ctx context.Context, req infer.ReadRequest[UserP
 	return infer.ReadResponse[UserPlatformRoleArgs, UserPlatformRoleState]{}, nil
 }
 
-// No Update — all fields are forceNew.
+// parseUserPlatformRoleID extracts email and role from a Pulumi resource ID.
+// The ID format is "{email}:{role}". Because email local-parts may contain colons
+// (RFC 5321 quoted strings), we split on the LAST colon. The parsed role is validated
+// against the known platform-role enum so that a typo in an imported ID surfaces as a
+// clear error instead of silently reporting the resource as deleted.
+func parseUserPlatformRoleID(id string, state UserPlatformRoleState) (email, role string, err error) {
+	if idx := strings.LastIndex(id, ":"); idx > 0 && idx < len(id)-1 {
+		email = id[:idx]
+		role = strings.ToUpper(id[idx+1:])
+	} else if state.UserEmail != "" && state.Role != "" {
+		email = state.UserEmail
+		role = strings.ToUpper(state.Role)
+	} else {
+		return "", "", fmt.Errorf("invalid user platform role ID %q: expected non-empty {email}:{role}", id)
+	}
+	if email == "" || role == "" {
+		return "", "", fmt.Errorf("invalid user platform role ID %q: email and role must both be non-empty", id)
+	}
+	if !validPlatformRoles[role] {
+		return "", "", fmt.Errorf("invalid user platform role ID %q: role must be one of %s", id, validPlatformRoleList())
+	}
+	return email, role, nil
+}
+
+// No Update method — the Lagoon API exposes only addPlatformRoleToUser and
+// removePlatformRoleFromUser mutations, so any change to userEmail or role requires a
+// replace (see Diff).
 
 func (r *UserPlatformRole) Delete(ctx context.Context, req infer.DeleteRequest[UserPlatformRoleState]) (infer.DeleteResponse, error) {
 	c := clientFor(ctx)
@@ -126,5 +159,9 @@ func (r *UserPlatformRole) Diff(ctx context.Context, req infer.DiffRequest[UserP
 	if !strings.EqualFold(req.Inputs.Role, req.State.Role) {
 		diff["role"] = p.PropertyDiff{Kind: p.UpdateReplace}
 	}
-	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil
+	// Note: DeleteBeforeReplace is intentionally false. Lagoon allows multiple
+	// platform roles concurrently, so creating the new assignment before removing the
+	// old one avoids a window where the user has no platform role if the create
+	// step fails mid-replace.
+	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff}, nil
 }

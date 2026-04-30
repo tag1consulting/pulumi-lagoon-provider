@@ -89,6 +89,10 @@ func (c *Client) UpdateUser(ctx context.Context, email string, patch map[string]
 
 	data, err := c.Execute(ctx, mutationUpdateUser, map[string]any{"input": input})
 	if err != nil {
+		var apiErr *LagoonAPIError
+		if errors.As(err, &apiErr) && containsNotFound(apiErr.Message) {
+			return nil, &LagoonNotFoundError{ResourceType: "User", Identifier: email}
+		}
 		return nil, err
 	}
 
@@ -190,6 +194,11 @@ func (c *Client) GetUserGroupRoles(ctx context.Context, email string) ([]UserGro
 	if u.Email == "" {
 		return nil, &LagoonNotFoundError{ResourceType: "User", Identifier: email}
 	}
+	// Normalize nil to empty slice so callers can distinguish "user exists with no group
+	// roles" (non-nil empty) from "user not found" (error returned above).
+	if u.GroupRoles == nil {
+		return []UserGroupRole{}, nil
+	}
 	return u.GroupRoles, nil
 }
 
@@ -211,11 +220,22 @@ func (c *Client) GetUserPlatformRoles(ctx context.Context, email string) ([]stri
 	if u.Email == "" {
 		return nil, &LagoonNotFoundError{ResourceType: "User", Identifier: email}
 	}
+	// Normalize nil to empty slice — see GetUserGroupRoles for rationale.
+	if u.PlatformRoles == nil {
+		return []string{}, nil
+	}
 	return u.PlatformRoles, nil
 }
 
-// containsNotFound checks if an error message indicates a not-found condition.
+// containsNotFound checks if an error message indicates a user-not-found condition.
+// Lagoon's GraphQL API returns human-readable error strings rather than typed codes, so
+// we match a narrow set of known phrases. The substrings must co-occur with "user" to
+// avoid misclassifying authorization errors (e.g., "access denied: no user permissions
+// for this operation") as NotFound, which would cause silent state removal in Read and
+// silent success on Delete — a privilege-retention risk for UserPlatformRole.
 func containsNotFound(msg string) bool {
 	lower := strings.ToLower(msg)
-	return strings.Contains(lower, "not found") || strings.Contains(lower, "no user")
+	return strings.Contains(lower, "user not found") ||
+		strings.Contains(lower, "user does not exist") ||
+		strings.Contains(lower, "no user found")
 }

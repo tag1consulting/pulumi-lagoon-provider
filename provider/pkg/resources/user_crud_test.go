@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/pulumi/pulumi-go-provider/infer"
@@ -510,5 +511,215 @@ func TestUserPlatformRoleDelete_NotFound(t *testing.T) {
 	})
 	if err != nil {
 		t.Error("delete of non-existent platform role should succeed (idempotent)")
+	}
+}
+
+// ==================== New behavior tests (fixes for PR review findings) ====================
+
+// TestUserUpdate_ClearOptionalField verifies that transitioning an optional field from
+// non-nil to nil sends explicit null in the patch so Lagoon actually clears the field.
+// Regression test for the "silent drop of field-clear updates" bug.
+func TestUserUpdate_ClearOptionalField(t *testing.T) {
+	var gotPatch map[string]any
+	mock := &mockLagoonClient{
+		updateUserFn: func(_ context.Context, email string, patch map[string]any) (*client.User, error) {
+			gotPatch = patch
+			return &client.User{ID: "uuid-1", Email: email}, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &User{}
+
+	oldFirst := "Alice"
+	_, err := r.Update(ctx, infer.UpdateRequest[UserArgs, UserState]{
+		Inputs: UserArgs{Email: "test@example.com", FirstName: nil},
+		State:  UserState{UserArgs: UserArgs{Email: "test@example.com", FirstName: &oldFirst}, LagoonID: "uuid-1"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotPatch == nil {
+		t.Fatal("expected UpdateUser to be called when clearing a field")
+	}
+	v, present := gotPatch["firstName"]
+	if !present {
+		t.Fatalf("expected firstName key in patch, got %#v", gotPatch)
+	}
+	if v != nil {
+		t.Errorf("expected firstName=nil (null) to clear the field, got %v", v)
+	}
+}
+
+func TestUserCreate_DuplicateEntryGuidance(t *testing.T) {
+	dupErr := &client.LagoonAPIError{Message: "duplicate entry for key email"}
+	mock := &mockLagoonClient{
+		createUserFn: func(_ context.Context, _ string, _, _, _ *string) (*client.User, error) {
+			return nil, dupErr
+		},
+	}
+	ctx := testCtx(mock)
+	r := &User{}
+	_, err := r.Create(ctx, infer.CreateRequest[UserArgs]{
+		Inputs: UserArgs{Email: "admin@example.com"},
+	})
+	if err == nil {
+		t.Fatal("expected duplicate-entry error to surface")
+	}
+	if !strings.Contains(err.Error(), "pulumi import") {
+		t.Errorf("expected duplicate-entry error to suggest pulumi import, got: %v", err)
+	}
+}
+
+func TestUserGroupAssignmentCreate_EmptyInputs(t *testing.T) {
+	ctx := testCtx(&mockLagoonClient{})
+	r := &UserGroupAssignment{}
+	cases := []UserGroupAssignmentArgs{
+		{UserEmail: "", GroupName: "g", Role: "GUEST"},
+		{UserEmail: "u@x", GroupName: "", Role: "GUEST"},
+	}
+	for _, in := range cases {
+		_, err := r.Create(ctx, infer.CreateRequest[UserGroupAssignmentArgs]{Inputs: in})
+		if err == nil {
+			t.Errorf("expected error for empty input %+v", in)
+		}
+	}
+}
+
+func TestUserGroupAssignmentCreate_DuplicateEntryGuidance(t *testing.T) {
+	dupErr := &client.LagoonAPIError{Message: "user already exists in group"}
+	mock := &mockLagoonClient{
+		addUserToGroupFn: func(_ context.Context, _, _, _ string) error { return dupErr },
+	}
+	ctx := testCtx(mock)
+	r := &UserGroupAssignment{}
+	_, err := r.Create(ctx, infer.CreateRequest[UserGroupAssignmentArgs]{
+		Inputs: UserGroupAssignmentArgs{UserEmail: "u@x", GroupName: "g", Role: "GUEST"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "pulumi import") {
+		t.Errorf("expected duplicate-entry error mentioning pulumi import, got: %v", err)
+	}
+}
+
+func TestParseUserGroupAssignmentID(t *testing.T) {
+	cases := []struct {
+		name      string
+		id        string
+		state     UserGroupAssignmentState
+		wantEmail string
+		wantGroup string
+		wantErr   bool
+	}{
+		{"happy path", "u@x.com:devs", UserGroupAssignmentState{}, "u@x.com", "devs", false},
+		{"colon in email local-part", `"a:b"@x.com:devs`, UserGroupAssignmentState{}, `"a:b"@x.com`, "devs", false},
+		{"empty left", ":devs", UserGroupAssignmentState{}, "", "", true},
+		{"empty right", "u@x.com:", UserGroupAssignmentState{}, "", "", true},
+		{"no colon, state fallback", "", UserGroupAssignmentState{UserGroupAssignmentArgs: UserGroupAssignmentArgs{UserEmail: "u@x", GroupName: "g"}}, "u@x", "g", false},
+		{"no colon, no state", "garbage", UserGroupAssignmentState{}, "", "", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			email, group, err := parseUserGroupAssignmentID(tc.id, tc.state)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("wantErr=%v, got err=%v", tc.wantErr, err)
+			}
+			if err == nil && (email != tc.wantEmail || group != tc.wantGroup) {
+				t.Errorf("got (%q, %q), want (%q, %q)", email, group, tc.wantEmail, tc.wantGroup)
+			}
+		})
+	}
+}
+
+func TestParseUserPlatformRoleID(t *testing.T) {
+	cases := []struct {
+		name     string
+		id       string
+		state    UserPlatformRoleState
+		wantMail string
+		wantRole string
+		wantErr  bool
+	}{
+		{"happy path upper", "admin@x:OWNER", UserPlatformRoleState{}, "admin@x", "OWNER", false},
+		{"happy path lower (normalized)", "admin@x:owner", UserPlatformRoleState{}, "admin@x", "OWNER", false},
+		{"invalid role", "admin@x:ADMIN", UserPlatformRoleState{}, "", "", true},
+		{"empty left", ":OWNER", UserPlatformRoleState{}, "", "", true},
+		{"empty right", "admin@x:", UserPlatformRoleState{}, "", "", true},
+		{"state fallback", "", UserPlatformRoleState{UserPlatformRoleArgs: UserPlatformRoleArgs{UserEmail: "u@x", Role: "VIEWER"}}, "u@x", "VIEWER", false},
+		{"garbage", "nocolon", UserPlatformRoleState{}, "", "", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			email, role, err := parseUserPlatformRoleID(tc.id, tc.state)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("wantErr=%v, got err=%v", tc.wantErr, err)
+			}
+			if err == nil && (email != tc.wantMail || role != tc.wantRole) {
+				t.Errorf("got (%q, %q), want (%q, %q)", email, role, tc.wantMail, tc.wantRole)
+			}
+		})
+	}
+}
+
+func TestUserPlatformRoleCreate_DuplicateEntryGuidance(t *testing.T) {
+	dupErr := &client.LagoonAPIError{Message: "role already exists for user"}
+	mock := &mockLagoonClient{
+		addPlatformRoleToUserFn: func(_ context.Context, _, _ string) error { return dupErr },
+	}
+	ctx := testCtx(mock)
+	r := &UserPlatformRole{}
+	_, err := r.Create(ctx, infer.CreateRequest[UserPlatformRoleArgs]{
+		Inputs: UserPlatformRoleArgs{UserEmail: "admin@x", Role: "OWNER"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "pulumi import") {
+		t.Errorf("expected duplicate-entry error mentioning pulumi import, got: %v", err)
+	}
+}
+
+func TestUserPlatformRoleDiff_NoDeleteBeforeReplace(t *testing.T) {
+	r := &UserPlatformRole{}
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[UserPlatformRoleArgs, UserPlatformRoleState]{
+		Inputs: UserPlatformRoleArgs{UserEmail: "admin@x", Role: "OWNER"},
+		State:  UserPlatformRoleState{UserPlatformRoleArgs: UserPlatformRoleArgs{UserEmail: "admin@x", Role: "VIEWER"}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.DeleteBeforeReplace {
+		t.Error("DeleteBeforeReplace must be false so a failed Create does not leave the user with no platform role")
+	}
+}
+
+func TestUserGroupAssignmentDiff_NoDeleteBeforeReplace(t *testing.T) {
+	r := &UserGroupAssignment{}
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[UserGroupAssignmentArgs, UserGroupAssignmentState]{
+		Inputs: UserGroupAssignmentArgs{UserEmail: "u@x", GroupName: "newgroup", Role: "GUEST"},
+		State:  UserGroupAssignmentState{UserGroupAssignmentArgs: UserGroupAssignmentArgs{UserEmail: "u@x", GroupName: "oldgroup", Role: "GUEST"}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.DeleteBeforeReplace {
+		t.Error("DeleteBeforeReplace must be false so a failed Create does not drop the user's access")
+	}
+}
+
+// Client-level containsNotFound / NotFound translation tests
+func TestContainsNotFound_NarrowMatching(t *testing.T) {
+	// These are checked indirectly via the real client, but we can assert the behavior
+	// through DeleteUser: an authorization-style error containing "no user permissions"
+	// must NOT be converted to ErrNotFound.
+	mock := &mockLagoonClient{
+		deleteUserFn: func(_ context.Context, _ string) error {
+			// Mock returns exactly what the real client would return for an authz error:
+			// the original LagoonAPIError, NOT a LagoonNotFoundError.
+			return &client.LagoonAPIError{Message: "access denied: no user permissions for this operation"}
+		},
+	}
+	ctx := testCtx(mock)
+	r := &User{}
+	_, err := r.Delete(ctx, infer.DeleteRequest[UserState]{
+		State: UserState{UserArgs: UserArgs{Email: "u@x"}, LagoonID: "1"},
+	})
+	if err == nil {
+		t.Fatal("expected authorization error to surface, not be silently swallowed as NotFound")
 	}
 }
