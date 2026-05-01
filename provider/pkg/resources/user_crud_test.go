@@ -59,8 +59,8 @@ func TestUserCreate_DryRun(t *testing.T) {
 	if called {
 		t.Error("API should not be called during dry run")
 	}
-	if resp.ID != "preview-id" {
-		t.Errorf("expected preview-id, got %q", resp.ID)
+	if resp.ID != "test@example.com" {
+		t.Errorf("expected email as preview ID, got %q", resp.ID)
 	}
 }
 
@@ -511,6 +511,37 @@ func TestUserPlatformRoleDelete_NotFound(t *testing.T) {
 	})
 	if err != nil {
 		t.Error("delete of non-existent platform role should succeed (idempotent)")
+	}
+}
+
+func TestUserCreate_EmptyEmail(t *testing.T) {
+	ctx := testCtx(&mockLagoonClient{})
+	r := &User{}
+	_, err := r.Create(ctx, infer.CreateRequest[UserArgs]{
+		Inputs: UserArgs{Email: ""},
+	})
+	if err == nil {
+		t.Fatal("expected error for empty email")
+	}
+	if !strings.Contains(err.Error(), "email must not be empty") {
+		t.Errorf("expected empty email error, got: %v", err)
+	}
+}
+
+func TestUserDiff_NoDeleteBeforeReplace(t *testing.T) {
+	r := &User{}
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[UserArgs, UserState]{
+		Inputs: UserArgs{Email: "new@example.com"},
+		State:  UserState{UserArgs: UserArgs{Email: "old@example.com"}, LagoonID: "uuid-1"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.DeleteBeforeReplace {
+		t.Error("DeleteBeforeReplace must be false — old and new email are independent identities")
+	}
+	if !resp.HasChanges {
+		t.Error("expected HasChanges when email differs")
 	}
 }
 

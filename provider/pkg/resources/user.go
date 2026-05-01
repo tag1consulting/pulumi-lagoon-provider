@@ -46,9 +46,13 @@ func (s *UserState) Annotate(an infer.Annotator) {
 func (r *User) Create(ctx context.Context, req infer.CreateRequest[UserArgs]) (infer.CreateResponse[UserState], error) {
 	c := clientFor(ctx)
 
+	if req.Inputs.Email == "" {
+		return infer.CreateResponse[UserState]{}, fmt.Errorf("email must not be empty")
+	}
+
 	if req.DryRun {
 		return infer.CreateResponse[UserState]{
-			ID:     "preview-id",
+			ID:     req.Inputs.Email,
 			Output: UserState{UserArgs: req.Inputs},
 		}, nil
 	}
@@ -165,7 +169,7 @@ func (r *User) Diff(ctx context.Context, req infer.DiffRequest[UserArgs, UserSta
 	if ptrDiffers(req.Inputs.Comment, req.State.Comment) {
 		diff["comment"] = p.PropertyDiff{Kind: p.Update}
 	}
-	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil
+	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff}, nil
 }
 
 func nilIfEmpty(s string) *string {
