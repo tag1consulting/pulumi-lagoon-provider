@@ -165,6 +165,32 @@ func TestIsDuplicateEntry(t *testing.T) {
 	}
 }
 
+func TestContainsNotFound(t *testing.T) {
+	tests := []struct {
+		msg  string
+		want bool
+	}{
+		{"user not found", true},
+		{"User not found", true},
+		{"USER NOT FOUND", true},
+		{"user does not exist", true},
+		{"no user found", true},
+		{"No user found with that email", true},
+		{"access denied: no user permissions for this operation", false},
+		{"permission denied", false},
+		{"not found", false},
+		{"group not found", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			if got := containsNotFound(tt.msg); got != tt.want {
+				t.Errorf("containsNotFound(%q) = %v, want %v", tt.msg, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLagoonAPIError_Is_ErrDuplicateEntry(t *testing.T) {
 	// Test errors.Is(apiErr, ErrDuplicateEntry) via the Is() method directly.
 	tests := []struct {
