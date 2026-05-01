@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
+
+	p "github.com/pulumi/pulumi-go-provider"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pulumi/pulumi-go-provider/infer"
@@ -52,11 +55,16 @@ func (c *LagoonConfig) Annotate(a infer.Annotator) {
 // Configure validates the config and prepares it for use.
 // Called by the Pulumi engine when the provider is configured.
 func (c *LagoonConfig) Configure(ctx context.Context) error {
-	// Track whether token was derived from JWTSecret (vs explicitly provided)
+	log := p.GetLogger(ctx)
+
+	c.Token = strings.TrimSpace(c.Token)
+	c.JWTSecret = strings.TrimSpace(c.JWTSecret)
+	c.JWTAudience = strings.TrimSpace(c.JWTAudience)
+
 	tokenFromSecret := false
 
-	// If no direct token, try generating from JWT secret
 	if c.Token == "" && c.JWTSecret != "" {
+		log.Debugf("Generating admin token from jwtSecret (%d bytes, audience=%q)", len(c.JWTSecret), c.JWTAudience)
 		token, err := c.generateAdminToken()
 		if err != nil {
 			return fmt.Errorf("failed to generate admin token from jwtSecret: %w", err)
@@ -65,15 +73,16 @@ func (c *LagoonConfig) Configure(ctx context.Context) error {
 		tokenFromSecret = true
 	}
 
-	// Also check env vars if nothing is configured yet
 	if c.Token == "" {
-		if envToken := os.Getenv("LAGOON_TOKEN"); envToken != "" {
+		if envToken := strings.TrimSpace(os.Getenv("LAGOON_TOKEN")); envToken != "" {
+			log.Debugf("Using token from LAGOON_TOKEN environment variable")
 			c.Token = envToken
 		}
 	}
 	if c.Token == "" {
-		if envSecret := os.Getenv("LAGOON_JWT_SECRET"); envSecret != "" {
-			c.JWTSecret = envSecret // Persist for token refresh in NewClient()
+		if envSecret := strings.TrimSpace(os.Getenv("LAGOON_JWT_SECRET")); envSecret != "" {
+			log.Debugf("Generating admin token from LAGOON_JWT_SECRET (%d bytes, audience=%q)", len(envSecret), c.JWTAudience)
+			c.JWTSecret = envSecret
 			token, err := generateAdminTokenFromSecret(envSecret, c.JWTAudience)
 			if err != nil {
 				return fmt.Errorf("failed to generate token from LAGOON_JWT_SECRET: %w", err)
@@ -88,8 +97,6 @@ func (c *LagoonConfig) Configure(ctx context.Context) error {
 			"or use LAGOON_TOKEN/LAGOON_JWT_SECRET environment variables")
 	}
 
-	// Clear JWTSecret if token was explicitly provided (not derived from secret)
-	// so NewClient() won't set up a refresh callback that overrides the explicit token
 	if !tokenFromSecret {
 		c.JWTSecret = ""
 	}

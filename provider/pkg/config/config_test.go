@@ -67,7 +67,10 @@ func TestGenerateAdminTokenFromSecret_DefaultAudience(t *testing.T) {
 		t.Fatalf("failed to parse token: %v", err)
 	}
 
-	claims := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		t.Fatal("expected MapClaims")
+	}
 	if claims["aud"] != "api.dev" {
 		t.Errorf("expected aud=api.dev (default), got %v", claims["aud"])
 	}
@@ -89,7 +92,10 @@ func TestGenerateAdminTokenFromSecret_Expiry(t *testing.T) {
 		t.Fatalf("failed to parse token: %v", err)
 	}
 
-	claims := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		t.Fatal("expected MapClaims")
+	}
 
 	exp, err := claims.GetExpirationTime()
 	if err != nil {
@@ -291,6 +297,121 @@ func TestConfigure_TokenPrecedence(t *testing.T) {
 	}
 	if cfg.JWTSecret != "" {
 		t.Errorf("expected JWTSecret to be cleared when direct token takes precedence, got %s", cfg.JWTSecret)
+	}
+}
+
+func TestConfigure_TrimsJWTSecretWhitespace(t *testing.T) {
+	origToken := os.Getenv("LAGOON_TOKEN")
+	origSecret := os.Getenv("LAGOON_JWT_SECRET")
+	os.Unsetenv("LAGOON_TOKEN")
+	os.Unsetenv("LAGOON_JWT_SECRET")
+	defer func() {
+		if origToken != "" {
+			os.Setenv("LAGOON_TOKEN", origToken)
+		}
+		if origSecret != "" {
+			os.Setenv("LAGOON_JWT_SECRET", origSecret)
+		}
+	}()
+
+	secret := "test-secret-for-trimming"
+
+	cleanCfg := &LagoonConfig{
+		APIUrl:      "https://api.test/graphql",
+		JWTSecret:   secret,
+		JWTAudience: "api.dev",
+	}
+	if err := cleanCfg.Configure(context.TODO()); err != nil {
+		t.Fatalf("Configure (clean) failed: %v", err)
+	}
+
+	cases := []struct {
+		name      string
+		jwtSecret string
+	}{
+		{"trailing newline", secret + "\n"},
+		{"trailing space", secret + " "},
+		{"leading space", " " + secret},
+		{"leading and trailing whitespace", "  " + secret + "\t\n"},
+		{"trailing CRLF", secret + "\r\n"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &LagoonConfig{
+				APIUrl:      "https://api.test/graphql",
+				JWTSecret:   tc.jwtSecret,
+				JWTAudience: "api.dev",
+			}
+			if err := cfg.Configure(context.TODO()); err != nil {
+				t.Fatalf("Configure failed: %v", err)
+			}
+			cleanToken, err := jwt.Parse(cleanCfg.Token, func(t *jwt.Token) (any, error) {
+				return []byte(secret), nil
+			})
+			if err != nil {
+				t.Fatalf("failed to parse clean token: %v", err)
+			}
+			dirtyToken, err := jwt.Parse(cfg.Token, func(t *jwt.Token) (any, error) {
+				return []byte(secret), nil
+			})
+			if err != nil {
+				t.Fatalf("failed to parse dirty token: %v", err)
+			}
+			if !dirtyToken.Valid {
+				t.Errorf("token generated from %q should be valid when verified with trimmed secret", tc.name)
+			}
+			cleanClaims, ok := cleanToken.Claims.(jwt.MapClaims)
+			if !ok {
+				t.Fatal("expected MapClaims from clean token")
+			}
+			dirtyClaims, ok := dirtyToken.Claims.(jwt.MapClaims)
+			if !ok {
+				t.Fatal("expected MapClaims from dirty token")
+			}
+			if cleanClaims["role"] != dirtyClaims["role"] || cleanClaims["aud"] != dirtyClaims["aud"] {
+				t.Errorf("claims mismatch between clean and whitespace-padded secret tokens")
+			}
+		})
+	}
+}
+
+func TestConfigure_TrimsTokenWhitespace(t *testing.T) {
+	cfg := &LagoonConfig{
+		APIUrl: "https://api.test/graphql",
+		Token:  "  my-token\n",
+	}
+	if err := cfg.Configure(context.TODO()); err != nil {
+		t.Fatalf("Configure failed: %v", err)
+	}
+	if cfg.Token != "my-token" {
+		t.Errorf("expected trimmed token 'my-token', got %q", cfg.Token)
+	}
+}
+
+func TestConfigure_TrimsEnvVarWhitespace(t *testing.T) {
+	origToken := os.Getenv("LAGOON_TOKEN")
+	origSecret := os.Getenv("LAGOON_JWT_SECRET")
+	os.Setenv("LAGOON_TOKEN", "  env-token\n")
+	os.Unsetenv("LAGOON_JWT_SECRET")
+	defer func() {
+		if origToken != "" {
+			os.Setenv("LAGOON_TOKEN", origToken)
+		} else {
+			os.Unsetenv("LAGOON_TOKEN")
+		}
+		if origSecret != "" {
+			os.Setenv("LAGOON_JWT_SECRET", origSecret)
+		}
+	}()
+
+	cfg := &LagoonConfig{
+		APIUrl: "https://api.test/graphql",
+	}
+	if err := cfg.Configure(context.TODO()); err != nil {
+		t.Fatalf("Configure failed: %v", err)
+	}
+	if cfg.Token != "env-token" {
+		t.Errorf("expected trimmed env token 'env-token', got %q", cfg.Token)
 	}
 }
 
