@@ -67,7 +67,10 @@ func TestGenerateAdminTokenFromSecret_DefaultAudience(t *testing.T) {
 		t.Fatalf("failed to parse token: %v", err)
 	}
 
-	claims := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		t.Fatal("expected MapClaims")
+	}
 	if claims["aud"] != "api.dev" {
 		t.Errorf("expected aud=api.dev (default), got %v", claims["aud"])
 	}
@@ -89,7 +92,10 @@ func TestGenerateAdminTokenFromSecret_Expiry(t *testing.T) {
 		t.Fatalf("failed to parse token: %v", err)
 	}
 
-	claims := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		t.Fatal("expected MapClaims")
+	}
 
 	exp, err := claims.GetExpirationTime()
 	if err != nil {
@@ -339,17 +345,29 @@ func TestConfigure_TrimsJWTSecretWhitespace(t *testing.T) {
 			if err := cfg.Configure(context.TODO()); err != nil {
 				t.Fatalf("Configure failed: %v", err)
 			}
-			cleanToken, _ := jwt.Parse(cleanCfg.Token, func(t *jwt.Token) (any, error) {
+			cleanToken, err := jwt.Parse(cleanCfg.Token, func(t *jwt.Token) (any, error) {
 				return []byte(secret), nil
 			})
-			dirtyToken, _ := jwt.Parse(cfg.Token, func(t *jwt.Token) (any, error) {
+			if err != nil {
+				t.Fatalf("failed to parse clean token: %v", err)
+			}
+			dirtyToken, err := jwt.Parse(cfg.Token, func(t *jwt.Token) (any, error) {
 				return []byte(secret), nil
 			})
+			if err != nil {
+				t.Fatalf("failed to parse dirty token: %v", err)
+			}
 			if !dirtyToken.Valid {
 				t.Errorf("token generated from %q should be valid when verified with trimmed secret", tc.name)
 			}
-			cleanClaims := cleanToken.Claims.(jwt.MapClaims)
-			dirtyClaims := dirtyToken.Claims.(jwt.MapClaims)
+			cleanClaims, ok := cleanToken.Claims.(jwt.MapClaims)
+			if !ok {
+				t.Fatal("expected MapClaims from clean token")
+			}
+			dirtyClaims, ok := dirtyToken.Claims.(jwt.MapClaims)
+			if !ok {
+				t.Fatal("expected MapClaims from dirty token")
+			}
 			if cleanClaims["role"] != dirtyClaims["role"] || cleanClaims["aud"] != dirtyClaims["aud"] {
 				t.Errorf("claims mismatch between clean and whitespace-padded secret tokens")
 			}
