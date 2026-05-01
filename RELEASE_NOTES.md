@@ -1,4 +1,7 @@
-# Unreleased
+# Release v0.4.1 (2026-05-01)
+
+Patch release fixing the provider replace cascade that caused every resource to be
+replaced on every `pulumi up` when config inputs were re-evaluated.
 
 ## Bug Fixes
 
@@ -13,7 +16,8 @@ provider (DeployTarget, Project, etc.).
 No provider config change requires a replace — changing credentials or the API
 URL only affects how the provider authenticates, not which resources it can
 manage. The diff also normalizes whitespace so that trailing newlines in secrets
-(common with shell pipelines) are not detected as changes.
+(common with shell pipelines) are not detected as changes. Empty `jwtAudience`
+and `"api.dev"` are treated as equivalent, matching the runtime default.
 
 ---
 
