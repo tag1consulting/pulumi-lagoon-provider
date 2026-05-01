@@ -506,6 +506,20 @@ func TestDiff_NeverReplace(t *testing.T) {
 	}
 }
 
+func TestDiff_AudienceDefaultEquivalence(t *testing.T) {
+	c := &LagoonConfig{}
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
+		Inputs: LagoonConfig{JWTAudience: ""},
+		State:  LagoonConfig{JWTAudience: "api.dev"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.HasChanges {
+		t.Error("empty string and 'api.dev' are runtime-equivalent; expected no changes")
+	}
+}
+
 func TestDiff_PartialChange(t *testing.T) {
 	c := &LagoonConfig{}
 	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{

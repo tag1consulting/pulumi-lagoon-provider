@@ -132,6 +132,13 @@ func (c *LagoonConfig) NewClient() *client.Client {
 // resource associated with this provider instance.
 func (c *LagoonConfig) Diff(_ context.Context, req infer.DiffRequest[LagoonConfig, LagoonConfig]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
+	normalizeAudience := func(v string) string {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			return "api.dev"
+		}
+		return v
+	}
 	if strings.TrimSpace(req.Inputs.APIUrl) != strings.TrimSpace(req.State.APIUrl) {
 		diff["apiUrl"] = p.PropertyDiff{Kind: p.Update}
 	}
@@ -141,7 +148,7 @@ func (c *LagoonConfig) Diff(_ context.Context, req infer.DiffRequest[LagoonConfi
 	if strings.TrimSpace(req.Inputs.JWTSecret) != strings.TrimSpace(req.State.JWTSecret) {
 		diff["jwtSecret"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if strings.TrimSpace(req.Inputs.JWTAudience) != strings.TrimSpace(req.State.JWTAudience) {
+	if normalizeAudience(req.Inputs.JWTAudience) != normalizeAudience(req.State.JWTAudience) {
 		diff["jwtAudience"] = p.PropertyDiff{Kind: p.Update}
 	}
 	if req.Inputs.Insecure != req.State.Insecure {
