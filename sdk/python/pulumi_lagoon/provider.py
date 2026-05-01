@@ -19,11 +19,11 @@ __all__ = ['ProviderArgs', 'Provider']
 @pulumi.input_type
 class ProviderArgs:
     def __init__(__self__, *,
-                 api_url: Optional[pulumi.Input[_builtins.str]] = None,
-                 insecure: Optional[pulumi.Input[_builtins.bool]] = None,
-                 jwt_audience: Optional[pulumi.Input[_builtins.str]] = None,
-                 jwt_secret: Optional[pulumi.Input[_builtins.str]] = None,
-                 token: Optional[pulumi.Input[_builtins.str]] = None):
+                 api_url: pulumi.Input[Optional[_builtins.str]] = None,
+                 insecure: pulumi.Input[Optional[_builtins.bool]] = None,
+                 jwt_audience: pulumi.Input[Optional[_builtins.str]] = None,
+                 jwt_secret: pulumi.Input[Optional[_builtins.str]] = None,
+                 token: pulumi.Input[Optional[_builtins.str]] = None):
         """
         The set of arguments for constructing a Provider resource.
 
@@ -56,62 +56,62 @@ class ProviderArgs:
 
     @_builtins.property
     @pulumi.getter(name="apiUrl")
-    def api_url(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def api_url(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         The Lagoon GraphQL API endpoint URL.
         """
         return pulumi.get(self, "api_url")
 
     @api_url.setter
-    def api_url(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def api_url(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "api_url", value)
 
     @_builtins.property
     @pulumi.getter
-    def insecure(self) -> Optional[pulumi.Input[_builtins.bool]]:
+    def insecure(self) -> pulumi.Input[Optional[_builtins.bool]]:
         """
         Disable SSL certificate verification when connecting to the Lagoon API.
         """
         return pulumi.get(self, "insecure")
 
     @insecure.setter
-    def insecure(self, value: Optional[pulumi.Input[_builtins.bool]]):
+    def insecure(self, value: pulumi.Input[Optional[_builtins.bool]]):
         pulumi.set(self, "insecure", value)
 
     @_builtins.property
     @pulumi.getter(name="jwtAudience")
-    def jwt_audience(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def jwt_audience(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         The audience claim for generated JWT tokens. Defaults to 'api.dev'.
         """
         return pulumi.get(self, "jwt_audience")
 
     @jwt_audience.setter
-    def jwt_audience(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def jwt_audience(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "jwt_audience", value)
 
     @_builtins.property
     @pulumi.getter(name="jwtSecret")
-    def jwt_secret(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def jwt_secret(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         The Lagoon core JWTSECRET. Used to generate admin tokens on-the-fly.
         """
         return pulumi.get(self, "jwt_secret")
 
     @jwt_secret.setter
-    def jwt_secret(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def jwt_secret(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "jwt_secret", value)
 
     @_builtins.property
     @pulumi.getter
-    def token(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def token(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         A pre-configured JWT authentication token for the Lagoon API.
         """
         return pulumi.get(self, "token")
 
     @token.setter
-    def token(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def token(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "token", value)
 
 
@@ -121,11 +121,11 @@ class Provider(pulumi.ProviderResource):
     def __init__(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 api_url: Optional[pulumi.Input[_builtins.str]] = None,
-                 insecure: Optional[pulumi.Input[_builtins.bool]] = None,
-                 jwt_audience: Optional[pulumi.Input[_builtins.str]] = None,
-                 jwt_secret: Optional[pulumi.Input[_builtins.str]] = None,
-                 token: Optional[pulumi.Input[_builtins.str]] = None,
+                 api_url: pulumi.Input[Optional[_builtins.str]] = None,
+                 insecure: pulumi.Input[Optional[_builtins.bool]] = None,
+                 jwt_audience: pulumi.Input[Optional[_builtins.str]] = None,
+                 jwt_secret: pulumi.Input[Optional[_builtins.str]] = None,
+                 token: pulumi.Input[Optional[_builtins.str]] = None,
                  __props__=None):
         """
         Create a Lagoon resource with the given unique name, props, and options.
@@ -162,11 +162,11 @@ class Provider(pulumi.ProviderResource):
     def _internal_init(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 api_url: Optional[pulumi.Input[_builtins.str]] = None,
-                 insecure: Optional[pulumi.Input[_builtins.bool]] = None,
-                 jwt_audience: Optional[pulumi.Input[_builtins.str]] = None,
-                 jwt_secret: Optional[pulumi.Input[_builtins.str]] = None,
-                 token: Optional[pulumi.Input[_builtins.str]] = None,
+                 api_url: pulumi.Input[Optional[_builtins.str]] = None,
+                 insecure: pulumi.Input[Optional[_builtins.bool]] = None,
+                 jwt_audience: pulumi.Input[Optional[_builtins.str]] = None,
+                 jwt_secret: pulumi.Input[Optional[_builtins.str]] = None,
+                 token: pulumi.Input[Optional[_builtins.str]] = None,
                  __props__=None):
         opts = pulumi.ResourceOptions.merge(_utilities.get_resource_opts_defaults(), opts)
         if not isinstance(opts, pulumi.ResourceOptions):

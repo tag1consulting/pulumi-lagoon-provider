@@ -126,15 +126,15 @@ export interface DeployTargetArgs {
     /**
      * Custom build image.
      */
-    buildImage?: pulumi.Input<string>;
+    buildImage?: pulumi.Input<string | undefined>;
     /**
      * Cloud provider (e.g., 'kind', 'aws', 'gcp'). Defaults to 'kind'.
      */
-    cloudProvider?: pulumi.Input<string>;
+    cloudProvider?: pulumi.Input<string | undefined>;
     /**
      * Cloud region (e.g., 'us-east-1', 'local'). Defaults to 'local'.
      */
-    cloudRegion?: pulumi.Input<string>;
+    cloudRegion?: pulumi.Input<string | undefined>;
     /**
      * The Kubernetes API URL.
      */
@@ -142,7 +142,7 @@ export interface DeployTargetArgs {
     /**
      * Whether the deploy target is disabled.
      */
-    disabled?: pulumi.Input<boolean>;
+    disabled?: pulumi.Input<boolean | undefined>;
     /**
      * The deploy target name.
      */
@@ -150,13 +150,13 @@ export interface DeployTargetArgs {
     /**
      * Router pattern for the deploy target.
      */
-    routerPattern?: pulumi.Input<string>;
+    routerPattern?: pulumi.Input<string | undefined>;
     /**
      * SSH host for builds.
      */
-    sshHost?: pulumi.Input<string>;
+    sshHost?: pulumi.Input<string | undefined>;
     /**
      * SSH port for builds.
      */
-    sshPort?: pulumi.Input<string>;
+    sshPort?: pulumi.Input<string | undefined>;
 }

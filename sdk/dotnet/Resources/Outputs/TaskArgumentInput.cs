@@ -14,8 +14,17 @@ namespace Tag1Consulting.Lagoon.Resources.Outputs
     [OutputType]
     public sealed class TaskArgumentInput
     {
+        /// <summary>
+        /// The human-readable label shown in the Lagoon UI.
+        /// </summary>
         public readonly string DisplayName;
+        /// <summary>
+        /// The argument identifier (used as the variable name).
+        /// </summary>
         public readonly string Name;
+        /// <summary>
+        /// The argument type: STRING, ENVIRONMENT_SOURCE_NAME, or ENVIRONMENT_SOURCE_NAME_EXCLUDE_SELF.
+        /// </summary>
         public readonly string Type;
 
         [OutputConstructor]

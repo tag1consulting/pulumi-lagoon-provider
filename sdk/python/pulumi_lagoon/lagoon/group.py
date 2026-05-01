@@ -20,7 +20,7 @@ __all__ = ['GroupArgs', 'Group']
 class GroupArgs:
     def __init__(__self__, *,
                  name: pulumi.Input[_builtins.str],
-                 parent_group_name: Optional[pulumi.Input[_builtins.str]] = None):
+                 parent_group_name: pulumi.Input[Optional[_builtins.str]] = None):
         """
         The set of arguments for constructing a Group resource.
 
@@ -45,14 +45,14 @@ class GroupArgs:
 
     @_builtins.property
     @pulumi.getter(name="parentGroupName")
-    def parent_group_name(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def parent_group_name(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         The name of the parent group, for creating subgroups.
         """
         return pulumi.get(self, "parent_group_name")
 
     @parent_group_name.setter
-    def parent_group_name(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def parent_group_name(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "parent_group_name", value)
 
 
@@ -62,8 +62,8 @@ class Group(pulumi.CustomResource):
     def __init__(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 name: Optional[pulumi.Input[_builtins.str]] = None,
-                 parent_group_name: Optional[pulumi.Input[_builtins.str]] = None,
+                 name: pulumi.Input[Optional[_builtins.str]] = None,
+                 parent_group_name: pulumi.Input[Optional[_builtins.str]] = None,
                  __props__=None):
         """
         Manages a Lagoon group for organizing projects and users.
@@ -99,8 +99,8 @@ class Group(pulumi.CustomResource):
     def _internal_init(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 name: Optional[pulumi.Input[_builtins.str]] = None,
-                 parent_group_name: Optional[pulumi.Input[_builtins.str]] = None,
+                 name: pulumi.Input[Optional[_builtins.str]] = None,
+                 parent_group_name: pulumi.Input[Optional[_builtins.str]] = None,
                  __props__=None):
         opts = pulumi.ResourceOptions.merge(_utilities.get_resource_opts_defaults(), opts)
         if not isinstance(opts, pulumi.ResourceOptions):

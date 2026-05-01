@@ -67,21 +67,21 @@ export interface ProviderArgs {
     /**
      * The Lagoon GraphQL API endpoint URL.
      */
-    apiUrl?: pulumi.Input<string>;
+    apiUrl?: pulumi.Input<string | undefined>;
     /**
      * Disable SSL certificate verification when connecting to the Lagoon API.
      */
-    insecure?: pulumi.Input<boolean>;
+    insecure?: pulumi.Input<boolean | undefined>;
     /**
      * The audience claim for generated JWT tokens. Defaults to 'api.dev'.
      */
-    jwtAudience?: pulumi.Input<string>;
+    jwtAudience?: pulumi.Input<string | undefined>;
     /**
      * The Lagoon core JWTSECRET. Used to generate admin tokens on-the-fly.
      */
-    jwtSecret?: pulumi.Input<string>;
+    jwtSecret?: pulumi.Input<string | undefined>;
     /**
      * A pre-configured JWT authentication token for the Lagoon API.
      */
-    token?: pulumi.Input<string>;
+    token?: pulumi.Input<string | undefined>;
 }

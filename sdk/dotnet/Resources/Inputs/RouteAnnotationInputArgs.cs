@@ -13,9 +13,15 @@ namespace Tag1Consulting.Lagoon.Resources.Inputs
 
     public sealed class RouteAnnotationInputArgs : global::Pulumi.ResourceArgs
     {
+        /// <summary>
+        /// The annotation key.
+        /// </summary>
         [Input("key", required: true)]
         public Input<string> Key { get; set; } = null!;
 
+        /// <summary>
+        /// The annotation value.
+        /// </summary>
         [Input("value", required: true)]
         public Input<string> Value { get; set; } = null!;
 

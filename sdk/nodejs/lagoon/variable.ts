@@ -110,7 +110,7 @@ export interface VariableArgs {
     /**
      * Environment ID (omit for project-level variables).
      */
-    environmentId?: pulumi.Input<number>;
+    environmentId?: pulumi.Input<number | undefined>;
     /**
      * The variable name.
      */

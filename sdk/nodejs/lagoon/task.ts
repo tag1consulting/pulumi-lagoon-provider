@@ -155,31 +155,31 @@ export interface TaskArgs {
     /**
      * List of argument definitions for the task.
      */
-    arguments?: pulumi.Input<pulumi.Input<inputs.resources.TaskArgumentInputArgs>[]>;
+    arguments?: pulumi.Input<pulumi.Input<inputs.resources.TaskArgumentInputArgs>[] | undefined>;
     /**
      * Command to execute (required for 'command' type).
      */
-    command?: pulumi.Input<string>;
+    command?: pulumi.Input<string | undefined>;
     /**
      * Text to display for user confirmation.
      */
-    confirmationText?: pulumi.Input<string>;
+    confirmationText?: pulumi.Input<string | undefined>;
     /**
      * Task description.
      */
-    description?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
     /**
      * Environment ID (for environment-scoped tasks).
      */
-    environmentId?: pulumi.Input<number>;
+    environmentId?: pulumi.Input<number | undefined>;
     /**
      * Group name (for group-scoped tasks).
      */
-    groupName?: pulumi.Input<string>;
+    groupName?: pulumi.Input<string | undefined>;
     /**
      * Container image to run (required for 'image' type).
      */
-    image?: pulumi.Input<string>;
+    image?: pulumi.Input<string | undefined>;
     /**
      * The task definition name.
      */
@@ -187,11 +187,11 @@ export interface TaskArgs {
     /**
      * Permission level: 'guest', 'developer', or 'maintainer'.
      */
-    permission?: pulumi.Input<string>;
+    permission?: pulumi.Input<string | undefined>;
     /**
      * Project ID (for project-scoped tasks).
      */
-    projectId?: pulumi.Input<number>;
+    projectId?: pulumi.Input<number | undefined>;
     /**
      * Service container name to run the task in.
      */
@@ -199,7 +199,7 @@ export interface TaskArgs {
     /**
      * If true, task is available system-wide (platform admin only).
      */
-    systemWide?: pulumi.Input<boolean>;
+    systemWide?: pulumi.Input<boolean | undefined>;
     /**
      * Task type: 'command' or 'image'.
      */

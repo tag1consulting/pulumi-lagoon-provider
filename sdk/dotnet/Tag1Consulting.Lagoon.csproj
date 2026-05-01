@@ -11,7 +11,7 @@
     <PackageIcon>logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>lagoon;pulumi;infrastructure-as-code;kubernetes;hosting</PackageTags>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
 
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -54,11 +54,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
     <None Include="logo.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
-    <None Include="README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>

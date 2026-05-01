@@ -5,7 +5,7 @@
   keywords = ["lagoon", "hosting", "kubernetes", "pulumi", "infrastructure-as-code"]
   readme = "README.md"
   requires-python = ">=3.9"
-  version = "0.3.0"
+  version = "0.4.0"
   license = "Apache-2.0"
   authors = [{name = "Tag1 Consulting", email = "info@tag1consulting.com"}]
   classifiers = [
