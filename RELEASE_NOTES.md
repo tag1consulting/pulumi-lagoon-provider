@@ -61,6 +61,27 @@ ensure it exists before `pulumi up` runs.
   operation; if you see stale values persisting, confirm your Lagoon version
   honours null in `UpdateUserInput.patch`.
 
+## Bug Fixes
+
+### Fix JWT secret whitespace causing "invalid signature" (closes #171)
+
+The provider now trims leading/trailing whitespace from the `jwtSecret`, `token`,
+and `jwtAudience` configuration values before use. Previously, a trailing newline
+or space in the JWT secret (common when extracting from Kubernetes secrets via
+shell pipelines) would silently corrupt the HMAC signing key, producing tokens
+that the Lagoon API rejected with "Legacy token invalid: invalid signature".
+
+The same trimming is applied to `LAGOON_TOKEN` and `LAGOON_JWT_SECRET` environment
+variables.
+
+### Debug logging for token generation
+
+The provider now logs debug messages during `Configure` showing whether a token
+was generated from a JWT secret or loaded from an environment variable, along
+with the secret length and audience value. These messages are visible with
+`pulumi --logtostderr -v=9` and help diagnose authentication issues without
+exposing secret values.
+
 ---
 
 # Release v0.3.0 (2026-03-31)
