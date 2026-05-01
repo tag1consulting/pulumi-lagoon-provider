@@ -135,11 +135,11 @@ export interface ProjectArgs {
     /**
      * Whether to auto-idle environments (1=yes, 0=no).
      */
-    autoIdle?: pulumi.Input<number>;
+    autoIdle?: pulumi.Input<number | undefined>;
     /**
      * Regex pattern for branches to deploy.
      */
-    branches?: pulumi.Input<string>;
+    branches?: pulumi.Input<string | undefined>;
     /**
      * The deploy target (Kubernetes cluster) ID.
      */
@@ -155,17 +155,17 @@ export interface ProjectArgs {
     /**
      * Namespace pattern for the project on the cluster.
      */
-    openshiftProjectPattern?: pulumi.Input<string>;
+    openshiftProjectPattern?: pulumi.Input<string | undefined>;
     /**
      * Name of the production branch/environment.
      */
-    productionEnvironment?: pulumi.Input<string>;
+    productionEnvironment?: pulumi.Input<string | undefined>;
     /**
      * Regex pattern for pull requests to deploy.
      */
-    pullrequests?: pulumi.Input<string>;
+    pullrequests?: pulumi.Input<string | undefined>;
     /**
      * Whether to calculate storage (1=yes, 0=no).
      */
-    storageCalc?: pulumi.Input<number>;
+    storageCalc?: pulumi.Input<number | undefined>;
 }

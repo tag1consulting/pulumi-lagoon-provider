@@ -194,15 +194,15 @@ export interface RouteArgs {
     /**
      * Additional SAN domains for the TLS certificate (max 25).
      */
-    alternativeNames?: pulumi.Input<pulumi.Input<string>[]>;
+    alternativeNames?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Ingress annotations (key/value pairs, max 10).
      */
-    annotations?: pulumi.Input<pulumi.Input<inputs.resources.RouteAnnotationInputArgs>[]>;
+    annotations?: pulumi.Input<pulumi.Input<inputs.resources.RouteAnnotationInputArgs>[] | undefined>;
     /**
      * Whether to disable request verification.
      */
-    disableRequestVerification?: pulumi.Input<boolean>;
+    disableRequestVerification?: pulumi.Input<boolean | undefined>;
     /**
      * The primary domain for the route (e.g., 'example.com'). Changing this forces replacement.
      */
@@ -210,39 +210,39 @@ export interface RouteArgs {
     /**
      * The environment to attach this route to.
      */
-    environment?: pulumi.Input<string>;
+    environment?: pulumi.Input<string | undefined>;
     /**
      * Whether to enable HTTP Strict Transport Security.
      */
-    hstsEnabled?: pulumi.Input<boolean>;
+    hstsEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to include subdomains in HSTS.
      */
-    hstsIncludeSubdomains?: pulumi.Input<boolean>;
+    hstsIncludeSubdomains?: pulumi.Input<boolean | undefined>;
     /**
      * HSTS max-age in seconds.
      */
-    hstsMaxAge?: pulumi.Input<number>;
+    hstsMaxAge?: pulumi.Input<number | undefined>;
     /**
      * Whether to include the preload directive in HSTS.
      */
-    hstsPreload?: pulumi.Input<boolean>;
+    hstsPreload?: pulumi.Input<boolean | undefined>;
     /**
      * How to handle insecure (HTTP) traffic: Allow, Redirect, or None. Defaults to Redirect.
      */
-    insecure?: pulumi.Input<string>;
+    insecure?: pulumi.Input<string | undefined>;
     /**
      * Path to use for uptime monitoring.
      */
-    monitoringPath?: pulumi.Input<string>;
+    monitoringPath?: pulumi.Input<string | undefined>;
     /**
      * Path-based routing rules (max 10).
      */
-    pathRoutes?: pulumi.Input<pulumi.Input<inputs.resources.RoutePathRouteInputArgs>[]>;
+    pathRoutes?: pulumi.Input<pulumi.Input<inputs.resources.RoutePathRouteInputArgs>[] | undefined>;
     /**
      * Whether this is the primary route.
      */
-    primary?: pulumi.Input<boolean>;
+    primary?: pulumi.Input<boolean | undefined>;
     /**
      * The Lagoon project name this route belongs to.
      */
@@ -250,13 +250,13 @@ export interface RouteArgs {
     /**
      * Route type for active/standby: STANDARD, ACTIVE, or STANDBY.
      */
-    routeType?: pulumi.Input<string>;
+    routeType?: pulumi.Input<string | undefined>;
     /**
      * The service to route traffic to (e.g., 'nginx').
      */
-    service?: pulumi.Input<string>;
+    service?: pulumi.Input<string | undefined>;
     /**
      * Whether to use Let's Encrypt for TLS. Defaults to true.
      */
-    tlsAcme?: pulumi.Input<boolean>;
+    tlsAcme?: pulumi.Input<boolean | undefined>;
 }

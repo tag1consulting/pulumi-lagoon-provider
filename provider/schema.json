@@ -1,7 +1,7 @@
 {
   "name": "lagoon",
   "displayName": "Lagoon",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Manage Lagoon hosting platform resources as infrastructure-as-code.",
   "keywords": [
     "lagoon",

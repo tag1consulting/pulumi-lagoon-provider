@@ -43,6 +43,9 @@ _utilities.register(
    "lagoon:lagoon:ProjectNotification": "ProjectNotification",
    "lagoon:lagoon:Route": "Route",
    "lagoon:lagoon:Task": "Task",
+   "lagoon:lagoon:User": "User",
+   "lagoon:lagoon:UserGroupAssignment": "UserGroupAssignment",
+   "lagoon:lagoon:UserPlatformRole": "UserPlatformRole",
    "lagoon:lagoon:Variable": "Variable"
   }
  }

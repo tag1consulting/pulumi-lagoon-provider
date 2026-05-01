@@ -21,10 +21,10 @@ class DeployTargetConfigArgs:
     def __init__(__self__, *,
                  deploy_target_id: pulumi.Input[_builtins.int],
                  project_id: pulumi.Input[_builtins.int],
-                 branches: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_target_project_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 pullrequests: Optional[pulumi.Input[_builtins.str]] = None,
-                 weight: Optional[pulumi.Input[_builtins.int]] = None):
+                 branches: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_target_project_pattern: pulumi.Input[Optional[_builtins.str]] = None,
+                 pullrequests: pulumi.Input[Optional[_builtins.str]] = None,
+                 weight: pulumi.Input[Optional[_builtins.int]] = None):
         """
         The set of arguments for constructing a DeployTargetConfig resource.
 
@@ -72,50 +72,50 @@ class DeployTargetConfigArgs:
 
     @_builtins.property
     @pulumi.getter
-    def branches(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def branches(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Regex pattern for branches to match.
         """
         return pulumi.get(self, "branches")
 
     @branches.setter
-    def branches(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def branches(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "branches", value)
 
     @_builtins.property
     @pulumi.getter(name="deployTargetProjectPattern")
-    def deploy_target_project_pattern(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def deploy_target_project_pattern(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Optional namespace pattern.
         """
         return pulumi.get(self, "deploy_target_project_pattern")
 
     @deploy_target_project_pattern.setter
-    def deploy_target_project_pattern(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def deploy_target_project_pattern(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "deploy_target_project_pattern", value)
 
     @_builtins.property
     @pulumi.getter
-    def pullrequests(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def pullrequests(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Whether to handle PRs ('true' or 'false').
         """
         return pulumi.get(self, "pullrequests")
 
     @pullrequests.setter
-    def pullrequests(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def pullrequests(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "pullrequests", value)
 
     @_builtins.property
     @pulumi.getter
-    def weight(self) -> Optional[pulumi.Input[_builtins.int]]:
+    def weight(self) -> pulumi.Input[Optional[_builtins.int]]:
         """
         Priority weight (higher = more priority).
         """
         return pulumi.get(self, "weight")
 
     @weight.setter
-    def weight(self, value: Optional[pulumi.Input[_builtins.int]]):
+    def weight(self, value: pulumi.Input[Optional[_builtins.int]]):
         pulumi.set(self, "weight", value)
 
 
@@ -125,12 +125,12 @@ class DeployTargetConfig(pulumi.CustomResource):
     def __init__(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 branches: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_target_id: Optional[pulumi.Input[_builtins.int]] = None,
-                 deploy_target_project_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 project_id: Optional[pulumi.Input[_builtins.int]] = None,
-                 pullrequests: Optional[pulumi.Input[_builtins.str]] = None,
-                 weight: Optional[pulumi.Input[_builtins.int]] = None,
+                 branches: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_target_id: pulumi.Input[Optional[_builtins.int]] = None,
+                 deploy_target_project_pattern: pulumi.Input[Optional[_builtins.str]] = None,
+                 project_id: pulumi.Input[Optional[_builtins.int]] = None,
+                 pullrequests: pulumi.Input[Optional[_builtins.str]] = None,
+                 weight: pulumi.Input[Optional[_builtins.int]] = None,
                  __props__=None):
         """
         Manages a deploy target configuration to route branches/PRs to specific clusters.
@@ -170,12 +170,12 @@ class DeployTargetConfig(pulumi.CustomResource):
     def _internal_init(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 branches: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_target_id: Optional[pulumi.Input[_builtins.int]] = None,
-                 deploy_target_project_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 project_id: Optional[pulumi.Input[_builtins.int]] = None,
-                 pullrequests: Optional[pulumi.Input[_builtins.str]] = None,
-                 weight: Optional[pulumi.Input[_builtins.int]] = None,
+                 branches: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_target_id: pulumi.Input[Optional[_builtins.int]] = None,
+                 deploy_target_project_pattern: pulumi.Input[Optional[_builtins.str]] = None,
+                 project_id: pulumi.Input[Optional[_builtins.int]] = None,
+                 pullrequests: pulumi.Input[Optional[_builtins.str]] = None,
+                 weight: pulumi.Input[Optional[_builtins.int]] = None,
                  __props__=None):
         opts = pulumi.ResourceOptions.merge(_utilities.get_resource_opts_defaults(), opts)
         if not isinstance(opts, pulumi.ResourceOptions):

@@ -85,5 +85,5 @@ export interface GroupArgs {
     /**
      * The name of the parent group, for creating subgroups.
      */
-    parentGroupName?: pulumi.Input<string>;
+    parentGroupName?: pulumi.Input<string | undefined>;
 }

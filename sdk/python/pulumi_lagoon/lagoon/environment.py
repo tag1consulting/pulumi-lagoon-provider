@@ -23,11 +23,11 @@ class EnvironmentArgs:
                  environment_type: pulumi.Input[_builtins.str],
                  name: pulumi.Input[_builtins.str],
                  project_id: pulumi.Input[_builtins.int],
-                 auto_idle: Optional[pulumi.Input[_builtins.int]] = None,
-                 deploy_base_ref: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_head_ref: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_title: Optional[pulumi.Input[_builtins.str]] = None,
-                 openshift_project_name: Optional[pulumi.Input[_builtins.str]] = None):
+                 auto_idle: pulumi.Input[Optional[_builtins.int]] = None,
+                 deploy_base_ref: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_head_ref: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_title: pulumi.Input[Optional[_builtins.str]] = None,
+                 openshift_project_name: pulumi.Input[Optional[_builtins.str]] = None):
         """
         The set of arguments for constructing a Environment resource.
 
@@ -106,62 +106,62 @@ class EnvironmentArgs:
 
     @_builtins.property
     @pulumi.getter(name="autoIdle")
-    def auto_idle(self) -> Optional[pulumi.Input[_builtins.int]]:
+    def auto_idle(self) -> pulumi.Input[Optional[_builtins.int]]:
         """
         Whether to auto-idle this environment (1=yes, 0=no).
         """
         return pulumi.get(self, "auto_idle")
 
     @auto_idle.setter
-    def auto_idle(self, value: Optional[pulumi.Input[_builtins.int]]):
+    def auto_idle(self, value: pulumi.Input[Optional[_builtins.int]]):
         pulumi.set(self, "auto_idle", value)
 
     @_builtins.property
     @pulumi.getter(name="deployBaseRef")
-    def deploy_base_ref(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def deploy_base_ref(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         The base ref for the deployment.
         """
         return pulumi.get(self, "deploy_base_ref")
 
     @deploy_base_ref.setter
-    def deploy_base_ref(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def deploy_base_ref(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "deploy_base_ref", value)
 
     @_builtins.property
     @pulumi.getter(name="deployHeadRef")
-    def deploy_head_ref(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def deploy_head_ref(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         The head ref for pull request deployments.
         """
         return pulumi.get(self, "deploy_head_ref")
 
     @deploy_head_ref.setter
-    def deploy_head_ref(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def deploy_head_ref(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "deploy_head_ref", value)
 
     @_builtins.property
     @pulumi.getter(name="deployTitle")
-    def deploy_title(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def deploy_title(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Title for pull request deployments.
         """
         return pulumi.get(self, "deploy_title")
 
     @deploy_title.setter
-    def deploy_title(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def deploy_title(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "deploy_title", value)
 
     @_builtins.property
     @pulumi.getter(name="openshiftProjectName")
-    def openshift_project_name(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def openshift_project_name(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Override namespace name on the cluster.
         """
         return pulumi.get(self, "openshift_project_name")
 
     @openshift_project_name.setter
-    def openshift_project_name(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def openshift_project_name(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "openshift_project_name", value)
 
 
@@ -171,15 +171,15 @@ class Environment(pulumi.CustomResource):
     def __init__(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 auto_idle: Optional[pulumi.Input[_builtins.int]] = None,
-                 deploy_base_ref: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_head_ref: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_title: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_type: Optional[pulumi.Input[_builtins.str]] = None,
-                 environment_type: Optional[pulumi.Input[_builtins.str]] = None,
-                 name: Optional[pulumi.Input[_builtins.str]] = None,
-                 openshift_project_name: Optional[pulumi.Input[_builtins.str]] = None,
-                 project_id: Optional[pulumi.Input[_builtins.int]] = None,
+                 auto_idle: pulumi.Input[Optional[_builtins.int]] = None,
+                 deploy_base_ref: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_head_ref: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_title: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_type: pulumi.Input[Optional[_builtins.str]] = None,
+                 environment_type: pulumi.Input[Optional[_builtins.str]] = None,
+                 name: pulumi.Input[Optional[_builtins.str]] = None,
+                 openshift_project_name: pulumi.Input[Optional[_builtins.str]] = None,
+                 project_id: pulumi.Input[Optional[_builtins.int]] = None,
                  __props__=None):
         """
         Manages a Lagoon environment (branch/PR deployment).
@@ -222,15 +222,15 @@ class Environment(pulumi.CustomResource):
     def _internal_init(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 auto_idle: Optional[pulumi.Input[_builtins.int]] = None,
-                 deploy_base_ref: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_head_ref: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_title: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploy_type: Optional[pulumi.Input[_builtins.str]] = None,
-                 environment_type: Optional[pulumi.Input[_builtins.str]] = None,
-                 name: Optional[pulumi.Input[_builtins.str]] = None,
-                 openshift_project_name: Optional[pulumi.Input[_builtins.str]] = None,
-                 project_id: Optional[pulumi.Input[_builtins.int]] = None,
+                 auto_idle: pulumi.Input[Optional[_builtins.int]] = None,
+                 deploy_base_ref: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_head_ref: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_title: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploy_type: pulumi.Input[Optional[_builtins.str]] = None,
+                 environment_type: pulumi.Input[Optional[_builtins.str]] = None,
+                 name: pulumi.Input[Optional[_builtins.str]] = None,
+                 openshift_project_name: pulumi.Input[Optional[_builtins.str]] = None,
+                 project_id: pulumi.Input[Optional[_builtins.int]] = None,
                  __props__=None):
         opts = pulumi.ResourceOptions.merge(_utilities.get_resource_opts_defaults(), opts)
         if not isinstance(opts, pulumi.ResourceOptions):

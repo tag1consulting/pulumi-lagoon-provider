@@ -1,4 +1,4 @@
-# Release v0.4.0 (unreleased)
+# Release v0.4.0 (2026-05-01)
 
 Feature release adding User resource management: full CRUD for Lagoon users, group role assignments, and platform role assignments.
 

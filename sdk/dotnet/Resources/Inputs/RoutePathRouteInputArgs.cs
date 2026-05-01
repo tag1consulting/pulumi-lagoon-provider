@@ -13,9 +13,15 @@ namespace Tag1Consulting.Lagoon.Resources.Inputs
 
     public sealed class RoutePathRouteInputArgs : global::Pulumi.ResourceArgs
     {
+        /// <summary>
+        /// The URL path prefix to match (e.g., '/api').
+        /// </summary>
         [Input("path", required: true)]
         public Input<string> Path { get; set; } = null!;
 
+        /// <summary>
+        /// The service to route matching requests to.
+        /// </summary>
         [Input("toService", required: true)]
         public Input<string> ToService { get; set; } = null!;
 

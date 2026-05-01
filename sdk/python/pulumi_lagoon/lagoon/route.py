@@ -22,21 +22,21 @@ class RouteArgs:
     def __init__(__self__, *,
                  domain: pulumi.Input[_builtins.str],
                  project_name: pulumi.Input[_builtins.str],
-                 alternative_names: Optional[pulumi.Input[Sequence[pulumi.Input[_builtins.str]]]] = None,
-                 annotations: Optional[pulumi.Input[Sequence[pulumi.Input['_resources.RouteAnnotationInputArgs']]]] = None,
-                 disable_request_verification: Optional[pulumi.Input[_builtins.bool]] = None,
-                 environment: Optional[pulumi.Input[_builtins.str]] = None,
-                 hsts_enabled: Optional[pulumi.Input[_builtins.bool]] = None,
-                 hsts_include_subdomains: Optional[pulumi.Input[_builtins.bool]] = None,
-                 hsts_max_age: Optional[pulumi.Input[_builtins.int]] = None,
-                 hsts_preload: Optional[pulumi.Input[_builtins.bool]] = None,
-                 insecure: Optional[pulumi.Input[_builtins.str]] = None,
-                 monitoring_path: Optional[pulumi.Input[_builtins.str]] = None,
-                 path_routes: Optional[pulumi.Input[Sequence[pulumi.Input['_resources.RoutePathRouteInputArgs']]]] = None,
-                 primary: Optional[pulumi.Input[_builtins.bool]] = None,
-                 route_type: Optional[pulumi.Input[_builtins.str]] = None,
-                 service: Optional[pulumi.Input[_builtins.str]] = None,
-                 tls_acme: Optional[pulumi.Input[_builtins.bool]] = None):
+                 alternative_names: pulumi.Input[Optional[Sequence[pulumi.Input[_builtins.str]]]] = None,
+                 annotations: pulumi.Input[Optional[Sequence[pulumi.Input['_resources.RouteAnnotationInputArgs']]]] = None,
+                 disable_request_verification: pulumi.Input[Optional[_builtins.bool]] = None,
+                 environment: pulumi.Input[Optional[_builtins.str]] = None,
+                 hsts_enabled: pulumi.Input[Optional[_builtins.bool]] = None,
+                 hsts_include_subdomains: pulumi.Input[Optional[_builtins.bool]] = None,
+                 hsts_max_age: pulumi.Input[Optional[_builtins.int]] = None,
+                 hsts_preload: pulumi.Input[Optional[_builtins.bool]] = None,
+                 insecure: pulumi.Input[Optional[_builtins.str]] = None,
+                 monitoring_path: pulumi.Input[Optional[_builtins.str]] = None,
+                 path_routes: pulumi.Input[Optional[Sequence[pulumi.Input['_resources.RoutePathRouteInputArgs']]]] = None,
+                 primary: pulumi.Input[Optional[_builtins.bool]] = None,
+                 route_type: pulumi.Input[Optional[_builtins.str]] = None,
+                 service: pulumi.Input[Optional[_builtins.str]] = None,
+                 tls_acme: pulumi.Input[Optional[_builtins.bool]] = None):
         """
         The set of arguments for constructing a Route resource.
 
@@ -117,182 +117,182 @@ class RouteArgs:
 
     @_builtins.property
     @pulumi.getter(name="alternativeNames")
-    def alternative_names(self) -> Optional[pulumi.Input[Sequence[pulumi.Input[_builtins.str]]]]:
+    def alternative_names(self) -> pulumi.Input[Optional[Sequence[pulumi.Input[_builtins.str]]]]:
         """
         Additional SAN domains for the TLS certificate (max 25).
         """
         return pulumi.get(self, "alternative_names")
 
     @alternative_names.setter
-    def alternative_names(self, value: Optional[pulumi.Input[Sequence[pulumi.Input[_builtins.str]]]]):
+    def alternative_names(self, value: pulumi.Input[Optional[Sequence[pulumi.Input[_builtins.str]]]]):
         pulumi.set(self, "alternative_names", value)
 
     @_builtins.property
     @pulumi.getter
-    def annotations(self) -> Optional[pulumi.Input[Sequence[pulumi.Input['_resources.RouteAnnotationInputArgs']]]]:
+    def annotations(self) -> pulumi.Input[Optional[Sequence[pulumi.Input['_resources.RouteAnnotationInputArgs']]]]:
         """
         Ingress annotations (key/value pairs, max 10).
         """
         return pulumi.get(self, "annotations")
 
     @annotations.setter
-    def annotations(self, value: Optional[pulumi.Input[Sequence[pulumi.Input['_resources.RouteAnnotationInputArgs']]]]):
+    def annotations(self, value: pulumi.Input[Optional[Sequence[pulumi.Input['_resources.RouteAnnotationInputArgs']]]]):
         pulumi.set(self, "annotations", value)
 
     @_builtins.property
     @pulumi.getter(name="disableRequestVerification")
-    def disable_request_verification(self) -> Optional[pulumi.Input[_builtins.bool]]:
+    def disable_request_verification(self) -> pulumi.Input[Optional[_builtins.bool]]:
         """
         Whether to disable request verification.
         """
         return pulumi.get(self, "disable_request_verification")
 
     @disable_request_verification.setter
-    def disable_request_verification(self, value: Optional[pulumi.Input[_builtins.bool]]):
+    def disable_request_verification(self, value: pulumi.Input[Optional[_builtins.bool]]):
         pulumi.set(self, "disable_request_verification", value)
 
     @_builtins.property
     @pulumi.getter
-    def environment(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def environment(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         The environment to attach this route to.
         """
         return pulumi.get(self, "environment")
 
     @environment.setter
-    def environment(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def environment(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "environment", value)
 
     @_builtins.property
     @pulumi.getter(name="hstsEnabled")
-    def hsts_enabled(self) -> Optional[pulumi.Input[_builtins.bool]]:
+    def hsts_enabled(self) -> pulumi.Input[Optional[_builtins.bool]]:
         """
         Whether to enable HTTP Strict Transport Security.
         """
         return pulumi.get(self, "hsts_enabled")
 
     @hsts_enabled.setter
-    def hsts_enabled(self, value: Optional[pulumi.Input[_builtins.bool]]):
+    def hsts_enabled(self, value: pulumi.Input[Optional[_builtins.bool]]):
         pulumi.set(self, "hsts_enabled", value)
 
     @_builtins.property
     @pulumi.getter(name="hstsIncludeSubdomains")
-    def hsts_include_subdomains(self) -> Optional[pulumi.Input[_builtins.bool]]:
+    def hsts_include_subdomains(self) -> pulumi.Input[Optional[_builtins.bool]]:
         """
         Whether to include subdomains in HSTS.
         """
         return pulumi.get(self, "hsts_include_subdomains")
 
     @hsts_include_subdomains.setter
-    def hsts_include_subdomains(self, value: Optional[pulumi.Input[_builtins.bool]]):
+    def hsts_include_subdomains(self, value: pulumi.Input[Optional[_builtins.bool]]):
         pulumi.set(self, "hsts_include_subdomains", value)
 
     @_builtins.property
     @pulumi.getter(name="hstsMaxAge")
-    def hsts_max_age(self) -> Optional[pulumi.Input[_builtins.int]]:
+    def hsts_max_age(self) -> pulumi.Input[Optional[_builtins.int]]:
         """
         HSTS max-age in seconds.
         """
         return pulumi.get(self, "hsts_max_age")
 
     @hsts_max_age.setter
-    def hsts_max_age(self, value: Optional[pulumi.Input[_builtins.int]]):
+    def hsts_max_age(self, value: pulumi.Input[Optional[_builtins.int]]):
         pulumi.set(self, "hsts_max_age", value)
 
     @_builtins.property
     @pulumi.getter(name="hstsPreload")
-    def hsts_preload(self) -> Optional[pulumi.Input[_builtins.bool]]:
+    def hsts_preload(self) -> pulumi.Input[Optional[_builtins.bool]]:
         """
         Whether to include the preload directive in HSTS.
         """
         return pulumi.get(self, "hsts_preload")
 
     @hsts_preload.setter
-    def hsts_preload(self, value: Optional[pulumi.Input[_builtins.bool]]):
+    def hsts_preload(self, value: pulumi.Input[Optional[_builtins.bool]]):
         pulumi.set(self, "hsts_preload", value)
 
     @_builtins.property
     @pulumi.getter
-    def insecure(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def insecure(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         How to handle insecure (HTTP) traffic: Allow, Redirect, or None. Defaults to Redirect.
         """
         return pulumi.get(self, "insecure")
 
     @insecure.setter
-    def insecure(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def insecure(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "insecure", value)
 
     @_builtins.property
     @pulumi.getter(name="monitoringPath")
-    def monitoring_path(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def monitoring_path(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Path to use for uptime monitoring.
         """
         return pulumi.get(self, "monitoring_path")
 
     @monitoring_path.setter
-    def monitoring_path(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def monitoring_path(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "monitoring_path", value)
 
     @_builtins.property
     @pulumi.getter(name="pathRoutes")
-    def path_routes(self) -> Optional[pulumi.Input[Sequence[pulumi.Input['_resources.RoutePathRouteInputArgs']]]]:
+    def path_routes(self) -> pulumi.Input[Optional[Sequence[pulumi.Input['_resources.RoutePathRouteInputArgs']]]]:
         """
         Path-based routing rules (max 10).
         """
         return pulumi.get(self, "path_routes")
 
     @path_routes.setter
-    def path_routes(self, value: Optional[pulumi.Input[Sequence[pulumi.Input['_resources.RoutePathRouteInputArgs']]]]):
+    def path_routes(self, value: pulumi.Input[Optional[Sequence[pulumi.Input['_resources.RoutePathRouteInputArgs']]]]):
         pulumi.set(self, "path_routes", value)
 
     @_builtins.property
     @pulumi.getter
-    def primary(self) -> Optional[pulumi.Input[_builtins.bool]]:
+    def primary(self) -> pulumi.Input[Optional[_builtins.bool]]:
         """
         Whether this is the primary route.
         """
         return pulumi.get(self, "primary")
 
     @primary.setter
-    def primary(self, value: Optional[pulumi.Input[_builtins.bool]]):
+    def primary(self, value: pulumi.Input[Optional[_builtins.bool]]):
         pulumi.set(self, "primary", value)
 
     @_builtins.property
     @pulumi.getter(name="routeType")
-    def route_type(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def route_type(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Route type for active/standby: STANDARD, ACTIVE, or STANDBY.
         """
         return pulumi.get(self, "route_type")
 
     @route_type.setter
-    def route_type(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def route_type(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "route_type", value)
 
     @_builtins.property
     @pulumi.getter
-    def service(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def service(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         The service to route traffic to (e.g., 'nginx').
         """
         return pulumi.get(self, "service")
 
     @service.setter
-    def service(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def service(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "service", value)
 
     @_builtins.property
     @pulumi.getter(name="tlsAcme")
-    def tls_acme(self) -> Optional[pulumi.Input[_builtins.bool]]:
+    def tls_acme(self) -> pulumi.Input[Optional[_builtins.bool]]:
         """
         Whether to use Let's Encrypt for TLS. Defaults to true.
         """
         return pulumi.get(self, "tls_acme")
 
     @tls_acme.setter
-    def tls_acme(self, value: Optional[pulumi.Input[_builtins.bool]]):
+    def tls_acme(self, value: pulumi.Input[Optional[_builtins.bool]]):
         pulumi.set(self, "tls_acme", value)
 
 
@@ -302,23 +302,23 @@ class Route(pulumi.CustomResource):
     def __init__(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 alternative_names: Optional[pulumi.Input[Sequence[pulumi.Input[_builtins.str]]]] = None,
-                 annotations: Optional[pulumi.Input[Sequence[pulumi.Input[Union['_resources.RouteAnnotationInputArgs', '_resources.RouteAnnotationInputArgsDict']]]]] = None,
-                 disable_request_verification: Optional[pulumi.Input[_builtins.bool]] = None,
-                 domain: Optional[pulumi.Input[_builtins.str]] = None,
-                 environment: Optional[pulumi.Input[_builtins.str]] = None,
-                 hsts_enabled: Optional[pulumi.Input[_builtins.bool]] = None,
-                 hsts_include_subdomains: Optional[pulumi.Input[_builtins.bool]] = None,
-                 hsts_max_age: Optional[pulumi.Input[_builtins.int]] = None,
-                 hsts_preload: Optional[pulumi.Input[_builtins.bool]] = None,
-                 insecure: Optional[pulumi.Input[_builtins.str]] = None,
-                 monitoring_path: Optional[pulumi.Input[_builtins.str]] = None,
-                 path_routes: Optional[pulumi.Input[Sequence[pulumi.Input[Union['_resources.RoutePathRouteInputArgs', '_resources.RoutePathRouteInputArgsDict']]]]] = None,
-                 primary: Optional[pulumi.Input[_builtins.bool]] = None,
-                 project_name: Optional[pulumi.Input[_builtins.str]] = None,
-                 route_type: Optional[pulumi.Input[_builtins.str]] = None,
-                 service: Optional[pulumi.Input[_builtins.str]] = None,
-                 tls_acme: Optional[pulumi.Input[_builtins.bool]] = None,
+                 alternative_names: pulumi.Input[Optional[Sequence[pulumi.Input[_builtins.str]]]] = None,
+                 annotations: pulumi.Input[Optional[Sequence[pulumi.Input[Union['_resources.RouteAnnotationInputArgs', '_resources.RouteAnnotationInputArgsDict']]]]] = None,
+                 disable_request_verification: pulumi.Input[Optional[_builtins.bool]] = None,
+                 domain: pulumi.Input[Optional[_builtins.str]] = None,
+                 environment: pulumi.Input[Optional[_builtins.str]] = None,
+                 hsts_enabled: pulumi.Input[Optional[_builtins.bool]] = None,
+                 hsts_include_subdomains: pulumi.Input[Optional[_builtins.bool]] = None,
+                 hsts_max_age: pulumi.Input[Optional[_builtins.int]] = None,
+                 hsts_preload: pulumi.Input[Optional[_builtins.bool]] = None,
+                 insecure: pulumi.Input[Optional[_builtins.str]] = None,
+                 monitoring_path: pulumi.Input[Optional[_builtins.str]] = None,
+                 path_routes: pulumi.Input[Optional[Sequence[pulumi.Input[Union['_resources.RoutePathRouteInputArgs', '_resources.RoutePathRouteInputArgsDict']]]]] = None,
+                 primary: pulumi.Input[Optional[_builtins.bool]] = None,
+                 project_name: pulumi.Input[Optional[_builtins.str]] = None,
+                 route_type: pulumi.Input[Optional[_builtins.str]] = None,
+                 service: pulumi.Input[Optional[_builtins.str]] = None,
+                 tls_acme: pulumi.Input[Optional[_builtins.bool]] = None,
                  __props__=None):
         """
         Manages a Lagoon API-defined route on a project (requires Lagoon v2.29.0+).
@@ -369,23 +369,23 @@ class Route(pulumi.CustomResource):
     def _internal_init(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 alternative_names: Optional[pulumi.Input[Sequence[pulumi.Input[_builtins.str]]]] = None,
-                 annotations: Optional[pulumi.Input[Sequence[pulumi.Input[Union['_resources.RouteAnnotationInputArgs', '_resources.RouteAnnotationInputArgsDict']]]]] = None,
-                 disable_request_verification: Optional[pulumi.Input[_builtins.bool]] = None,
-                 domain: Optional[pulumi.Input[_builtins.str]] = None,
-                 environment: Optional[pulumi.Input[_builtins.str]] = None,
-                 hsts_enabled: Optional[pulumi.Input[_builtins.bool]] = None,
-                 hsts_include_subdomains: Optional[pulumi.Input[_builtins.bool]] = None,
-                 hsts_max_age: Optional[pulumi.Input[_builtins.int]] = None,
-                 hsts_preload: Optional[pulumi.Input[_builtins.bool]] = None,
-                 insecure: Optional[pulumi.Input[_builtins.str]] = None,
-                 monitoring_path: Optional[pulumi.Input[_builtins.str]] = None,
-                 path_routes: Optional[pulumi.Input[Sequence[pulumi.Input[Union['_resources.RoutePathRouteInputArgs', '_resources.RoutePathRouteInputArgsDict']]]]] = None,
-                 primary: Optional[pulumi.Input[_builtins.bool]] = None,
-                 project_name: Optional[pulumi.Input[_builtins.str]] = None,
-                 route_type: Optional[pulumi.Input[_builtins.str]] = None,
-                 service: Optional[pulumi.Input[_builtins.str]] = None,
-                 tls_acme: Optional[pulumi.Input[_builtins.bool]] = None,
+                 alternative_names: pulumi.Input[Optional[Sequence[pulumi.Input[_builtins.str]]]] = None,
+                 annotations: pulumi.Input[Optional[Sequence[pulumi.Input[Union['_resources.RouteAnnotationInputArgs', '_resources.RouteAnnotationInputArgsDict']]]]] = None,
+                 disable_request_verification: pulumi.Input[Optional[_builtins.bool]] = None,
+                 domain: pulumi.Input[Optional[_builtins.str]] = None,
+                 environment: pulumi.Input[Optional[_builtins.str]] = None,
+                 hsts_enabled: pulumi.Input[Optional[_builtins.bool]] = None,
+                 hsts_include_subdomains: pulumi.Input[Optional[_builtins.bool]] = None,
+                 hsts_max_age: pulumi.Input[Optional[_builtins.int]] = None,
+                 hsts_preload: pulumi.Input[Optional[_builtins.bool]] = None,
+                 insecure: pulumi.Input[Optional[_builtins.str]] = None,
+                 monitoring_path: pulumi.Input[Optional[_builtins.str]] = None,
+                 path_routes: pulumi.Input[Optional[Sequence[pulumi.Input[Union['_resources.RoutePathRouteInputArgs', '_resources.RoutePathRouteInputArgsDict']]]]] = None,
+                 primary: pulumi.Input[Optional[_builtins.bool]] = None,
+                 project_name: pulumi.Input[Optional[_builtins.str]] = None,
+                 route_type: pulumi.Input[Optional[_builtins.str]] = None,
+                 service: pulumi.Input[Optional[_builtins.str]] = None,
+                 tls_acme: pulumi.Input[Optional[_builtins.bool]] = None,
                  __props__=None):
         opts = pulumi.ResourceOptions.merge(_utilities.get_resource_opts_defaults(), opts)
         if not isinstance(opts, pulumi.ResourceOptions):

@@ -14,7 +14,13 @@ namespace Tag1Consulting.Lagoon.Resources.Outputs
     [OutputType]
     public sealed class RouteAnnotationInput
     {
+        /// <summary>
+        /// The annotation key.
+        /// </summary>
         public readonly string Key;
+        /// <summary>
+        /// The annotation value.
+        /// </summary>
         public readonly string Value;
 
         [OutputConstructor]

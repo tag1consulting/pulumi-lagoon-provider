@@ -14,7 +14,13 @@ namespace Tag1Consulting.Lagoon.Resources.Outputs
     [OutputType]
     public sealed class RoutePathRouteInput
     {
+        /// <summary>
+        /// The URL path prefix to match (e.g., '/api').
+        /// </summary>
         public readonly string Path;
+        /// <summary>
+        /// The service to route matching requests to.
+        /// </summary>
         public readonly string ToService;
 
         [OutputConstructor]

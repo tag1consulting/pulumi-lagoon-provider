@@ -21,13 +21,13 @@ class DeployTargetArgs:
     def __init__(__self__, *,
                  console_url: pulumi.Input[_builtins.str],
                  name: pulumi.Input[_builtins.str],
-                 build_image: Optional[pulumi.Input[_builtins.str]] = None,
-                 cloud_provider: Optional[pulumi.Input[_builtins.str]] = None,
-                 cloud_region: Optional[pulumi.Input[_builtins.str]] = None,
-                 disabled: Optional[pulumi.Input[_builtins.bool]] = None,
-                 router_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 ssh_host: Optional[pulumi.Input[_builtins.str]] = None,
-                 ssh_port: Optional[pulumi.Input[_builtins.str]] = None):
+                 build_image: pulumi.Input[Optional[_builtins.str]] = None,
+                 cloud_provider: pulumi.Input[Optional[_builtins.str]] = None,
+                 cloud_region: pulumi.Input[Optional[_builtins.str]] = None,
+                 disabled: pulumi.Input[Optional[_builtins.bool]] = None,
+                 router_pattern: pulumi.Input[Optional[_builtins.str]] = None,
+                 ssh_host: pulumi.Input[Optional[_builtins.str]] = None,
+                 ssh_port: pulumi.Input[Optional[_builtins.str]] = None):
         """
         The set of arguments for constructing a DeployTarget resource.
 
@@ -84,86 +84,86 @@ class DeployTargetArgs:
 
     @_builtins.property
     @pulumi.getter(name="buildImage")
-    def build_image(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def build_image(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Custom build image.
         """
         return pulumi.get(self, "build_image")
 
     @build_image.setter
-    def build_image(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def build_image(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "build_image", value)
 
     @_builtins.property
     @pulumi.getter(name="cloudProvider")
-    def cloud_provider(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def cloud_provider(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Cloud provider (e.g., 'kind', 'aws', 'gcp'). Defaults to 'kind'.
         """
         return pulumi.get(self, "cloud_provider")
 
     @cloud_provider.setter
-    def cloud_provider(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def cloud_provider(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "cloud_provider", value)
 
     @_builtins.property
     @pulumi.getter(name="cloudRegion")
-    def cloud_region(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def cloud_region(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Cloud region (e.g., 'us-east-1', 'local'). Defaults to 'local'.
         """
         return pulumi.get(self, "cloud_region")
 
     @cloud_region.setter
-    def cloud_region(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def cloud_region(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "cloud_region", value)
 
     @_builtins.property
     @pulumi.getter
-    def disabled(self) -> Optional[pulumi.Input[_builtins.bool]]:
+    def disabled(self) -> pulumi.Input[Optional[_builtins.bool]]:
         """
         Whether the deploy target is disabled.
         """
         return pulumi.get(self, "disabled")
 
     @disabled.setter
-    def disabled(self, value: Optional[pulumi.Input[_builtins.bool]]):
+    def disabled(self, value: pulumi.Input[Optional[_builtins.bool]]):
         pulumi.set(self, "disabled", value)
 
     @_builtins.property
     @pulumi.getter(name="routerPattern")
-    def router_pattern(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def router_pattern(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Router pattern for the deploy target.
         """
         return pulumi.get(self, "router_pattern")
 
     @router_pattern.setter
-    def router_pattern(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def router_pattern(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "router_pattern", value)
 
     @_builtins.property
     @pulumi.getter(name="sshHost")
-    def ssh_host(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def ssh_host(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         SSH host for builds.
         """
         return pulumi.get(self, "ssh_host")
 
     @ssh_host.setter
-    def ssh_host(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def ssh_host(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "ssh_host", value)
 
     @_builtins.property
     @pulumi.getter(name="sshPort")
-    def ssh_port(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def ssh_port(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         SSH port for builds.
         """
         return pulumi.get(self, "ssh_port")
 
     @ssh_port.setter
-    def ssh_port(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def ssh_port(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "ssh_port", value)
 
 
@@ -173,15 +173,15 @@ class DeployTarget(pulumi.CustomResource):
     def __init__(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 build_image: Optional[pulumi.Input[_builtins.str]] = None,
-                 cloud_provider: Optional[pulumi.Input[_builtins.str]] = None,
-                 cloud_region: Optional[pulumi.Input[_builtins.str]] = None,
-                 console_url: Optional[pulumi.Input[_builtins.str]] = None,
-                 disabled: Optional[pulumi.Input[_builtins.bool]] = None,
-                 name: Optional[pulumi.Input[_builtins.str]] = None,
-                 router_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 ssh_host: Optional[pulumi.Input[_builtins.str]] = None,
-                 ssh_port: Optional[pulumi.Input[_builtins.str]] = None,
+                 build_image: pulumi.Input[Optional[_builtins.str]] = None,
+                 cloud_provider: pulumi.Input[Optional[_builtins.str]] = None,
+                 cloud_region: pulumi.Input[Optional[_builtins.str]] = None,
+                 console_url: pulumi.Input[Optional[_builtins.str]] = None,
+                 disabled: pulumi.Input[Optional[_builtins.bool]] = None,
+                 name: pulumi.Input[Optional[_builtins.str]] = None,
+                 router_pattern: pulumi.Input[Optional[_builtins.str]] = None,
+                 ssh_host: pulumi.Input[Optional[_builtins.str]] = None,
+                 ssh_port: pulumi.Input[Optional[_builtins.str]] = None,
                  __props__=None):
         """
         Manages a Lagoon Kubernetes deploy target (cluster).
@@ -224,15 +224,15 @@ class DeployTarget(pulumi.CustomResource):
     def _internal_init(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 build_image: Optional[pulumi.Input[_builtins.str]] = None,
-                 cloud_provider: Optional[pulumi.Input[_builtins.str]] = None,
-                 cloud_region: Optional[pulumi.Input[_builtins.str]] = None,
-                 console_url: Optional[pulumi.Input[_builtins.str]] = None,
-                 disabled: Optional[pulumi.Input[_builtins.bool]] = None,
-                 name: Optional[pulumi.Input[_builtins.str]] = None,
-                 router_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 ssh_host: Optional[pulumi.Input[_builtins.str]] = None,
-                 ssh_port: Optional[pulumi.Input[_builtins.str]] = None,
+                 build_image: pulumi.Input[Optional[_builtins.str]] = None,
+                 cloud_provider: pulumi.Input[Optional[_builtins.str]] = None,
+                 cloud_region: pulumi.Input[Optional[_builtins.str]] = None,
+                 console_url: pulumi.Input[Optional[_builtins.str]] = None,
+                 disabled: pulumi.Input[Optional[_builtins.bool]] = None,
+                 name: pulumi.Input[Optional[_builtins.str]] = None,
+                 router_pattern: pulumi.Input[Optional[_builtins.str]] = None,
+                 ssh_host: pulumi.Input[Optional[_builtins.str]] = None,
+                 ssh_port: pulumi.Input[Optional[_builtins.str]] = None,
                  __props__=None):
         opts = pulumi.ResourceOptions.merge(_utilities.get_resource_opts_defaults(), opts)
         if not isinstance(opts, pulumi.ResourceOptions):

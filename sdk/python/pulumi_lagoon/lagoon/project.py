@@ -22,12 +22,12 @@ class ProjectArgs:
                  deploytarget_id: pulumi.Input[_builtins.int],
                  git_url: pulumi.Input[_builtins.str],
                  name: pulumi.Input[_builtins.str],
-                 auto_idle: Optional[pulumi.Input[_builtins.int]] = None,
-                 branches: Optional[pulumi.Input[_builtins.str]] = None,
-                 openshift_project_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 production_environment: Optional[pulumi.Input[_builtins.str]] = None,
-                 pullrequests: Optional[pulumi.Input[_builtins.str]] = None,
-                 storage_calc: Optional[pulumi.Input[_builtins.int]] = None):
+                 auto_idle: pulumi.Input[Optional[_builtins.int]] = None,
+                 branches: pulumi.Input[Optional[_builtins.str]] = None,
+                 openshift_project_pattern: pulumi.Input[Optional[_builtins.str]] = None,
+                 production_environment: pulumi.Input[Optional[_builtins.str]] = None,
+                 pullrequests: pulumi.Input[Optional[_builtins.str]] = None,
+                 storage_calc: pulumi.Input[Optional[_builtins.int]] = None):
         """
         The set of arguments for constructing a Project resource.
 
@@ -95,74 +95,74 @@ class ProjectArgs:
 
     @_builtins.property
     @pulumi.getter(name="autoIdle")
-    def auto_idle(self) -> Optional[pulumi.Input[_builtins.int]]:
+    def auto_idle(self) -> pulumi.Input[Optional[_builtins.int]]:
         """
         Whether to auto-idle environments (1=yes, 0=no).
         """
         return pulumi.get(self, "auto_idle")
 
     @auto_idle.setter
-    def auto_idle(self, value: Optional[pulumi.Input[_builtins.int]]):
+    def auto_idle(self, value: pulumi.Input[Optional[_builtins.int]]):
         pulumi.set(self, "auto_idle", value)
 
     @_builtins.property
     @pulumi.getter
-    def branches(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def branches(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Regex pattern for branches to deploy.
         """
         return pulumi.get(self, "branches")
 
     @branches.setter
-    def branches(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def branches(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "branches", value)
 
     @_builtins.property
     @pulumi.getter(name="openshiftProjectPattern")
-    def openshift_project_pattern(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def openshift_project_pattern(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Namespace pattern for the project on the cluster.
         """
         return pulumi.get(self, "openshift_project_pattern")
 
     @openshift_project_pattern.setter
-    def openshift_project_pattern(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def openshift_project_pattern(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "openshift_project_pattern", value)
 
     @_builtins.property
     @pulumi.getter(name="productionEnvironment")
-    def production_environment(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def production_environment(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Name of the production branch/environment.
         """
         return pulumi.get(self, "production_environment")
 
     @production_environment.setter
-    def production_environment(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def production_environment(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "production_environment", value)
 
     @_builtins.property
     @pulumi.getter
-    def pullrequests(self) -> Optional[pulumi.Input[_builtins.str]]:
+    def pullrequests(self) -> pulumi.Input[Optional[_builtins.str]]:
         """
         Regex pattern for pull requests to deploy.
         """
         return pulumi.get(self, "pullrequests")
 
     @pullrequests.setter
-    def pullrequests(self, value: Optional[pulumi.Input[_builtins.str]]):
+    def pullrequests(self, value: pulumi.Input[Optional[_builtins.str]]):
         pulumi.set(self, "pullrequests", value)
 
     @_builtins.property
     @pulumi.getter(name="storageCalc")
-    def storage_calc(self) -> Optional[pulumi.Input[_builtins.int]]:
+    def storage_calc(self) -> pulumi.Input[Optional[_builtins.int]]:
         """
         Whether to calculate storage (1=yes, 0=no).
         """
         return pulumi.get(self, "storage_calc")
 
     @storage_calc.setter
-    def storage_calc(self, value: Optional[pulumi.Input[_builtins.int]]):
+    def storage_calc(self, value: pulumi.Input[Optional[_builtins.int]]):
         pulumi.set(self, "storage_calc", value)
 
 
@@ -172,15 +172,15 @@ class Project(pulumi.CustomResource):
     def __init__(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 auto_idle: Optional[pulumi.Input[_builtins.int]] = None,
-                 branches: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploytarget_id: Optional[pulumi.Input[_builtins.int]] = None,
-                 git_url: Optional[pulumi.Input[_builtins.str]] = None,
-                 name: Optional[pulumi.Input[_builtins.str]] = None,
-                 openshift_project_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 production_environment: Optional[pulumi.Input[_builtins.str]] = None,
-                 pullrequests: Optional[pulumi.Input[_builtins.str]] = None,
-                 storage_calc: Optional[pulumi.Input[_builtins.int]] = None,
+                 auto_idle: pulumi.Input[Optional[_builtins.int]] = None,
+                 branches: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploytarget_id: pulumi.Input[Optional[_builtins.int]] = None,
+                 git_url: pulumi.Input[Optional[_builtins.str]] = None,
+                 name: pulumi.Input[Optional[_builtins.str]] = None,
+                 openshift_project_pattern: pulumi.Input[Optional[_builtins.str]] = None,
+                 production_environment: pulumi.Input[Optional[_builtins.str]] = None,
+                 pullrequests: pulumi.Input[Optional[_builtins.str]] = None,
+                 storage_calc: pulumi.Input[Optional[_builtins.int]] = None,
                  __props__=None):
         """
         Manages a Lagoon project (application/site).
@@ -223,15 +223,15 @@ class Project(pulumi.CustomResource):
     def _internal_init(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 auto_idle: Optional[pulumi.Input[_builtins.int]] = None,
-                 branches: Optional[pulumi.Input[_builtins.str]] = None,
-                 deploytarget_id: Optional[pulumi.Input[_builtins.int]] = None,
-                 git_url: Optional[pulumi.Input[_builtins.str]] = None,
-                 name: Optional[pulumi.Input[_builtins.str]] = None,
-                 openshift_project_pattern: Optional[pulumi.Input[_builtins.str]] = None,
-                 production_environment: Optional[pulumi.Input[_builtins.str]] = None,
-                 pullrequests: Optional[pulumi.Input[_builtins.str]] = None,
-                 storage_calc: Optional[pulumi.Input[_builtins.int]] = None,
+                 auto_idle: pulumi.Input[Optional[_builtins.int]] = None,
+                 branches: pulumi.Input[Optional[_builtins.str]] = None,
+                 deploytarget_id: pulumi.Input[Optional[_builtins.int]] = None,
+                 git_url: pulumi.Input[Optional[_builtins.str]] = None,
+                 name: pulumi.Input[Optional[_builtins.str]] = None,
+                 openshift_project_pattern: pulumi.Input[Optional[_builtins.str]] = None,
+                 production_environment: pulumi.Input[Optional[_builtins.str]] = None,
+                 pullrequests: pulumi.Input[Optional[_builtins.str]] = None,
+                 storage_calc: pulumi.Input[Optional[_builtins.int]] = None,
                  __props__=None):
         opts = pulumi.ResourceOptions.merge(_utilities.get_resource_opts_defaults(), opts)
         if not isinstance(opts, pulumi.ResourceOptions):

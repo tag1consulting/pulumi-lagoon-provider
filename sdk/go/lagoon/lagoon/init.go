@@ -49,6 +49,12 @@ func (m *module) Construct(ctx *pulumi.Context, name, typ, urn string) (r pulumi
 		r = &Route{}
 	case "lagoon:lagoon:Task":
 		r = &Task{}
+	case "lagoon:lagoon:User":
+		r = &User{}
+	case "lagoon:lagoon:UserGroupAssignment":
+		r = &UserGroupAssignment{}
+	case "lagoon:lagoon:UserPlatformRole":
+		r = &UserPlatformRole{}
 	case "lagoon:lagoon:Variable":
 		r = &Variable{}
 	default:

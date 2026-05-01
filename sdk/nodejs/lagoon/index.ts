@@ -75,6 +75,21 @@ export type Task = import("./task").Task;
 export const Task: typeof import("./task").Task = null as any;
 utilities.lazyLoad(exports, ["Task"], () => require("./task"));
 
+export { UserArgs } from "./user";
+export type User = import("./user").User;
+export const User: typeof import("./user").User = null as any;
+utilities.lazyLoad(exports, ["User"], () => require("./user"));
+
+export { UserGroupAssignmentArgs } from "./userGroupAssignment";
+export type UserGroupAssignment = import("./userGroupAssignment").UserGroupAssignment;
+export const UserGroupAssignment: typeof import("./userGroupAssignment").UserGroupAssignment = null as any;
+utilities.lazyLoad(exports, ["UserGroupAssignment"], () => require("./userGroupAssignment"));
+
+export { UserPlatformRoleArgs } from "./userPlatformRole";
+export type UserPlatformRole = import("./userPlatformRole").UserPlatformRole;
+export const UserPlatformRole: typeof import("./userPlatformRole").UserPlatformRole = null as any;
+utilities.lazyLoad(exports, ["UserPlatformRole"], () => require("./userPlatformRole"));
+
 export { VariableArgs } from "./variable";
 export type Variable = import("./variable").Variable;
 export const Variable: typeof import("./variable").Variable = null as any;
@@ -113,6 +128,12 @@ const _module = {
                 return new Route(name, <any>undefined, { urn })
             case "lagoon:lagoon:Task":
                 return new Task(name, <any>undefined, { urn })
+            case "lagoon:lagoon:User":
+                return new User(name, <any>undefined, { urn })
+            case "lagoon:lagoon:UserGroupAssignment":
+                return new UserGroupAssignment(name, <any>undefined, { urn })
+            case "lagoon:lagoon:UserPlatformRole":
+                return new UserPlatformRole(name, <any>undefined, { urn })
             case "lagoon:lagoon:Variable":
                 return new Variable(name, <any>undefined, { urn })
             default:

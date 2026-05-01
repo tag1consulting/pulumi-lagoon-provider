@@ -13,12 +13,21 @@ namespace Tag1Consulting.Lagoon.Resources.Inputs
 
     public sealed class TaskArgumentInputArgs : global::Pulumi.ResourceArgs
     {
+        /// <summary>
+        /// The human-readable label shown in the Lagoon UI.
+        /// </summary>
         [Input("displayName", required: true)]
         public Input<string> DisplayName { get; set; } = null!;
 
+        /// <summary>
+        /// The argument identifier (used as the variable name).
+        /// </summary>
         [Input("name", required: true)]
         public Input<string> Name { get; set; } = null!;
 
+        /// <summary>
+        /// The argument type: STRING, ENVIRONMENT_SOURCE_NAME, or ENVIRONMENT_SOURCE_NAME_EXCLUDE_SELF.
+        /// </summary>
         [Input("type", required: true)]
         public Input<string> Type { get; set; } = null!;
 

@@ -105,7 +105,7 @@ export interface DeployTargetConfigArgs {
     /**
      * Regex pattern for branches to match.
      */
-    branches?: pulumi.Input<string>;
+    branches?: pulumi.Input<string | undefined>;
     /**
      * The deploy target (Kubernetes cluster) ID.
      */
@@ -113,7 +113,7 @@ export interface DeployTargetConfigArgs {
     /**
      * Optional namespace pattern.
      */
-    deployTargetProjectPattern?: pulumi.Input<string>;
+    deployTargetProjectPattern?: pulumi.Input<string | undefined>;
     /**
      * The project ID.
      */
@@ -121,9 +121,9 @@ export interface DeployTargetConfigArgs {
     /**
      * Whether to handle PRs ('true' or 'false').
      */
-    pullrequests?: pulumi.Input<string>;
+    pullrequests?: pulumi.Input<string | undefined>;
     /**
      * Priority weight (higher = more priority).
      */
-    weight?: pulumi.Input<number>;
+    weight?: pulumi.Input<number | undefined>;
 }

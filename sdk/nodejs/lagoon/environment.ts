@@ -150,19 +150,19 @@ export interface EnvironmentArgs {
     /**
      * Whether to auto-idle this environment (1=yes, 0=no).
      */
-    autoIdle?: pulumi.Input<number>;
+    autoIdle?: pulumi.Input<number | undefined>;
     /**
      * The base ref for the deployment.
      */
-    deployBaseRef?: pulumi.Input<string>;
+    deployBaseRef?: pulumi.Input<string | undefined>;
     /**
      * The head ref for pull request deployments.
      */
-    deployHeadRef?: pulumi.Input<string>;
+    deployHeadRef?: pulumi.Input<string | undefined>;
     /**
      * Title for pull request deployments.
      */
-    deployTitle?: pulumi.Input<string>;
+    deployTitle?: pulumi.Input<string | undefined>;
     /**
      * Deployment type: 'branch' or 'pullrequest'.
      */
@@ -178,7 +178,7 @@ export interface EnvironmentArgs {
     /**
      * Override namespace name on the cluster.
      */
-    openshiftProjectName?: pulumi.Input<string>;
+    openshiftProjectName?: pulumi.Input<string | undefined>;
     /**
      * The parent project ID.
      */
