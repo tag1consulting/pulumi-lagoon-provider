@@ -1,3 +1,22 @@
+# Unreleased
+
+## Bug Fixes
+
+### Fix provider replace cascade on config changes (closes #177)
+
+The provider now implements `DiffConfig` to prevent unnecessary provider
+replacements when configuration values change. Previously, any change to
+`jwtSecret`, `token`, `apiUrl`, or other config fields triggered a provider
+replace, which cascaded into replacing every resource associated with the
+provider (DeployTarget, Project, etc.).
+
+No provider config change requires a replace — changing credentials or the API
+URL only affects how the provider authenticates, not which resources it can
+manage. The diff also normalizes whitespace so that trailing newlines in secrets
+(common with shell pipelines) are not detected as changes.
+
+---
+
 # Release v0.4.0 (2026-05-01)
 
 Feature release adding User resource management: full CRUD for Lagoon users, group role assignments, and platform role assignments.

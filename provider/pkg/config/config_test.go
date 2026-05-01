@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	p "github.com/pulumi/pulumi-go-provider"
+	"github.com/pulumi/pulumi-go-provider/infer"
 )
 
 func TestGenerateAdminTokenFromSecret(t *testing.T) {
@@ -443,5 +445,83 @@ func TestConfigure_JWTSecretGeneratesToken(t *testing.T) {
 	parts := strings.Split(cfg.Token, ".")
 	if len(parts) != 3 {
 		t.Errorf("expected JWT with 3 parts, got %d", len(parts))
+	}
+}
+
+// ==================== Diff (CustomDiff) ====================
+
+func TestDiff_NoChanges(t *testing.T) {
+	c := &LagoonConfig{}
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
+		Inputs: LagoonConfig{APIUrl: "https://api.test/graphql", Token: "tok", JWTAudience: "api.dev"},
+		State:  LagoonConfig{APIUrl: "https://api.test/graphql", Token: "tok", JWTAudience: "api.dev"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.HasChanges {
+		t.Error("expected no changes when config is identical")
+	}
+}
+
+func TestDiff_WhitespaceDifferencesIgnored(t *testing.T) {
+	c := &LagoonConfig{}
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
+		Inputs: LagoonConfig{Token: "my-token\n", JWTSecret: " secret "},
+		State:  LagoonConfig{Token: "my-token", JWTSecret: "secret"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.HasChanges {
+		t.Error("expected no changes when only whitespace differs")
+	}
+}
+
+func TestDiff_NeverReplace(t *testing.T) {
+	c := &LagoonConfig{}
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
+		Inputs: LagoonConfig{APIUrl: "https://new-api.test/graphql", Token: "new-tok", JWTSecret: "new-secret", JWTAudience: "api.prod", Insecure: true},
+		State:  LagoonConfig{APIUrl: "https://old-api.test/graphql", Token: "old-tok", JWTSecret: "old-secret", JWTAudience: "api.dev", Insecure: false},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !resp.HasChanges {
+		t.Error("expected changes when all fields differ")
+	}
+	if resp.DeleteBeforeReplace {
+		t.Error("DeleteBeforeReplace must always be false for provider config")
+	}
+	for field, d := range resp.DetailedDiff {
+		if d.Kind != p.Update {
+			t.Errorf("field %q has Kind=%v, want Update (never replace)", field, d.Kind)
+		}
+	}
+	expectedFields := []string{"apiUrl", "token", "jwtSecret", "jwtAudience", "insecure"}
+	for _, f := range expectedFields {
+		if _, ok := resp.DetailedDiff[f]; !ok {
+			t.Errorf("expected %q in DetailedDiff", f)
+		}
+	}
+}
+
+func TestDiff_PartialChange(t *testing.T) {
+	c := &LagoonConfig{}
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
+		Inputs: LagoonConfig{APIUrl: "https://api.test/graphql", Token: "new-tok"},
+		State:  LagoonConfig{APIUrl: "https://api.test/graphql", Token: "old-tok"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !resp.HasChanges {
+		t.Error("expected changes")
+	}
+	if len(resp.DetailedDiff) != 1 {
+		t.Errorf("expected 1 changed field, got %d", len(resp.DetailedDiff))
+	}
+	if _, ok := resp.DetailedDiff["token"]; !ok {
+		t.Error("expected 'token' in DetailedDiff")
 	}
 }

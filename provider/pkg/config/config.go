@@ -125,6 +125,31 @@ func (c *LagoonConfig) NewClient() *client.Client {
 	return client.NewClient(c.APIUrl, c.Token, opts...)
 }
 
+// Diff compares old and new provider configuration. No config change requires a
+// provider replace — changing apiUrl, token, jwtSecret, or insecure only changes
+// how the provider authenticates or connects, not which resources it can manage.
+// Returning Update (never UpdateReplace) prevents the cascading replace of every
+// resource associated with this provider instance.
+func (c *LagoonConfig) Diff(_ context.Context, req infer.DiffRequest[LagoonConfig, LagoonConfig]) (infer.DiffResponse, error) {
+	diff := map[string]p.PropertyDiff{}
+	if strings.TrimSpace(req.Inputs.APIUrl) != strings.TrimSpace(req.State.APIUrl) {
+		diff["apiUrl"] = p.PropertyDiff{Kind: p.Update}
+	}
+	if strings.TrimSpace(req.Inputs.Token) != strings.TrimSpace(req.State.Token) {
+		diff["token"] = p.PropertyDiff{Kind: p.Update}
+	}
+	if strings.TrimSpace(req.Inputs.JWTSecret) != strings.TrimSpace(req.State.JWTSecret) {
+		diff["jwtSecret"] = p.PropertyDiff{Kind: p.Update}
+	}
+	if strings.TrimSpace(req.Inputs.JWTAudience) != strings.TrimSpace(req.State.JWTAudience) {
+		diff["jwtAudience"] = p.PropertyDiff{Kind: p.Update}
+	}
+	if req.Inputs.Insecure != req.State.Insecure {
+		diff["insecure"] = p.PropertyDiff{Kind: p.Update}
+	}
+	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff}, nil
+}
+
 // generateAdminToken creates an admin JWT from the configured secret.
 func (c *LagoonConfig) generateAdminToken() (string, error) {
 	return generateAdminTokenFromSecret(c.JWTSecret, c.JWTAudience)
