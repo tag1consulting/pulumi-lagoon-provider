@@ -613,8 +613,9 @@ func TestParseUserGroupAssignmentID(t *testing.T) {
 		{"colon in email local-part", `"a:b"@x.com:devs`, UserGroupAssignmentState{}, `"a:b"@x.com`, "devs", false},
 		{"empty left", ":devs", UserGroupAssignmentState{}, "", "", true},
 		{"empty right", "u@x.com:", UserGroupAssignmentState{}, "", "", true},
-		{"no colon, state fallback", "", UserGroupAssignmentState{UserGroupAssignmentArgs: UserGroupAssignmentArgs{UserEmail: "u@x", GroupName: "g"}}, "u@x", "g", false},
-		{"no colon, no state", "garbage", UserGroupAssignmentState{}, "", "", true},
+		{"empty id, state fallback", "", UserGroupAssignmentState{UserGroupAssignmentArgs: UserGroupAssignmentArgs{UserEmail: "u@x", GroupName: "g"}}, "u@x", "g", false},
+		{"malformed id with state rejects", "garbage", UserGroupAssignmentState{UserGroupAssignmentArgs: UserGroupAssignmentArgs{UserEmail: "u@x", GroupName: "g"}}, "", "", true},
+		{"malformed id without state", "garbage", UserGroupAssignmentState{}, "", "", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -643,8 +644,9 @@ func TestParseUserPlatformRoleID(t *testing.T) {
 		{"invalid role", "admin@x:ADMIN", UserPlatformRoleState{}, "", "", true},
 		{"empty left", ":OWNER", UserPlatformRoleState{}, "", "", true},
 		{"empty right", "admin@x:", UserPlatformRoleState{}, "", "", true},
-		{"state fallback", "", UserPlatformRoleState{UserPlatformRoleArgs: UserPlatformRoleArgs{UserEmail: "u@x", Role: "VIEWER"}}, "u@x", "VIEWER", false},
-		{"garbage", "nocolon", UserPlatformRoleState{}, "", "", true},
+		{"empty id, state fallback", "", UserPlatformRoleState{UserPlatformRoleArgs: UserPlatformRoleArgs{UserEmail: "u@x", Role: "VIEWER"}}, "u@x", "VIEWER", false},
+		{"malformed id with state rejects", "nocolon", UserPlatformRoleState{UserPlatformRoleArgs: UserPlatformRoleArgs{UserEmail: "u@x", Role: "VIEWER"}}, "", "", true},
+		{"malformed id without state", "nocolon", UserPlatformRoleState{}, "", "", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

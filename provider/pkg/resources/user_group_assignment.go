@@ -117,6 +117,7 @@ func (r *UserGroupAssignment) Read(ctx context.Context, req infer.ReadRequest[Us
 		}
 	}
 
+	p.GetLogger(ctx).Warningf("UserGroupAssignment %s: user %q has no role in group %q — removing from state", req.ID, email, groupName)
 	return infer.ReadResponse[UserGroupAssignmentArgs, UserGroupAssignmentState]{}, nil
 }
 
@@ -129,6 +130,8 @@ func parseUserGroupAssignmentID(id string, state UserGroupAssignmentState) (emai
 	if idx := strings.LastIndex(id, ":"); idx > 0 && idx < len(id)-1 {
 		email = id[:idx]
 		groupName = id[idx+1:]
+	} else if id != "" {
+		return "", "", fmt.Errorf("invalid user group assignment ID %q: expected {email}:{groupName}", id)
 	} else if state.UserEmail != "" && state.GroupName != "" {
 		email = state.UserEmail
 		groupName = state.GroupName

@@ -108,6 +108,7 @@ func (r *UserPlatformRole) Read(ctx context.Context, req infer.ReadRequest[UserP
 		}
 	}
 
+	p.GetLogger(ctx).Warningf("UserPlatformRole %s: user %q does not have platform role %q — removing from state", req.ID, email, role)
 	return infer.ReadResponse[UserPlatformRoleArgs, UserPlatformRoleState]{}, nil
 }
 
@@ -120,6 +121,8 @@ func parseUserPlatformRoleID(id string, state UserPlatformRoleState) (email, rol
 	if idx := strings.LastIndex(id, ":"); idx > 0 && idx < len(id)-1 {
 		email = id[:idx]
 		role = strings.ToUpper(id[idx+1:])
+	} else if id != "" {
+		return "", "", fmt.Errorf("invalid user platform role ID %q: expected {email}:{role}", id)
 	} else if state.UserEmail != "" && state.Role != "" {
 		email = state.UserEmail
 		role = strings.ToUpper(state.Role)
