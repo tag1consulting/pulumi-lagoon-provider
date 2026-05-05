@@ -30,6 +30,39 @@ sdk/                 # Generated SDKs — do not hand-edit
 examples/            # Usage examples
 ```
 
+## Making Schema Changes
+
+Any change that affects the Pulumi-facing surface of a resource counts as a schema
+change and requires regenerating `provider/schema.json` plus all four SDKs. This
+includes:
+
+- adding, removing, or renaming a field on a `*Args` or `*State` struct
+- changing or adding a `pulumi:"..."` struct tag
+- changing or adding an `Annotate` description
+- adding a new resource (see next section)
+- changing any input/output type signature
+
+When you have made a schema-affecting change, regenerate with the pinned Pulumi CLI:
+
+```bash
+make check-pulumi-version   # Verifies your local CLI matches .pulumiversion
+make go-schema              # Regenerates provider/schema.json
+make go-sdk-all             # Regenerates sdk/python, sdk/nodejs, sdk/go, sdk/dotnet
+```
+
+(`go-schema` and the `go-sdk-*` targets run `check-pulumi-version` automatically; the
+standalone invocation above is for when you want to verify the pin before a long
+regeneration.)
+
+Commit `provider/schema.json` **and** all `sdk/{python,nodejs,go,dotnet}/` changes in
+the same PR as the provider source change. CI's `verify-sdks` workflow fails any PR
+whose committed artifacts drift from a fresh regeneration.
+
+If your local CLI version does not match `.pulumiversion`, install the pinned version
+(see [Prerequisites](#prerequisites)) or note the mismatch in your PR description and
+ask a maintainer to run the regeneration. Do not merge without the regenerated
+artifacts.
+
 ## Adding a New Resource
 
 1. **Add GraphQL queries** to `provider/pkg/client/queries.go`.
@@ -51,10 +84,10 @@ examples/            # Usage examples
 
 5. **Register the resource** in the provider constructor (see `provider/pkg/provider/`).
 
-6. **Regenerate the schema and SDKs:**
+6. **Regenerate the schema and SDKs** (see [Making Schema Changes](#making-schema-changes)):
    ```bash
    make go-schema    # Regenerates provider/schema.json
-   make go-sdk-all   # Regenerates sdk/python, sdk/nodejs, sdk/go
+   make go-sdk-all   # Regenerates sdk/python, sdk/nodejs, sdk/go, sdk/dotnet
    ```
 
 7. **Verify tests pass:**
