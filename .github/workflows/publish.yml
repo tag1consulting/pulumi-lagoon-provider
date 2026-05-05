@@ -15,6 +15,40 @@ permissions:
   contents: write
 
 jobs:
+  regenerate-sdks:
+    name: Regenerate SDKs with pinned Pulumi CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: provider/go.mod
+          cache-dependency-path: provider/go.sum
+
+      - name: Read pinned Pulumi CLI version
+        id: pulumi-version
+        run: |
+          VERSION=$(cat .pulumiversion | tr -d '[:space:]')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v6
+        with:
+          pulumi-version: ${{ steps.pulumi-version.outputs.version }}
+
+      - name: Regenerate all SDKs
+        run: make go-sdk-all
+
+      - name: Upload regenerated SDKs
+        uses: actions/upload-artifact@v7
+        with:
+          name: regenerated-sdks
+          path: |
+            sdk/
+            provider/schema.json
+
   goreleaser:
     name: Build and publish provider binaries
     runs-on: ubuntu-latest
@@ -40,9 +74,15 @@ jobs:
 
   build-python:
     name: Build Python distribution
+    needs: regenerate-sdks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Download regenerated SDKs
+        uses: actions/download-artifact@v8
+        with:
+          name: regenerated-sdks
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -115,9 +155,15 @@ jobs:
 
   build-nodejs:
     name: Build Node.js distribution
+    needs: regenerate-sdks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Download regenerated SDKs
+        uses: actions/download-artifact@v8
+        with:
+          name: regenerated-sdks
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -267,9 +313,15 @@ jobs:
 
   build-dotnet:
     name: Build .NET distribution
+    needs: regenerate-sdks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Download regenerated SDKs
+        uses: actions/download-artifact@v8
+        with:
+          name: regenerated-sdks
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v5
