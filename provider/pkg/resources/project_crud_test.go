@@ -13,7 +13,7 @@ import (
 func TestProjectCreate_HappyPath(t *testing.T) {
 	mock := &mockLagoonClient{
 		createProjectFn: func(_ context.Context, input map[string]any) (*client.Project, error) {
-			return &client.Project{ID: 42, Name: "myproject", Created: "2024-01-01"}, nil
+			return &client.Project{ID: 42, Name: "myproject", Created: "2024-01-01", PublicKey: "ssh-rsa AAAA... lagoon"}, nil
 		},
 	}
 	ctx := testCtx(mock)
@@ -35,6 +35,9 @@ func TestProjectCreate_HappyPath(t *testing.T) {
 	}
 	if resp.Output.Name != "myproject" {
 		t.Errorf("expected Name 'myproject', got %q", resp.Output.Name)
+	}
+	if resp.Output.PublicKey != "ssh-rsa AAAA... lagoon" {
+		t.Errorf("expected PublicKey to be populated from API response, got %q", resp.Output.PublicKey)
 	}
 }
 
@@ -132,7 +135,7 @@ func TestProjectCreate_APIError(t *testing.T) {
 func TestProjectUpdate_HappyPath(t *testing.T) {
 	mock := &mockLagoonClient{
 		updateProjectFn: func(_ context.Context, id int, _ map[string]any) (*client.Project, error) {
-			return &client.Project{ID: id, Name: "myproject"}, nil
+			return &client.Project{ID: id, Name: "myproject", PublicKey: "ssh-rsa AAAA... lagoon"}, nil
 		},
 	}
 	ctx := testCtx(mock)
@@ -153,6 +156,36 @@ func TestProjectUpdate_HappyPath(t *testing.T) {
 	}
 	if resp.Output.GitURL != "git@new.com:repo.git" {
 		t.Errorf("expected updated GitURL, got %q", resp.Output.GitURL)
+	}
+	if resp.Output.PublicKey != "ssh-rsa AAAA... lagoon" {
+		t.Errorf("expected PublicKey from API, got %q", resp.Output.PublicKey)
+	}
+}
+
+func TestProjectUpdate_PublicKeyPreserved_WhenAPIOmits(t *testing.T) {
+	mock := &mockLagoonClient{
+		updateProjectFn: func(_ context.Context, id int, _ map[string]any) (*client.Project, error) {
+			// Some Lagoon API versions or permission scopes may omit publicKey on update
+			return &client.Project{ID: id, Name: "myproject"}, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Project{}
+	resp, err := r.Update(ctx, infer.UpdateRequest[ProjectArgs, ProjectState]{
+		ID:     "42",
+		Inputs: ProjectArgs{Name: "myproject", GitURL: "git@new.com:repo.git", DeploytargetID: 2},
+		State: ProjectState{
+			ProjectArgs: ProjectArgs{Name: "myproject", GitURL: "git@old.com:repo.git", DeploytargetID: 1},
+			LagoonID:    42,
+			PublicKey:   "ssh-rsa PRIOR... lagoon",
+			Created:     "2024-01-01",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+	if resp.Output.PublicKey != "ssh-rsa PRIOR... lagoon" {
+		t.Errorf("expected PublicKey to fall back to prior state when API omits, got %q", resp.Output.PublicKey)
 	}
 }
 
@@ -267,6 +300,7 @@ func TestProjectRead_HappyPath(t *testing.T) {
 				ProductionEnvironment: "main",
 				Branches:              "main|develop",
 				Pullrequests:          "true",
+				PublicKey:             "ssh-rsa AAAA... lagoon",
 				Created:               "2024-01-01",
 			}, nil
 		},
@@ -282,6 +316,9 @@ func TestProjectRead_HappyPath(t *testing.T) {
 	}
 	if resp.State.LagoonID != 42 {
 		t.Errorf("expected LagoonID 42, got %d", resp.State.LagoonID)
+	}
+	if resp.State.PublicKey != "ssh-rsa AAAA... lagoon" {
+		t.Errorf("expected PublicKey to be read from API, got %q", resp.State.PublicKey)
 	}
 	if resp.Inputs.Name != "myproject" {
 		t.Errorf("expected Name 'myproject', got %q", resp.Inputs.Name)

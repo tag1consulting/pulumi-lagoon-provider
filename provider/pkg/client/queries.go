@@ -21,6 +21,7 @@ mutation AddProject($input: AddProjectInput!) {
         openshiftProjectPattern
         autoIdle
         storageCalc
+        publicKey
         created
     }
 }`
@@ -41,6 +42,7 @@ query ProjectByName($name: String!) {
         openshiftProjectPattern
         autoIdle
         storageCalc
+        publicKey
         created
     }
 }`
@@ -61,6 +63,7 @@ query AllProjects {
         openshiftProjectPattern
         autoIdle
         storageCalc
+        publicKey
         created
     }
 }`
@@ -81,6 +84,7 @@ mutation UpdateProject($input: UpdateProjectInput!) {
         openshiftProjectPattern
         autoIdle
         storageCalc
+        publicKey
     }
 }`
 
