@@ -1,0 +1,81 @@
+name: Verify SDKs
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Regenerate SDKs and check for drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: provider/go.mod
+          cache-dependency-path: provider/go.sum
+
+      - name: Read pinned Pulumi CLI version
+        id: pulumi-version
+        run: |
+          VERSION=$(cat .pulumiversion | tr -d '[:space:]')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v6
+        with:
+          pulumi-version: ${{ steps.pulumi-version.outputs.version }}
+
+      - name: Verify Pulumi CLI version
+        run: |
+          EXPECTED="${{ steps.pulumi-version.outputs.version }}"
+          ACTUAL=$(pulumi version | sed 's/^v//')
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "ERROR: Pulumi CLI version mismatch: expected $EXPECTED, got $ACTUAL" >&2
+            exit 1
+          fi
+          echo "Pulumi CLI version: $ACTUAL (matches pinned version)"
+
+      - name: Build provider binary
+        run: make go-build
+
+      - name: Regenerate schema and all SDKs
+        run: |
+          make go-schema
+          make go-sdk-all
+
+      - name: Check for SDK drift
+        run: |
+          if [ -z "$(git status --porcelain --untracked-files=all -- sdk/ provider/schema.json)" ]; then
+            echo "SDKs are up to date with the provider schema."
+          else
+            echo ""
+            echo "ERROR: SDK drift detected."
+            echo ""
+            echo "Changed files:"
+            git status --porcelain --untracked-files=all -- sdk/ provider/schema.json
+            echo ""
+            git diff -- sdk/ provider/schema.json || true
+            echo ""
+            echo "The committed SDK files do not match what the provider schema generates"
+            echo "with Pulumi CLI v${{ steps.pulumi-version.outputs.version }}."
+            echo ""
+            echo "To fix this, run the following locally with the pinned CLI version"
+            echo "(see .pulumiversion):"
+            echo ""
+            echo "  make go-schema"
+            echo "  make go-sdk-all"
+            echo "  git add sdk/ provider/schema.json"
+            echo "  git commit"
+            echo ""
+            echo "Or install the correct Pulumi CLI version:"
+            echo "  curl -fsSL https://get.pulumi.com | sh -s -- --version ${{ steps.pulumi-version.outputs.version }}"
+            echo ""
+            exit 1
+          fi

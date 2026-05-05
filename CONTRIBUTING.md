@@ -5,7 +5,7 @@ Contributions, bug reports, and feedback are welcome. Please follow our [Code of
 ## Prerequisites
 
 - Go 1.26+
-- [Pulumi CLI](https://www.pulumi.com/docs/install/)
+- [Pulumi CLI](https://www.pulumi.com/docs/install/) — version must match `.pulumiversion` (currently 3.234.0). SDK generation output varies between CLI versions, so mismatches cause spurious diffs. Install a specific version with: `curl -fsSL https://get.pulumi.com | sh -s -- --version $(cat .pulumiversion)`
 - A running Lagoon instance with API credentials (required for integration tests only; unit tests are self-contained)
 
 ## Development Setup
@@ -80,7 +80,7 @@ Integration tests require a live Lagoon instance. See `examples/simple-project/`
 
 1. Fork the repository and create a branch off `main` (e.g., `feature/my-resource` or `fix/123-description`).
 2. Make your changes with tests.
-3. If you changed the schema, regenerate SDKs with `make go-sdk-all` and include the generated changes in your PR.
+3. If you changed the schema, regenerate SDKs with `make go-sdk-all` (using the Pulumi CLI version from `.pulumiversion`) and include the generated changes in your PR. CI will verify that committed SDKs match what the pinned CLI produces.
 4. Open a pull request describing what you changed and why, linking any related issues.
 
 ## Reporting Bugs and Requesting Features
