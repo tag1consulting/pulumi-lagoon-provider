@@ -512,8 +512,8 @@ release-prep: check-release-version
 	sed -i.bak 's/var Version = .*/var Version = "$(VERSION)"/' provider/cmd/pulumi-resource-lagoon/main.go && rm -f provider/cmd/pulumi-resource-lagoon/main.go.bak
 	sed -i.bak 's/^PROVIDER_VERSION ?= .*/PROVIDER_VERSION ?= $(VERSION)/' Makefile && rm -f Makefile.bak
 	sed -i.bak 's/"version": ".*"/"version": "$(VERSION)"/' provider/schema.json && rm -f provider/schema.json.bak
-	sed -i.bak 's/^\*\*Status\*\*: v[0-9]\+\.[0-9]\+\.[0-9]\+/\*\*Status\*\*: v$(VERSION)/' README.md && rm -f README.md.bak
-	sed -i.bak 's/^\*\*Status\*\*: v[0-9]\+\.[0-9]\+\.[0-9]\+/\*\*Status\*\*: v$(VERSION)/' CLAUDE.md && rm -f CLAUDE.md.bak
+	sed -i.bak 's/^\*\*Status\*\*: v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\*\*Status\*\*: v$(VERSION)/' README.md && rm -f README.md.bak
+	sed -i.bak 's/^\*\*Status\*\*: v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\*\*Status\*\*: v$(VERSION)/' CLAUDE.md && rm -f CLAUDE.md.bak
 	printf '# Release v$(VERSION) (%s)\n\nTODO: Write release notes before committing.\n\n---\n\n' "$$(date +%Y-%m-%d)" > /tmp/rn_header.md && cat RELEASE_NOTES.md >> /tmp/rn_header.md && mv /tmp/rn_header.md RELEASE_NOTES.md
 	$(MAKE) PROVIDER_VERSION=$(VERSION) go-build go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet
 	sed -i.bak 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml && rm -f sdk/python/pyproject.toml.bak
