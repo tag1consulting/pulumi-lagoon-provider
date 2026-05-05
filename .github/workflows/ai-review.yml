@@ -109,6 +109,7 @@ jobs:
           AI_CONFIDENCE_THRESHOLD: '75'
           AI_MAX_INLINE: '25'
           AI_MAX_TOKENS_PER_AGENT: '8192'
+          AI_ENABLE_SUGGESTIONS: 'true'
         run: |
           docker pull "$IMAGE"
           SUMMARY_MOUNT=()
@@ -140,6 +141,7 @@ jobs:
             -e AI_CONFIDENCE_THRESHOLD \
             -e AI_MAX_INLINE \
             -e AI_MAX_TOKENS_PER_AGENT \
+            -e AI_ENABLE_SUGGESTIONS \
             -e GITHUB_WORKSPACE=/workspace \
             -v "$GITHUB_WORKSPACE:/workspace" \
             "${SUMMARY_MOUNT[@]}" \
