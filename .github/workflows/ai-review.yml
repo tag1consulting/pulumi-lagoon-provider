@@ -2,145 +2,37 @@ name: AI PR Review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, labeled]
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: "PR number to review"
-        required: false
-      review_mode:
-        description: Review mode
-        required: false
-        default: quick
-        type: choice
-        options: [quick, full]
+    types: [opened, synchronize, ready_for_review]
 
-permissions: {}
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   review:
-    permissions:
-      contents: read
-      pull-requests: write
-    concurrency:
-      group: ai-review-${{ github.event.pull_request.number || inputs.pr_number }}
-      cancel-in-progress: true
-    if: >-
-      (github.event_name == 'workflow_dispatch') ||
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.draft == false &&
-       github.actor != 'dependabot[bot]' &&
-       github.actor != 'renovate[bot]' &&
-       !contains(github.event.pull_request.labels.*.name, 'skip-ai-review') &&
-       (github.event.action != 'labeled' || github.event.label.name == 'ai-review-full'))
+    if: |
+      !github.event.pull_request.draft &&
+      github.actor != 'dependabot[bot]' &&
+      github.actor != 'renovate[bot]' &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ai-review')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Require pr_number for workflow_dispatch
-        if: github.event_name == 'workflow_dispatch' && inputs.pr_number == ''
-        run: |
-          echo "::error::workflow_dispatch requires pr_number input" >&2
-          exit 1
-
-      - name: Resolve PR refs (workflow_dispatch)
-        id: resolve-pr
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
-        run: |
-          base_ref=$(gh pr view "$INPUT_PR_NUMBER" --json baseRefName --jq '.baseRefName')
-          head_sha=$(gh pr view "$INPUT_PR_NUMBER" --json headRefOid --jq '.headRefOid')
-          echo "base_ref=${base_ref}" >> "$GITHUB_OUTPUT"
-          echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
-
-      # Inline the container-action steps because GitHub Actions cannot resolve
-      # action.yml from a private repo when the calling repo is public.
-      - name: Mask credentials
-        env:
-          _API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
-          _GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          _REGISTRY_TOKEN: ${{ secrets.GHCR_TOKEN }}
-        run: |
-          [[ -n "$_API_KEY" ]]       && echo "::add-mask::$_API_KEY"
-          [[ -n "$_GH_TOKEN" ]]      && echo "::add-mask::$_GH_TOKEN"
-          [[ -n "$_REGISTRY_TOKEN" ]] && echo "::add-mask::$_REGISTRY_TOKEN"
-
-      - name: Log in to GHCR
-        env:
-          REGISTRY_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          REGISTRY_USER: ${{ github.repository_owner }}
-        run: |
-          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
-
-      - name: Run AI review in container
-        env:
-          IMAGE: ghcr.io/tag1consulting/ai-pr-review:latest
-          AI_PROVIDER: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
-          AI_REVIEW_MODE: >-
-            ${{
-              inputs.review_mode ||
-              (contains(github.event.pull_request.labels.*.name, 'ai-review-full') && 'full') ||
-              'quick'
-            }}
-          FORCE_FULL_DIFF: 'false'
-          REVIEW_TARGET: pr
-          STANDALONE_DEPTH: '50'
-          MAX_DIFF_LINES: '5000'
-          AI_MODEL_STANDARD: ${{ vars.AI_REVIEW_MODEL_STANDARD || '' }}
-          AI_MODEL_PREMIUM: ${{ vars.AI_REVIEW_MODEL_PREMIUM || '' }}
-          ANTHROPIC_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
-          GOOGLE_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
-          BEDROCK_API_KEY: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
-          OPENAI_BASE_URL: ${{ vars.AI_REVIEW_BASE_URL || '' }}
-          BEDROCK_API_URL: ${{ vars.AI_REVIEW_BASE_URL || '' }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
-          BASE_REF: ${{ steps.resolve-pr.outputs.base_ref || github.event.pull_request.base.ref || github.event.repository.default_branch }}
-          HEAD_SHA: ${{ steps.resolve-pr.outputs.head_sha || github.event.pull_request.head.sha || github.sha }}
-          LLM_RETRY_COUNT: '3'
-          AI_PARALLEL: 'true'
-          AI_CONFIDENCE_THRESHOLD: '75'
-          AI_MAX_INLINE: '25'
-          AI_MAX_TOKENS_PER_AGENT: '8192'
-        run: |
-          docker pull "$IMAGE"
-          SUMMARY_MOUNT=()
-          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-            SUMMARY_MOUNT=(-e GITHUB_STEP_SUMMARY -v "$GITHUB_STEP_SUMMARY:$GITHUB_STEP_SUMMARY")
-          fi
-          docker run --rm \
-            -e AI_PROVIDER \
-            -e AI_REVIEW_MODE \
-            -e FORCE_FULL_DIFF \
-            -e REVIEW_TARGET \
-            -e STANDALONE_DEPTH \
-            -e MAX_DIFF_LINES \
-            -e AI_MODEL_STANDARD \
-            -e AI_MODEL_PREMIUM \
-            -e ANTHROPIC_API_KEY \
-            -e OPENAI_API_KEY \
-            -e GOOGLE_API_KEY \
-            -e BEDROCK_API_KEY \
-            -e OPENAI_BASE_URL \
-            -e BEDROCK_API_URL \
-            -e GH_TOKEN \
-            -e GITHUB_REPOSITORY \
-            -e PR_NUMBER \
-            -e BASE_REF \
-            -e HEAD_SHA \
-            -e LLM_RETRY_COUNT \
-            -e AI_PARALLEL \
-            -e AI_CONFIDENCE_THRESHOLD \
-            -e AI_MAX_INLINE \
-            -e AI_MAX_TOKENS_PER_AGENT \
-            -e GITHUB_WORKSPACE=/workspace \
-            -v "$GITHUB_WORKSPACE:/workspace" \
-            "${SUMMARY_MOUNT[@]}" \
-            "$IMAGE"
+      - name: Run AI review
+        uses: tag1consulting/ai-pr-review/container-action@main
+        with:
+          provider: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
+          api-key: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
+          base-url: ${{ vars.AI_REVIEW_BASE_URL || '' }}
+          model-standard: ${{ vars.AI_REVIEW_MODEL_STANDARD || '' }}
+          model-premium: ${{ vars.AI_REVIEW_MODEL_PREMIUM || '' }}
+          github-token: ${{ github.token }}
+          pr-number: ${{ github.event.pull_request.number }}
+          base-ref: ${{ github.event.pull_request.base.ref }}
+          head-sha: ${{ github.event.pull_request.head.sha }}
+          review-mode: 'quick'
+          enable-suggestions: 'true'
