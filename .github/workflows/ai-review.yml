@@ -1,7 +1,10 @@
 name: AI PR Review
 
+# pull_request_target runs the workflow from the base branch so that secrets
+# and repo variables are available even for fork PRs.  This is safe because the
+# AI review action only *reads* the checked-out code — it never executes it.
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, ready_for_review]
 
 permissions:
@@ -20,6 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Run AI review
