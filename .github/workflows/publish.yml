@@ -38,8 +38,10 @@ jobs:
         with:
           pulumi-version: ${{ steps.pulumi-version.outputs.version }}
 
-      - name: Regenerate all SDKs
-        run: make go-sdk-all
+      - name: Regenerate schema and all SDKs
+        run: |
+          make go-schema
+          make go-sdk-all
 
       - name: Upload regenerated SDKs
         uses: actions/upload-artifact@v7
@@ -78,6 +80,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Remove checked-out SDKs before overlay
+        run: rm -rf sdk/ provider/schema.json
 
       - name: Download regenerated SDKs
         uses: actions/download-artifact@v8
@@ -159,6 +164,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Remove checked-out SDKs before overlay
+        run: rm -rf sdk/ provider/schema.json
 
       - name: Download regenerated SDKs
         uses: actions/download-artifact@v8
@@ -317,6 +325,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Remove checked-out SDKs before overlay
+        run: rm -rf sdk/ provider/schema.json
 
       - name: Download regenerated SDKs
         uses: actions/download-artifact@v8

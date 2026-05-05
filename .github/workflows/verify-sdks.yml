@@ -45,16 +45,23 @@ jobs:
       - name: Build provider binary
         run: make go-build
 
-      - name: Regenerate all SDKs
-        run: make go-sdk-all
+      - name: Regenerate schema and all SDKs
+        run: |
+          make go-schema
+          make go-sdk-all
 
       - name: Check for SDK drift
         run: |
-          if git diff --exit-code -- sdk/ provider/schema.json; then
+          if [ -z "$(git status --porcelain --untracked-files=all -- sdk/ provider/schema.json)" ]; then
             echo "SDKs are up to date with the provider schema."
           else
             echo ""
             echo "ERROR: SDK drift detected."
+            echo ""
+            echo "Changed files:"
+            git status --porcelain --untracked-files=all -- sdk/ provider/schema.json
+            echo ""
+            git diff -- sdk/ provider/schema.json || true
             echo ""
             echo "The committed SDK files do not match what the provider schema generates"
             echo "with Pulumi CLI v${{ steps.pulumi-version.outputs.version }}."
@@ -62,6 +69,7 @@ jobs:
             echo "To fix this, run the following locally with the pinned CLI version"
             echo "(see .pulumiversion):"
             echo ""
+            echo "  make go-schema"
             echo "  make go-sdk-all"
             echo "  git add sdk/ provider/schema.json"
             echo "  git commit"
