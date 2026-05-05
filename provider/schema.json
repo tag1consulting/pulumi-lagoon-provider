@@ -1418,6 +1418,128 @@
         "service"
       ]
     },
+    "lagoon:lagoon:User": {
+      "description": "Manages a Lagoon user.",
+      "properties": {
+        "comment": {
+          "type": "string",
+          "description": "An optional comment about the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address (Lagoon's primary user identifier)."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lagoonId": {
+          "type": "string",
+          "description": "The Lagoon internal ID of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        }
+      },
+      "required": [
+        "email",
+        "lagoonId"
+      ],
+      "inputProperties": {
+        "comment": {
+          "type": "string",
+          "description": "An optional comment about the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address (Lagoon's primary user identifier)."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        }
+      },
+      "requiredInputs": [
+        "email"
+      ]
+    },
+    "lagoon:lagoon:UserGroupAssignment": {
+      "description": "Assigns a Lagoon user to a group with a specific role.",
+      "properties": {
+        "groupName": {
+          "type": "string",
+          "description": "The group name."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role within the group: GUEST, REPORTER, DEVELOPER, MAINTAINER, or OWNER."
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "The user's email address."
+        }
+      },
+      "required": [
+        "userEmail",
+        "groupName",
+        "role"
+      ],
+      "inputProperties": {
+        "groupName": {
+          "type": "string",
+          "description": "The group name."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role within the group: GUEST, REPORTER, DEVELOPER, MAINTAINER, or OWNER."
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "The user's email address."
+        }
+      },
+      "requiredInputs": [
+        "userEmail",
+        "groupName",
+        "role"
+      ]
+    },
+    "lagoon:lagoon:UserPlatformRole": {
+      "description": "Assigns a platform-level role (OWNER or VIEWER) to a Lagoon user.",
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "The platform role: OWNER or VIEWER."
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "The user's email address."
+        }
+      },
+      "required": [
+        "userEmail",
+        "role"
+      ],
+      "inputProperties": {
+        "role": {
+          "type": "string",
+          "description": "The platform role: OWNER or VIEWER."
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "The user's email address."
+        }
+      },
+      "requiredInputs": [
+        "userEmail",
+        "role"
+      ]
+    },
     "lagoon:lagoon:Variable": {
       "description": "Manages a Lagoon environment or project-level variable.",
       "properties": {
