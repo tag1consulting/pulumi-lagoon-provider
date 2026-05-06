@@ -22,7 +22,7 @@
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
         clean clean-all \
-        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet go-sdk-all go-install check-release-version release-prep go-proxy-warmup check-versions
+        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet go-sdk-all go-install check-release-version release-prep go-proxy-warmup check-versions check-pulumi-version
 
 # Variables
 PYTHON := python3
@@ -387,7 +387,42 @@ go-vet:
 go-lint:
 	cd provider && golangci-lint run ./...
 
-go-schema: go-build
+# check-pulumi-version verifies the local Pulumi CLI matches the version pinned
+# in .pulumiversion. Schema/SDK generators are sensitive to CLI version drift —
+# a mismatch produces diffs that don't match the provider source, which CI's
+# verify-sdks workflow will reject. Running this check locally before regen
+# avoids a long roundtrip through CI. Bypass with SKIP_PULUMI_VERSION_CHECK=1
+# only when you know what you're doing (e.g., testing a new CLI version before
+# updating the pin).
+check-pulumi-version:
+	@if [ -n "$(SKIP_PULUMI_VERSION_CHECK)" ]; then \
+		echo "WARNING: Pulumi CLI version check skipped (SKIP_PULUMI_VERSION_CHECK=$(SKIP_PULUMI_VERSION_CHECK))"; \
+		exit 0; \
+	fi
+	@command -v pulumi >/dev/null 2>&1 || { \
+		echo "ERROR: pulumi CLI not found. Install from https://www.pulumi.com/docs/install/" >&2; \
+		exit 1; \
+	}
+	@if [ ! -f .pulumiversion ]; then \
+		echo "ERROR: .pulumiversion not found at repo root" >&2; \
+		exit 1; \
+	fi
+	@PINNED=$$(cat .pulumiversion | tr -d '[:space:]'); \
+	ACTUAL=$$(pulumi version 2>/dev/null | sed 's/^v//' | head -1); \
+	if [ "$$PINNED" != "$$ACTUAL" ]; then \
+		echo "ERROR: Pulumi CLI version mismatch." >&2; \
+		echo "  pinned (.pulumiversion):    $$PINNED" >&2; \
+		echo "  installed (pulumi version): $$ACTUAL" >&2; \
+		echo "" >&2; \
+		echo "Install the pinned version:" >&2; \
+		echo "  curl -fsSL https://get.pulumi.com | sh -s -- --version $$PINNED" >&2; \
+		echo "" >&2; \
+		echo "Or set SKIP_PULUMI_VERSION_CHECK=1 to bypass (not recommended)." >&2; \
+		exit 1; \
+	fi; \
+	echo "Pulumi CLI version OK ($$ACTUAL)"
+
+go-schema: check-pulumi-version go-build
 	pulumi package get-schema ./$(PROVIDER_BIN) > provider/schema.json
 
 go-sdk-clean:
@@ -398,7 +433,7 @@ go-sdk-clean:
 # Generated files are rsynced over, then the temp directory is removed.
 SDK_TMP := .sdk-gen-tmp
 
-go-sdk-python: go-build
+go-sdk-python: check-pulumi-version go-build
 	rm -rf $(SDK_TMP)
 	pulumi package gen-sdk ./$(PROVIDER_BIN) --language python -o $(SDK_TMP)
 	rsync -a --ignore-existing $(SDK_TMP)/python/ sdk/python/
@@ -411,7 +446,7 @@ go-sdk-python: go-build
 	# "from pulumi_lagoon import Project" instead of "from pulumi_lagoon.lagoon import Project".
 	printf '\n# Re-export resource classes at the top level for convenience.\n# This is appended by the go-sdk-python Makefile target after generation.\nfrom .lagoon import *\n' >> sdk/python/pulumi_lagoon/__init__.py
 
-go-sdk-nodejs: go-build
+go-sdk-nodejs: check-pulumi-version go-build
 	rm -rf $(SDK_TMP)
 	pulumi package gen-sdk ./$(PROVIDER_BIN) --language nodejs -o $(SDK_TMP)
 	rsync -a --ignore-existing $(SDK_TMP)/nodejs/ sdk/nodejs/
@@ -436,7 +471,7 @@ go-sdk-nodejs: go-build
 	cp LICENSE sdk/nodejs/LICENSE
 	rm -rf $(SDK_TMP)
 
-go-sdk-go: go-build
+go-sdk-go: check-pulumi-version go-build
 	rm -rf $(SDK_TMP)
 	pulumi package gen-sdk ./$(PROVIDER_BIN) --language go -o $(SDK_TMP)
 	rsync -a --delete --exclude='go.mod' --exclude='go.sum' --exclude='LICENSE' $(SDK_TMP)/go/ sdk/go/
@@ -449,7 +484,7 @@ go-sdk-go: go-build
 #   - patches TargetFramework to net8.0 (codegen emits net6.0 which is EOL)
 #   - restores logo.png from docs/ (codegen copies the SVG under a .png name;
 #     we overwrite it with the real PNG so NuGet package icon renders correctly)
-go-sdk-dotnet: go-build
+go-sdk-dotnet: check-pulumi-version go-build
 	rm -rf $(SDK_TMP)
 	pulumi package gen-sdk ./$(PROVIDER_BIN) --language dotnet -o $(SDK_TMP)
 	mkdir -p sdk/dotnet
