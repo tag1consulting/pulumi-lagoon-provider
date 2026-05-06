@@ -18,6 +18,7 @@ type Project struct {
 	OpenshiftProjectPattern string `json:"openshiftProjectPattern"`
 	AutoIdle                *int   `json:"autoIdle"`
 	StorageCalc             *int   `json:"storageCalc"`
+	PublicKey               string `json:"publicKey"`
 	Created                 string `json:"created"`
 }
 
@@ -33,6 +34,7 @@ type projectRaw struct {
 	OpenshiftProjectPattern string          `json:"openshiftProjectPattern"`
 	AutoIdle                *int            `json:"autoIdle"`
 	StorageCalc             *int            `json:"storageCalc"`
+	PublicKey               string          `json:"publicKey"`
 	Created                 string          `json:"created"`
 }
 
@@ -47,6 +49,7 @@ func normalizeProject(raw projectRaw) Project {
 		OpenshiftProjectPattern: raw.OpenshiftProjectPattern,
 		AutoIdle:                raw.AutoIdle,
 		StorageCalc:             raw.StorageCalc,
+		PublicKey:               raw.PublicKey,
 		Created:                 raw.Created,
 	}
 

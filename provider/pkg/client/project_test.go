@@ -15,10 +15,11 @@ func TestCreateProject(t *testing.T) {
 		}
 		return map[string]any{
 			"addProject": map[string]any{
-				"id":      42,
-				"name":    "test-project",
-				"gitUrl":  "git@example.com:repo.git",
-				"created": "2024-01-01T00:00:00Z",
+				"id":        42,
+				"name":      "test-project",
+				"gitUrl":    "git@example.com:repo.git",
+				"created":   "2024-01-01T00:00:00Z",
+				"publicKey": "ssh-rsa AAAAB3NzaC1yc2E... lagoon",
 				"openshift": map[string]any{
 					"id":   1,
 					"name": "cluster-1",
@@ -45,6 +46,9 @@ func TestCreateProject(t *testing.T) {
 	}
 	if p.OpenshiftID != 1 {
 		t.Errorf("expected OpenshiftID=1 (normalized from nested), got %d", p.OpenshiftID)
+	}
+	if p.PublicKey != "ssh-rsa AAAAB3NzaC1yc2E... lagoon" {
+		t.Errorf("expected publicKey to round-trip, got %q", p.PublicKey)
 	}
 }
 
