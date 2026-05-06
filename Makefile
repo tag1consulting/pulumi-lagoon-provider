@@ -423,14 +423,14 @@ go-sdk-nodejs: go-build
 	done
 	# Fix generated path: utilities.ts uses require('./package.json') but compiles to bin/
 	# where package.json is one level up, so patch it to require('../package.json').
-	sed -i "s|require('./package.json')|require('../package.json')|g" sdk/nodejs/utilities.ts
+	sed -i.bak "s|require('./package.json')|require('../package.json')|g" sdk/nodejs/utilities.ts && rm -f sdk/nodejs/utilities.ts.bak
 	# Re-export resource classes at the top level so users can write
 	# import { Project } from "@tag1consulting/pulumi-lagoon".
 	printf '\n// Re-export resource classes at the top level for convenience.\n// This is appended by the go-sdk-nodejs Makefile target after generation.\nexport * from "./lagoon";\n' >> sdk/nodejs/index.ts
 	# Inject description field into package.json (codegen does not emit it).
 	# Guard: only inject if not already present (idempotent across re-runs).
 	grep -q '"description"' sdk/nodejs/package.json || \
-		sed -i '/"name": "@tag1consulting\/pulumi-lagoon"/a\    "description": "Manage Lagoon hosting platform resources as infrastructure-as-code.",' sdk/nodejs/package.json
+		{ awk '{print} /"name": "@tag1consulting\/pulumi-lagoon"/{print "    \"description\": \"Manage Lagoon hosting platform resources as infrastructure-as-code.\","}' sdk/nodejs/package.json > sdk/nodejs/package.json.tmp && mv sdk/nodejs/package.json.tmp sdk/nodejs/package.json; }
 	grep -q '"description"' sdk/nodejs/package.json || \
 		(echo "ERROR: description injection failed in package.json" >&2 && exit 1)
 	cp LICENSE sdk/nodejs/LICENSE
@@ -457,29 +457,29 @@ go-sdk-dotnet: go-build
 	cp LICENSE sdk/dotnet/LICENSE
 	# Patch generated TargetFramework to net8.0 (codegen emits net6.0, which is EOL).
 	# Match any TFM so this remains effective if codegen ever emits net7.0/net9.0.
-	sed -i 's|<TargetFramework>[^<]*</TargetFramework>|<TargetFramework>net8.0</TargetFramework>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+	sed -i.bak 's|<TargetFramework>[^<]*</TargetFramework>|<TargetFramework>net8.0</TargetFramework>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj && rm -f sdk/dotnet/Tag1Consulting.Lagoon.csproj.bak
 	grep -q '<TargetFramework>net8.0</TargetFramework>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
 		(echo "ERROR: TargetFramework patch failed in Tag1Consulting.Lagoon.csproj" >&2 && exit 1)
 	# Inject PackageReadmeFile property (codegen does not emit it).
 	# Guard: only inject if not already present (idempotent across re-runs).
 	grep -q '<PackageReadmeFile>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
-		sed -i '/<PackageIcon>logo.png<\/PackageIcon>/a\    <PackageReadmeFile>README.md</PackageReadmeFile>' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+		{ awk '{print} /<PackageIcon>logo.png<\/PackageIcon>/{print "    <PackageReadmeFile>README.md</PackageReadmeFile>"}' sdk/dotnet/Tag1Consulting.Lagoon.csproj > sdk/dotnet/Tag1Consulting.Lagoon.csproj.tmp && mv sdk/dotnet/Tag1Consulting.Lagoon.csproj.tmp sdk/dotnet/Tag1Consulting.Lagoon.csproj; }
 	grep -q '<PackageReadmeFile>README.md</PackageReadmeFile>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
 		(echo "ERROR: PackageReadmeFile patch failed in Tag1Consulting.Lagoon.csproj" >&2 && exit 1)
 	# Inject PackageTags property (codegen does not emit it).
 	# Guard: only inject if not already present (idempotent across re-runs).
 	grep -q '<PackageTags>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
-		sed -i '/<PackageReadmeFile>README.md<\/PackageReadmeFile>/a\    <PackageTags>lagoon;pulumi;infrastructure-as-code;kubernetes;hosting</PackageTags>' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+		{ awk '{print} /<PackageReadmeFile>README.md<\/PackageReadmeFile>/{print "    <PackageTags>lagoon;pulumi;infrastructure-as-code;kubernetes;hosting</PackageTags>"}' sdk/dotnet/Tag1Consulting.Lagoon.csproj > sdk/dotnet/Tag1Consulting.Lagoon.csproj.tmp && mv sdk/dotnet/Tag1Consulting.Lagoon.csproj.tmp sdk/dotnet/Tag1Consulting.Lagoon.csproj; }
 	grep -q '<PackageTags>' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
 		(echo "ERROR: PackageTags injection failed in Tag1Consulting.Lagoon.csproj" >&2 && exit 1)
 	# Pack README.md into the nupkg root (codegen does not include it).
 	# Guard: only inject if not already present (idempotent across re-runs).
 	grep -q '<None Include="README.md"' sdk/dotnet/Tag1Consulting.Lagoon.csproj || \
-		sed -i '/<None Include="logo.png">/i\    <None Include="README.md" Pack="true" PackagePath="" />' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+		{ awk '/<None Include="logo.png">/{print "    <None Include=\"README.md\" Pack=\"true\" PackagePath=\"\" />"} {print}' sdk/dotnet/Tag1Consulting.Lagoon.csproj > sdk/dotnet/Tag1Consulting.Lagoon.csproj.tmp && mv sdk/dotnet/Tag1Consulting.Lagoon.csproj.tmp sdk/dotnet/Tag1Consulting.Lagoon.csproj; }
 	# Replace the SVG-disguised-as-PNG that codegen copies with a real PNG.
 	cp docs/logo.png sdk/dotnet/logo.png
 	# Ensure version.txt has a trailing newline (codegen omits it).
-	sed -i -e '$$a\' sdk/dotnet/version.txt
+	awk 1 sdk/dotnet/version.txt > sdk/dotnet/version.txt.tmp && mv sdk/dotnet/version.txt.tmp sdk/dotnet/version.txt
 	rm -rf $(SDK_TMP)
 
 # go-sdk-all regenerates all SDKs without a clean; use go-sdk-clean first for a
@@ -509,16 +509,16 @@ endif
 # Usage: make release-prep VERSION=0.3.0
 release-prep: check-release-version
 	@echo "=== Setting version $(VERSION) ==="
-	sed -i 's/var Version = .*/var Version = "$(VERSION)"/' provider/cmd/pulumi-resource-lagoon/main.go
-	sed -i 's/^PROVIDER_VERSION ?= .*/PROVIDER_VERSION ?= $(VERSION)/' Makefile
-	sed -i 's/"version": ".*"/"version": "$(VERSION)"/' provider/schema.json
-	sed -i 's/^\*\*Status\*\*: v[0-9]\+\.[0-9]\+\.[0-9]\+/\*\*Status\*\*: v$(VERSION)/' README.md
-	sed -i 's/^\*\*Status\*\*: v[0-9]\+\.[0-9]\+\.[0-9]\+/\*\*Status\*\*: v$(VERSION)/' CLAUDE.md
+	sed -i.bak 's/var Version = .*/var Version = "$(VERSION)"/' provider/cmd/pulumi-resource-lagoon/main.go && rm -f provider/cmd/pulumi-resource-lagoon/main.go.bak
+	sed -i.bak 's/^PROVIDER_VERSION ?= .*/PROVIDER_VERSION ?= $(VERSION)/' Makefile && rm -f Makefile.bak
+	sed -i.bak 's/"version": ".*"/"version": "$(VERSION)"/' provider/schema.json && rm -f provider/schema.json.bak
+	sed -i.bak 's/^\*\*Status\*\*: v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\*\*Status\*\*: v$(VERSION)/' README.md && rm -f README.md.bak
+	sed -i.bak 's/^\*\*Status\*\*: v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/\*\*Status\*\*: v$(VERSION)/' CLAUDE.md && rm -f CLAUDE.md.bak
 	printf '# Release v$(VERSION) (%s)\n\nTODO: Write release notes before committing.\n\n---\n\n' "$$(date +%Y-%m-%d)" > /tmp/rn_header.md && cat RELEASE_NOTES.md >> /tmp/rn_header.md && mv /tmp/rn_header.md RELEASE_NOTES.md
 	$(MAKE) PROVIDER_VERSION=$(VERSION) go-build go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet
-	sed -i 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml
+	sed -i.bak 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml && rm -f sdk/python/pyproject.toml.bak
 	jq --indent 4 --arg v "$(VERSION)" '.version = $$v | .pulumi.version = $$v' sdk/nodejs/package.json > sdk/nodejs/package.json.tmp && mv sdk/nodejs/package.json.tmp sdk/nodejs/package.json
-	sed -i 's|<Version>.*</Version>|<Version>$(VERSION)</Version>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj
+	sed -i.bak 's|<Version>.*</Version>|<Version>$(VERSION)</Version>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj && rm -f sdk/dotnet/Tag1Consulting.Lagoon.csproj.bak
 	echo "$(VERSION)" > sdk/dotnet/version.txt
 	@echo "=== Running tests ==="
 	cd provider && CGO_ENABLED=0 go test ./... -count=1
