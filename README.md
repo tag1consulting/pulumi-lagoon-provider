@@ -13,7 +13,7 @@ A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as inf
 
 This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, deploy targets, notifications, tasks, etc.) using Pulumi, with native SDKs for Python, TypeScript/JavaScript, Go, and .NET/C#.
 
-**Status**: v0.4.1 — Native Go Provider
+**Status**: v0.5.0 — Native Go Provider
 
 ## Supported Resources
 
@@ -111,6 +111,9 @@ project = Project("my-site",
         branches="^(main|develop|stage)$",
     )
 )
+
+# The project's deploy key is available as an output for adding to your Git host
+pulumi.export("deploy_key", project.public_key)
 
 prod_env = Environment("production",
     EnvironmentArgs(
