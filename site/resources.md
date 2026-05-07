@@ -28,3 +28,6 @@ The Pulumi Lagoon Provider includes 18 resources organized into six categories. 
 | User | Lagoon users | [Users](users) |
 | UserGroupAssignment | User-to-group role assignments | [Users](users) |
 | UserPlatformRole | Platform-level role assignments | [Users](users) |
+
+{: .note }
+> The `lagoonId` output type varies across resources: most resources use an integer ID, but `Group` returns a UUID string and `User` returns a string ID. If you build automation that references resources by their Lagoon IDs, do not assume a single type.

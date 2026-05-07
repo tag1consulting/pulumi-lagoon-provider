@@ -36,6 +36,9 @@ curl -L https://github.com/uselagoon/lagoon-cli/releases/latest/download/lagoon_
 chmod +x /usr/local/bin/lagoon
 ```
 
+{: .note }
+> The Lagoon CLI project does not currently publish checksums for binary releases. Consider verifying downloads against the [GitHub release page](https://github.com/uselagoon/lagoon-cli/releases) or using a package manager where available.
+
 Verify the installation:
 
 ```bash
@@ -74,10 +77,10 @@ lagoon login
 
 This authenticates via SSH against the configured `--hostname` and stores a short-lived JWT token in your local config. The token is valid for the duration configured on your Lagoon instance (typically 24 hours).
 
-To use a token directly (for example, in CI):
+To use a token directly (for example, in CI), set the `LAGOON_TOKEN` environment variable rather than passing it as a command-line argument (which would expose it in shell history and process listings):
 
 ```bash
-lagoon login --token <your-jwt-token>
+export LAGOON_TOKEN="<your-jwt-token>"
 ```
 
 ## Common Commands

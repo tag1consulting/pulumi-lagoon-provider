@@ -19,6 +19,8 @@ search:
 
 heading_anchors: true
 
+gh_repository_url: "https://github.com/tag1consulting/pulumi-lagoon-provider"
+
 aux_links:
   "View on GitHub":
     - "https://github.com/tag1consulting/pulumi-lagoon-provider"

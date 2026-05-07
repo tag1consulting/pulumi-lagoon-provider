@@ -32,7 +32,7 @@ Each resource type uses a specific ID format for `pulumi import`. Use the table 
 | `lagoon:lagoon:NotificationRocketChat` | `{name}` | `deploy-alerts` |
 | `lagoon:lagoon:NotificationEmail` | `{name}` | `deploy-alerts` |
 | `lagoon:lagoon:NotificationMicrosoftTeams` | `{name}` | `deploy-alerts` |
-| `lagoon:lagoon:ProjectNotification` | `{project}:{type}:{name}` | `my-project:slack:deploy-alerts` |
+| `lagoon:lagoon:ProjectNotification` | `{project_name}:{type}:{notification_name}` | `my-project:slack:deploy-alerts` |
 | `lagoon:lagoon:Task` | `{numeric_id}` | `456` |
 | `lagoon:lagoon:Group` | `{name}` | `my-team` |
 | `lagoon:lagoon:Route` | `{project_name}:{domain}` | `my-project:example.com` |

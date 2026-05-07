@@ -141,7 +141,7 @@ func main() {
             GitUrl:                pulumi.String("git@github.com:org/repo.git"),
             DeploytargetId:        pulumi.Int(1),
             ProductionEnvironment: pulumi.String("main"),
-            Branches:              pulumi.StringPtrInput(pulumi.String("^(main|develop|stage)$")),
+            Branches:              pulumi.StringPtr("^(main|develop|stage)$"),
         })
         if err != nil {
             return err
@@ -153,15 +153,25 @@ func main() {
             Name:            pulumi.String("main"),
             ProjectId:       project.LagoonId,
             DeployType:      pulumi.String("branch"),
-            DeployBaseRef:   pulumi.StringPtrInput(pulumi.String("main")),
+            DeployBaseRef:   pulumi.StringPtr("main"),
             EnvironmentType: pulumi.String("production"),
         })
         if err != nil {
             return err
         }
 
+        _, err = lagoon.NewVariable(ctx, "db-host", &lagoon.VariableArgs{
+            Name:          pulumi.String("DATABASE_HOST"),
+            Value:         pulumi.String("mysql.production.example.com"),
+            ProjectId:     project.LagoonId,
+            EnvironmentId: prodEnv.LagoonId,
+            Scope:         pulumi.String("runtime"),
+        })
+        if err != nil {
+            return err
+        }
+
         ctx.Export("projectId", project.LagoonId)
-        _ = prodEnv
         return nil
     })
 }
@@ -193,6 +203,15 @@ return await Deployment.RunAsync(() =>
         DeployType = "branch",
         DeployBaseRef = "main",
         EnvironmentType = "production",
+    });
+
+    var dbHost = new Variable("db-host", new VariableArgs
+    {
+        Name = "DATABASE_HOST",
+        Value = "mysql.production.example.com",
+        ProjectId = project.LagoonId,
+        EnvironmentId = prodEnv.LagoonId,
+        Scope = "runtime",
     });
 
     return new Dictionary<string, object?>

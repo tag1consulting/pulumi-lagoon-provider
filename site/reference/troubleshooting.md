@@ -35,10 +35,18 @@ If you are using `lagoon:token`, generate a fresh one:
 ```bash
 lagoon login
 lagoon config whoami   # confirm the token works
-pulumi config set lagoon:token "$(cat ~/.lagoon/config.yaml | grep token | ...)" --secret
 ```
 
-Prefer `lagoon:jwtSecret` for automated workflows — the provider refreshes tokens automatically and there is no expiry concern.
+Then set the new token in your Pulumi config using `--secret` so it is encrypted in state:
+
+```bash
+pulumi config set lagoon:token --secret
+```
+
+Pulumi will prompt for the value interactively, avoiding shell history exposure.
+
+{: .tip }
+> Prefer `lagoon:jwtSecret` for automated workflows — the provider refreshes tokens automatically and there is no expiry concern.
 
 ### Self-signed certificate errors
 

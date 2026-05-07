@@ -45,7 +45,7 @@ The first value found is used.
 ## Setting Configuration via Pulumi CLI
 
 ```bash
-# Required: API endpoint
+# Optional: override the default API endpoint (default: https://api.lagoon.sh/graphql)
 pulumi config set lagoon:apiUrl https://api.lagoon.example.com/graphql
 
 # Authentication — use one of:
