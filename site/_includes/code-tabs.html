@@ -1,0 +1,22 @@
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll(".code-tabs").forEach(function(tabGroup) {
+    var radios = tabGroup.querySelectorAll('input[type="radio"]');
+    var panels = tabGroup.querySelectorAll(".tab-content");
+
+    function showTab() {
+      radios.forEach(function(radio, i) {
+        if (panels[i]) {
+          panels[i].style.display = radio.checked ? "block" : "none";
+        }
+      });
+    }
+
+    radios.forEach(function(radio) {
+      radio.addEventListener("change", showTab);
+    });
+
+    showTab();
+  });
+});
+</script>

@@ -9,6 +9,8 @@
 
 A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as infrastructure-as-code.
 
+**[Documentation Site](https://tag1consulting.github.io/pulumi-lagoon-provider/)** | **[Getting Started](https://tag1consulting.github.io/pulumi-lagoon-provider/getting-started/)** | **[Resource Reference](https://tag1consulting.github.io/pulumi-lagoon-provider/resources/)**
+
 ## Overview
 
 This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, deploy targets, notifications, tasks, etc.) using Pulumi, with native SDKs for Python, TypeScript/JavaScript, Go, and .NET/C#.
@@ -231,7 +233,7 @@ Use `pulumi import` to bring existing Lagoon resources under Pulumi management:
 | `lagoon:lagoon:Variable` (project-level) | `{project_id}::{var_name}` | `123::API_KEY` |
 | `lagoon:lagoon:DeployTargetConfig` | `{project_id}:{config_id}` | `123:5` |
 | `lagoon:lagoon:NotificationSlack` | `{name}` | `deploy-alerts` |
-| `lagoon:lagoon:ProjectNotification` | `{project}:{type}:{name}` | `my-project:slack:deploy-alerts` |
+| `lagoon:lagoon:ProjectNotification` | `{project_name}:{type}:{notification_name}` | `my-project:slack:deploy-alerts` |
 | `lagoon:lagoon:Task` | `{numeric_id}` | `456` |
 | `lagoon:lagoon:Group` | `{name}` | `my-team` |
 | `lagoon:lagoon:Route` | `{project_name}:{domain}` | `my-project:example.com` |
@@ -348,6 +350,7 @@ Apache License 2.0 — See [LICENSE](LICENSE) for details.
 
 ## Resources
 
+- [Documentation Site](https://tag1consulting.github.io/pulumi-lagoon-provider/)
 - [Release Notes](RELEASE_NOTES.md)
 - [Pulumi Documentation](https://www.pulumi.com/docs/)
 - [Lagoon Documentation](https://docs.lagoon.sh/)

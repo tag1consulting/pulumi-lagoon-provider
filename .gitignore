@@ -87,3 +87,8 @@ memory-bank/
 
 # OS
 Thumbs.db
+
+# Jekyll / GitHub Pages
+site/_site/
+site/.jekyll-cache/
+site/.sass-cache/
