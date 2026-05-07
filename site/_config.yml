@@ -45,6 +45,12 @@ callouts:
     title: Tip
     color: green
 
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
 exclude:
   - Gemfile.lock
   - node_modules
