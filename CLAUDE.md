@@ -20,14 +20,14 @@ The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1cons
 - Go-based native provider using `pulumi-go-provider` v1.3.0 (`infer` package)
 - Generated SDKs for Python, TypeScript, Go, and .NET/C# from a single schema
 - Published to PyPI (`pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), Go module, and NuGet (`Tag1Consulting.Lagoon`)
-- 490+ unit tests in `provider/`; comprehensive resource CRUD lifecycle
+- 690+ unit tests in `provider/`; comprehensive resource CRUD lifecycle
 
 > **Historical note**: v0.1.x was a Python dynamic provider, fully superseded in v0.2.0. The legacy code was removed in v0.2.7 (issue #77).
 
 ## Development Environment
 
 ### Prerequisites
-- Go 1.22+
+- Go 1.26+
 - Pulumi CLI installed
 - Access to a Lagoon instance with API credentials
 - GraphQL API endpoint and authentication token
@@ -392,7 +392,7 @@ export LAGOON_TOKEN=<your-token>
 
 ## Contributing
 
-This is currently an early-stage project. Once the core functionality is working, we'll open it up for community contributions.
+Contributions, feedback, and bug reports are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding guidelines, and the pull request process.
 
 ## References
 
