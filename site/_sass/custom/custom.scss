@@ -173,36 +173,103 @@ h1, h2, h3, h4, h5, h6,
   line-height: 1.45 !important;
 }
 
-// Language labels — style H4 headers that immediately precede a code block
-// as compact tab-like labels attached to the block below.
-.main-content h4 + .highlighter-rouge {
-  margin-top: 0;
-  border-top-left-radius: 0;
-}
+// ---------------------------------------------------------------------------
+// Language code tabs — JS handles show/hide, CSS handles styling
+// ---------------------------------------------------------------------------
+.code-tabs {
+  margin: 1.5rem 0;
 
-.main-content h4#python,
-.main-content h4#typescript,
-.main-content h4#go,
-.main-content h4#c,
-.main-content h4#python ~ h4#typescript,
-.main-content h4#python ~ h4#go,
-.main-content h4#python ~ h4#c {
-  display: inline-block;
-  background: #15787c;
-  color: #ffffff;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 0.3rem 0.85rem;
-  border-radius: 4px 4px 0 0;
-  margin-bottom: 0;
-  margin-top: 1.75rem;
-
-  // Hide the anchor icon inside these compact labels
-  .anchor-heading {
+  input[type="radio"] {
     display: none;
   }
+
+  label {
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    font-family: "Styrene A", Futura, "Trebuchet MS", Arial, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    color: #061e32;
+    background: #eef2f6;
+    border: 1px solid #d0d7de;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    margin-bottom: -1px;
+    margin-right: 2px;
+    position: relative;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+      background: #d1eaf1;
+    }
+  }
+
+  input[type="radio"]:checked + label {
+    background: #15787c;
+    color: #ffffff;
+    border-color: #15787c;
+    z-index: 1;
+  }
+
+  .tab-content {
+    display: none;
+    border-top: 2px solid #15787c;
+
+    .highlighter-rouge {
+      margin-top: 0;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    .highlight {
+      border-radius: 0 0 4px 4px;
+    }
+  }
+}
+
+// Auto-label standalone code blocks by language.
+// The .code-tabs override below hides labels for blocks inside tabs.
+.main-content .language-python.highlighter-rouge::before,
+.main-content .language-typescript.highlighter-rouge::before,
+.main-content .language-go.highlighter-rouge::before,
+.main-content .language-csharp.highlighter-rouge::before,
+.main-content .language-bash.highlighter-rouge::before,
+.main-content .language-shell.highlighter-rouge::before,
+.main-content .language-yaml.highlighter-rouge::before,
+.main-content .language-graphql.highlighter-rouge::before {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-family: "Styrene A", Futura, "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #ffffff;
+  background: #15787c;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: -1px;
+  position: relative;
+  z-index: 1;
+}
+
+.main-content .language-python.highlighter-rouge::before  { content: "Python"; }
+.main-content .language-typescript.highlighter-rouge::before { content: "TypeScript"; }
+.main-content .language-go.highlighter-rouge::before { content: "Go"; }
+.main-content .language-csharp.highlighter-rouge::before { content: "C#"; }
+.main-content .language-bash.highlighter-rouge::before { content: "Shell"; }
+.main-content .language-shell.highlighter-rouge::before { content: "Shell"; }
+.main-content .language-yaml.highlighter-rouge::before { content: "YAML"; }
+.main-content .language-graphql.highlighter-rouge::before { content: "GraphQL"; }
+
+// Hide auto-labels inside tab panels (tabs have their own labels)
+.code-tabs .tab-content .highlighter-rouge::before {
+  display: none;
+}
+
+// Remove top-left radius on code blocks that have a label above
+.main-content .highlighter-rouge[class*="language-"] .highlight {
+  border-top-left-radius: 0;
 }
 
 // Inline code in body text

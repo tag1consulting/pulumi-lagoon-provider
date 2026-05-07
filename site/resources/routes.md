@@ -58,7 +58,16 @@ pulumi import lagoon:lagoon:Route my-route my-site:www.example.com
 
 ### Examples
 
-#### Python
+<div class="code-tabs" markdown="0">
+  <input type="radio" id="route-example-python" name="route-example" checked>
+  <label for="route-example-python">Python</label>
+  <input type="radio" id="route-example-ts" name="route-example">
+  <label for="route-example-ts">TypeScript</label>
+  <input type="radio" id="route-example-go" name="route-example">
+  <label for="route-example-go">Go</label>
+  <input type="radio" id="route-example-csharp" name="route-example">
+  <label for="route-example-csharp">C#</label>
+  <div class="tab-content" markdown="1">
 
 ```python
 import pulumi
@@ -113,7 +122,8 @@ secure_route = lagoon.Route("secure-route",
 pulumi.export("main_route_id", main_route.lagoon_id)
 ```
 
-#### TypeScript
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```typescript
 import * as pulumi from "@pulumi/pulumi";
@@ -133,7 +143,8 @@ const mainRoute = new lagoon.Route("www-route", {
 export const mainRouteId = mainRoute.lagoonId;
 ```
 
-#### Go
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```go
 package main
@@ -165,7 +176,8 @@ func main() {
 }
 ```
 
-#### C#
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```csharp
 using Pulumi;
@@ -191,6 +203,9 @@ return await Deployment.RunAsync(() =>
     };
 });
 ```
+
+  </div>
+</div>
 
 ---
 

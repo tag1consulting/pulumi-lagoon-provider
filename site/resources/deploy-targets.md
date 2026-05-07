@@ -42,7 +42,16 @@ pulumi import lagoon:lagoon:DeployTarget production-cluster 1
 
 ### Examples
 
-#### Python
+<div class="code-tabs" markdown="0">
+  <input type="radio" id="deploy-target-example-python" name="deploy-target-example" checked>
+  <label for="deploy-target-example-python">Python</label>
+  <input type="radio" id="deploy-target-example-ts" name="deploy-target-example">
+  <label for="deploy-target-example-ts">TypeScript</label>
+  <input type="radio" id="deploy-target-example-go" name="deploy-target-example">
+  <label for="deploy-target-example-go">Go</label>
+  <input type="radio" id="deploy-target-example-csharp" name="deploy-target-example">
+  <label for="deploy-target-example-csharp">C#</label>
+  <div class="tab-content" markdown="1">
 
 ```python
 import pulumi
@@ -76,7 +85,8 @@ pulumi.export("production_target_id", production_cluster.lagoon_id)
 pulumi.export("staging_target_id", staging_cluster.lagoon_id)
 ```
 
-#### TypeScript
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```typescript
 import * as pulumi from "@pulumi/pulumi";
@@ -95,7 +105,8 @@ const productionCluster = new lagoon.DeployTarget("production-cluster", {
 export const productionTargetId = productionCluster.lagoonId;
 ```
 
-#### Go
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```go
 package main
@@ -126,7 +137,8 @@ func main() {
 }
 ```
 
-#### C#
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```csharp
 using Pulumi;
@@ -151,6 +163,9 @@ return await Deployment.RunAsync(() =>
     };
 });
 ```
+
+  </div>
+</div>
 
 ---
 

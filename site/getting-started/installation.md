@@ -10,7 +10,16 @@ Install the SDK for your language of choice. The provider binary is installed au
 
 ## SDK Installation
 
-#### Python
+<div class="code-tabs" markdown="0">
+  <input type="radio" id="install-sdk-python" name="install-sdk" checked>
+  <label for="install-sdk-python">Python</label>
+  <input type="radio" id="install-sdk-ts" name="install-sdk">
+  <label for="install-sdk-ts">TypeScript</label>
+  <input type="radio" id="install-sdk-go" name="install-sdk">
+  <label for="install-sdk-go">Go</label>
+  <input type="radio" id="install-sdk-csharp" name="install-sdk">
+  <label for="install-sdk-csharp">C#</label>
+  <div class="tab-content" markdown="1">
 
 ```bash
 pip install pulumi-lagoon
@@ -18,7 +27,8 @@ pip install pulumi-lagoon
 
 [View on PyPI](https://pypi.org/project/pulumi-lagoon/)
 
-#### TypeScript / JavaScript
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```bash
 npm install @tag1consulting/pulumi-lagoon
@@ -28,7 +38,8 @@ yarn add @tag1consulting/pulumi-lagoon
 
 [View on npm](https://www.npmjs.com/package/@tag1consulting/pulumi-lagoon)
 
-#### Go
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```bash
 go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon
@@ -36,13 +47,17 @@ go get github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon
 
 [View on pkg.go.dev](https://pkg.go.dev/github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon)
 
-#### .NET / C#
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```bash
 dotnet add package Tag1Consulting.Lagoon
 ```
 
 [View on NuGet](https://www.nuget.org/packages/Tag1Consulting.Lagoon)
+
+  </div>
+</div>
 
 ## Provider Binary
 

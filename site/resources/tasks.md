@@ -46,7 +46,16 @@ pulumi import lagoon:lagoon:Task drush-cache-clear 42
 
 ### Examples
 
-#### Python
+<div class="code-tabs" markdown="0">
+  <input type="radio" id="task-example-python" name="task-example" checked>
+  <label for="task-example-python">Python</label>
+  <input type="radio" id="task-example-ts" name="task-example">
+  <label for="task-example-ts">TypeScript</label>
+  <input type="radio" id="task-example-go" name="task-example">
+  <label for="task-example-go">Go</label>
+  <input type="radio" id="task-example-csharp" name="task-example">
+  <label for="task-example-csharp">C#</label>
+  <div class="tab-content" markdown="1">
 
 **Example 1: Drush cache-clear command task**
 
@@ -89,7 +98,8 @@ db_snapshot = lagoon.Task("db-snapshot",
 )
 ```
 
-#### TypeScript
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```typescript
 import * as pulumi from "@pulumi/pulumi";
@@ -108,7 +118,8 @@ const cacheClear = new lagoon.Task("drush-cache-clear", {
 export const cacheClearTaskId = cacheClear.lagoonId;
 ```
 
-#### Go
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```go
 package main
@@ -139,7 +150,8 @@ func main() {
 }
 ```
 
-#### C#
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```csharp
 using Pulumi;
@@ -164,3 +176,6 @@ return await Deployment.RunAsync(() =>
     };
 });
 ```
+
+  </div>
+</div>

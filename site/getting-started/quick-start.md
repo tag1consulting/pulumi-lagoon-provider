@@ -10,13 +10,11 @@ This walkthrough gets you from zero to a running Lagoon project in about five mi
 
 ## Step 1: Install the SDK
 
-#### Python
-
 ```bash
 pip install pulumi-lagoon
 ```
 
-See [Installation](installation/) for TypeScript, Go, and .NET instructions.
+See [Installation](installation/) for TypeScript, Go, and .NET install commands.
 
 ## Step 2: Create a New Pulumi Project
 
@@ -38,7 +36,16 @@ pulumi config set lagoon:token <your-jwt-token> --secret
 
 Replace the generated entry point with the following. The example creates a project, a production environment, and a database host variable.
 
-#### Python
+<div class="code-tabs" markdown="0">
+  <input type="radio" id="qs-write-code-python" name="qs-write-code" checked>
+  <label for="qs-write-code-python">Python</label>
+  <input type="radio" id="qs-write-code-ts" name="qs-write-code">
+  <label for="qs-write-code-ts">TypeScript</label>
+  <input type="radio" id="qs-write-code-go" name="qs-write-code">
+  <label for="qs-write-code-go">Go</label>
+  <input type="radio" id="qs-write-code-csharp" name="qs-write-code">
+  <label for="qs-write-code-csharp">C#</label>
+  <div class="tab-content" markdown="1">
 
 ```python
 import pulumi
@@ -80,7 +87,8 @@ pulumi.export("project_id", project.lagoon_id)
 pulumi.export("production_url", prod_env.route)
 ```
 
-#### TypeScript
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```typescript
 import * as pulumi from "@pulumi/pulumi";
@@ -115,7 +123,8 @@ const dbHost = new lagoon.Variable("db-host", {
 export const projectId = project.lagoonId;
 ```
 
-#### Go
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```go
 package main
@@ -158,7 +167,8 @@ func main() {
 }
 ```
 
-#### C#
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```csharp
 using System.Collections.Generic;
@@ -192,6 +202,9 @@ return await Deployment.RunAsync(() =>
     };
 });
 ```
+
+  </div>
+</div>
 
 ## Step 5: Deploy
 

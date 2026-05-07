@@ -89,7 +89,16 @@ pulumi import lagoon:lagoon:UserPlatformRole alice-platform alice@example.com:VI
 
 ### Complete user setup: create, assign to group, assign platform role
 
-#### Python
+<div class="code-tabs" markdown="0">
+  <input type="radio" id="user-example-python" name="user-example" checked>
+  <label for="user-example-python">Python</label>
+  <input type="radio" id="user-example-ts" name="user-example">
+  <label for="user-example-ts">TypeScript</label>
+  <input type="radio" id="user-example-go" name="user-example">
+  <label for="user-example-go">Go</label>
+  <input type="radio" id="user-example-csharp" name="user-example">
+  <label for="user-example-csharp">C#</label>
+  <div class="tab-content" markdown="1">
 
 ```python
 import pulumi
@@ -127,7 +136,8 @@ alice_platform = lagoon.UserPlatformRole("alice-platform-viewer",
 pulumi.export("alice_lagoon_id", alice.lagoon_id)
 ```
 
-#### TypeScript
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```typescript
 import * as pulumi from "@pulumi/pulumi";
@@ -154,7 +164,8 @@ const alicePlatform = new lagoon.UserPlatformRole("alice-platform-viewer", {
 export const aliceLagoonId = alice.lagoonId;
 ```
 
-#### Go
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```go
 package main
@@ -199,7 +210,8 @@ func main() {
 }
 ```
 
-#### C#
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```csharp
 using Pulumi;
@@ -234,3 +246,6 @@ return await Deployment.RunAsync(() =>
     };
 });
 ```
+
+  </div>
+</div>

@@ -46,7 +46,16 @@ pulumi import lagoon:lagoon:Project my-site 123
 
 ### Examples
 
-#### Python
+<div class="code-tabs" markdown="0">
+  <input type="radio" id="project-example-python" name="project-example" checked>
+  <label for="project-example-python">Python</label>
+  <input type="radio" id="project-example-ts" name="project-example">
+  <label for="project-example-ts">TypeScript</label>
+  <input type="radio" id="project-example-go" name="project-example">
+  <label for="project-example-go">Go</label>
+  <input type="radio" id="project-example-csharp" name="project-example">
+  <label for="project-example-csharp">C#</label>
+  <div class="tab-content" markdown="1">
 
 ```python
 import pulumi
@@ -68,7 +77,8 @@ pulumi.export("deploy_key", project.public_key)
 pulumi.export("project_id", project.lagoon_id)
 ```
 
-#### TypeScript
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```typescript
 import * as pulumi from "@pulumi/pulumi";
@@ -87,7 +97,8 @@ export const deployKey = project.publicKey;
 export const projectId = project.lagoonId;
 ```
 
-#### Go
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```go
 package main
@@ -118,7 +129,8 @@ func main() {
 }
 ```
 
-#### C#
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```csharp
 using Pulumi;
@@ -143,6 +155,9 @@ return await Deployment.RunAsync(() =>
     };
 });
 ```
+
+  </div>
+</div>
 
 ---
 

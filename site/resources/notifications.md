@@ -138,7 +138,12 @@ pulumi import lagoon:lagoon:ProjectNotification my-project-slack my-site:slack:m
 
 ### Creating a Slack notification and linking it to a project
 
-#### Python
+<div class="code-tabs" markdown="0">
+  <input type="radio" id="slack-notif-example-python" name="slack-notif-example" checked>
+  <label for="slack-notif-example-python">Python</label>
+  <input type="radio" id="slack-notif-example-ts" name="slack-notif-example">
+  <label for="slack-notif-example-ts">TypeScript</label>
+  <div class="tab-content" markdown="1">
 
 ```python
 import pulumi
@@ -182,7 +187,8 @@ lagoon.ProjectNotification("my-site-email",
 )
 ```
 
-#### TypeScript
+  </div>
+  <div class="tab-content" markdown="1">
 
 ```typescript
 import * as pulumi from "@pulumi/pulumi";
@@ -200,3 +206,6 @@ const projectSlack = new lagoon.ProjectNotification("my-site-slack", {
     notificationName: "deployments-slack",
 }, { dependsOn: [slackNotif] });
 ```
+
+  </div>
+</div>
