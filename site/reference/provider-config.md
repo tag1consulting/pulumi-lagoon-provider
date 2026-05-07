@@ -10,7 +10,7 @@ nav_order: 1
 
 | Config Key | Environment Variable | Type | Default | Secret | Description |
 |---|---|---|---|---|---|
-| `lagoon:apiUrl` | `LAGOON_API_URL` | string | `https://api.lagoon.sh/graphql` | No | Lagoon GraphQL API endpoint |
+| `lagoon:apiUrl` | `LAGOON_API_URL` | string | `https://api.lagoon.sh/graphql` | Yes | Lagoon GraphQL API endpoint |
 | `lagoon:token` | `LAGOON_TOKEN` | string | — | Yes | Pre-configured JWT authentication token |
 | `lagoon:jwtSecret` | `LAGOON_JWT_SECRET` | string | — | Yes | Lagoon core JWT secret; provider generates admin tokens automatically |
 | `lagoon:jwtAudience` | `LAGOON_JWT_AUDIENCE` | string | `api.dev` | No | Audience claim used when generating tokens from `jwtSecret` |
