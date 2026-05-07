@@ -124,6 +124,12 @@ A `ProjectNotification` links an existing notification configuration to a projec
 | `notificationType` | string | Yes | Notification type: `slack`, `rocketchat`, `email`, or `microsoftteams` |
 | `notificationName` | string | Yes | Name of the notification configuration to link |
 
+### Outputs
+
+| Output | Type | Description |
+|--------|------|-------------|
+| `projectId` | int | Lagoon internal ID of the linked project |
+
 ### Import
 
 Import using the project name, notification type, and notification name:

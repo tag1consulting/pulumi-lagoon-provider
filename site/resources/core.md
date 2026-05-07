@@ -24,9 +24,9 @@ A `Project` represents a Lagoon project — a site or application managed by Lag
 | `productionEnvironment` | string | No | Name of the production branch |
 | `branches` | string | No | Branch regex pattern to deploy |
 | `pullrequests` | string | No | PR regex pattern to deploy |
+| `openshiftProjectPattern` | string | No | Namespace pattern for the project on the cluster |
 | `autoIdle` | int | No | Auto-idle setting (0=disabled, 1=enabled) |
 | `storageCalc` | int | No | Storage calculation (0=disabled, 1=enabled) |
-| `openshift` | int | No | Deprecated alias for `deploytargetId` |
 
 ### Outputs
 
@@ -174,6 +174,9 @@ An `Environment` represents a Lagoon environment — a deployed branch or pull r
 | `deployType` | string | Yes | `branch` or `pullrequest` |
 | `environmentType` | string | Yes | `production` or `development` |
 | `deployBaseRef` | string | No | Base ref for deployment |
+| `deployHeadRef` | string | No | Head ref for pull request deployments |
+| `deployTitle` | string | No | Title for pull request deployments |
+| `openshiftProjectName` | string | No | Override namespace name on the cluster |
 | `autoIdle` | int | No | Auto-idle setting (0=disabled, 1=enabled) |
 
 ### Outputs

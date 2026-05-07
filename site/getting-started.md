@@ -19,7 +19,7 @@ Before you begin, make sure you have:
 - **One language runtime:**
   - Python 3.9+
   - Node.js 18+
-  - Go 1.22+
+  - Go 1.26+
   - .NET 6.0+
 
 ## In This Section
