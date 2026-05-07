@@ -1,4 +1,7 @@
 // Tag1 brand overrides for just-the-docs
+//
+// Colors: orange #e65c00, navy #061e32, light-blue #d1eaf1,
+//         jade #15787c, cream #eeefe8
 
 // Heading font
 h1, h2, h3, h4, h5, h6,
@@ -6,20 +9,39 @@ h1, h2, h3, h4, h5, h6,
   font-family: "Styrene A", Futura, "Trebuchet MS", Arial, sans-serif;
 }
 
+// ---------------------------------------------------------------------------
 // Hero section (home page)
+// ---------------------------------------------------------------------------
 .hero {
-  background: linear-gradient(135deg, #061e32 0%, #0a2d4a 100%);
+  background: linear-gradient(135deg, #061e32 0%, #0a2d4a 50%, #0d3356 100%);
   color: #ffffff;
-  padding: 4rem 2rem;
+  padding: 4.5rem 2rem 4rem;
   text-align: center;
   border-bottom: 4px solid #e65c00;
   margin: -1.5rem -1.5rem 2rem -1.5rem;
+  position: relative;
+  overflow: hidden;
+
+  // Subtle radial highlight behind the logo
+  &::before {
+    content: "";
+    position: absolute;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(21, 120, 124, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
 
   .hero-logo {
-    max-width: 120px;
+    max-width: 140px;
     height: auto;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.75rem;
     filter: brightness(0) invert(1);
+    opacity: 0.92;
+    position: relative;
   }
 
   h1 {
@@ -27,15 +49,19 @@ h1, h2, h3, h4, h5, h6,
     font-size: 2.75rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+    position: relative;
   }
 
   .tagline {
     color: #d1eaf1;
     font-size: 1.25rem;
-    margin-bottom: 2rem;
-    max-width: 600px;
+    margin-bottom: 2.25rem;
+    max-width: 620px;
     margin-left: auto;
     margin-right: auto;
+    line-height: 1.5;
+    position: relative;
   }
 
   .hero-actions {
@@ -43,6 +69,7 @@ h1, h2, h3, h4, h5, h6,
     gap: 1rem;
     justify-content: center;
     flex-wrap: wrap;
+    position: relative;
   }
 
   .btn-hero {
@@ -54,12 +81,15 @@ h1, h2, h3, h4, h5, h6,
     text-decoration: none;
     font-weight: 600;
     font-size: 1.1rem;
-    transition: background 0.2s;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(230, 92, 0, 0.25);
 
     &:hover {
       background: #c44f00;
       color: #ffffff;
       text-decoration: none;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(230, 92, 0, 0.35);
     }
   }
 
@@ -68,15 +98,19 @@ h1, h2, h3, h4, h5, h6,
     background: transparent;
     border: 2px solid #d1eaf1;
     color: #d1eaf1;
+    box-shadow: none;
 
     &:hover {
       background: rgba(209, 234, 241, 0.15);
       color: #ffffff;
+      box-shadow: 0 2px 8px rgba(209, 234, 241, 0.15);
     }
   }
 }
 
+// ---------------------------------------------------------------------------
 // Feature cards
+// ---------------------------------------------------------------------------
 .features {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -89,6 +123,12 @@ h1, h2, h3, h4, h5, h6,
   border-radius: 8px;
   padding: 1.5rem;
   border-left: 4px solid #e65c00;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(6, 30, 50, 0.1);
+  }
 
   h3 {
     color: #061e32;
@@ -100,26 +140,28 @@ h1, h2, h3, h4, h5, h6,
     color: #061e32;
     margin-bottom: 0;
     font-size: 0.95rem;
+    line-height: 1.5;
   }
 }
 
-// Sidebar active link
+// ---------------------------------------------------------------------------
+// Sidebar
+// ---------------------------------------------------------------------------
 .nav-list-link.active {
   border-left-color: #e65c00;
   font-weight: 600;
 }
 
-// Code block accent
+// ---------------------------------------------------------------------------
+// Code blocks
+// ---------------------------------------------------------------------------
 .highlight {
   border-left: 3px solid #15787c;
   border-radius: 4px;
 }
 
-// Tighten line spacing inside multi-line <pre> code blocks. just-the-docs
-// inherits .main-content line-height: 1.6 into pre/code, which spreads
-// rows of ASCII-art diagrams and tree listings apart. Override both the
-// pre container and any code element inside it. !important is required
-// because the theme's typography rules load after our custom stylesheet.
+// Code block line-height: theme default 1.6 is too loose for code, but 1em
+// is too tight — use 1.45 for readable code.
 .main-content div.highlighter-rouge,
 .main-content div.highlighter-rouge pre,
 .main-content div.highlighter-rouge pre code,
@@ -128,14 +170,71 @@ h1, h2, h3, h4, h5, h6,
 .main-content .highlight,
 .main-content .highlight pre,
 .main-content .highlight pre code {
-  line-height: 1em !important;
+  line-height: 1.45 !important;
 }
 
-// Table styling
+// Language labels — style H4 headers that immediately precede a code block
+// as compact tab-like labels attached to the block below.
+.main-content h4 + .highlighter-rouge {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+.main-content h4#python,
+.main-content h4#typescript,
+.main-content h4#go,
+.main-content h4#c,
+.main-content h4#python ~ h4#typescript,
+.main-content h4#python ~ h4#go,
+.main-content h4#python ~ h4#c {
+  display: inline-block;
+  background: #15787c;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.85rem;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 0;
+  margin-top: 1.75rem;
+
+  // Hide the anchor icon inside these compact labels
+  .anchor-heading {
+    display: none;
+  }
+}
+
+// Inline code in body text
+.main-content code {
+  background-color: #eef2f6;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  padding: 0.15em 0.35em;
+  font-size: 0.88em;
+}
+
+// Don't double-style code inside highlight blocks or links
+.main-content .highlight code,
+.main-content pre code {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+// ---------------------------------------------------------------------------
+// Tables
+// ---------------------------------------------------------------------------
 table {
+  border-collapse: separate;
+  border-spacing: 0;
+
   th {
     background-color: #061e32;
     color: #ffffff;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
 
     code {
       background-color: rgba(255, 255, 255, 0.15);
@@ -143,9 +242,139 @@ table {
       border-color: rgba(255, 255, 255, 0.3);
     }
   }
+
+  // Alternating row stripes
+  tbody tr:nth-child(even) {
+    background-color: #f8fafb;
+  }
+
+  tbody tr:hover {
+    background-color: #edf4f7;
+  }
+
+  td {
+    font-size: 0.92rem;
+  }
 }
 
+// ---------------------------------------------------------------------------
+// Callouts / admonitions
+// ---------------------------------------------------------------------------
+blockquote {
+  &.warning {
+    background-color: #fff4e6;
+    border-left: 4px solid #e65c00;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+
+    &::before {
+      content: "Warning";
+      display: block;
+      font-family: "Styrene A", Futura, "Trebuchet MS", Arial, sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #e65c00;
+      margin-bottom: 0.35rem;
+    }
+
+    p {
+      margin-bottom: 0;
+      color: #061e32;
+    }
+  }
+
+  &.note {
+    background-color: #e8f4f8;
+    border-left: 4px solid #15787c;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+
+    &::before {
+      content: "Note";
+      display: block;
+      font-family: "Styrene A", Futura, "Trebuchet MS", Arial, sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #15787c;
+      margin-bottom: 0.35rem;
+    }
+
+    p {
+      margin-bottom: 0;
+      color: #061e32;
+    }
+  }
+
+  &.important {
+    background-color: #fef3cd;
+    border-left: 4px solid #b8860b;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+
+    &::before {
+      content: "Important";
+      display: block;
+      font-family: "Styrene A", Futura, "Trebuchet MS", Arial, sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #b8860b;
+      margin-bottom: 0.35rem;
+    }
+
+    p {
+      margin-bottom: 0;
+      color: #061e32;
+    }
+  }
+
+  &.tip {
+    background-color: #e6f6e6;
+    border-left: 4px solid #2d8a2d;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+
+    &::before {
+      content: "Tip";
+      display: block;
+      font-family: "Styrene A", Futura, "Trebuchet MS", Arial, sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #2d8a2d;
+      margin-bottom: 0.35rem;
+    }
+
+    p {
+      margin-bottom: 0;
+      color: #061e32;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Section dividers — give horizontal rules more visual weight on resource pages
+// ---------------------------------------------------------------------------
+.main-content hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(to right, #d1eaf1, #d0d7de, #d1eaf1);
+  margin: 3rem 0;
+}
+
+// ---------------------------------------------------------------------------
 // Footer branding
+// ---------------------------------------------------------------------------
 .tag1-footer {
   border-top: 1px solid #d0d7de;
   padding-top: 1rem;
@@ -159,10 +388,16 @@ table {
   }
 }
 
-// Responsive hero adjustments
+// ---------------------------------------------------------------------------
+// Responsive
+// ---------------------------------------------------------------------------
 @media (max-width: 768px) {
   .hero {
     padding: 2.5rem 1rem;
+
+    .hero-logo {
+      max-width: 100px;
+    }
 
     h1 {
       font-size: 2rem;
