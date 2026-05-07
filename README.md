@@ -9,7 +9,7 @@
 
 A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as infrastructure-as-code.
 
-**[Documentation Site](https://tag1consulting.github.io/pulumi-lagoon-provider/)** | **[Getting Started](https://tag1consulting.github.io/pulumi-lagoon-provider/getting-started/)** | **[Resource Reference](https://tag1consulting.github.io/pulumi-lagoon-provider/resources/)**
+**[Documentation Site](https://tag1consulting.github.io/pulumi-lagoon-provider/)** | **[Getting Started](https://tag1consulting.github.io/pulumi-lagoon-provider/getting-started.html)** | **[Resource Reference](https://tag1consulting.github.io/pulumi-lagoon-provider/resources.html)**
 
 ## Overview
 
