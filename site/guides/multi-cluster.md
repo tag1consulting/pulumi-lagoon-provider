@@ -33,11 +33,10 @@ prod_target = lagoon.DeployTarget("prod-cluster",
     lagoon.DeployTargetArgs(
         name="prod",
         console_url="https://kubernetes.prod.example.com",
-        token="<prod-cluster-token>",
         router_pattern="${environment}.${project}.prod.example.com",
         ssh_host="ssh.prod.example.com",
         ssh_port="22",
-        build_image="uselagoon/build-deploy-tool:latest",
+        build_image="uselagoon/build-deploy-tool:v2.21.0",
     )
 )
 
@@ -46,11 +45,10 @@ nonprod_target = lagoon.DeployTarget("nonprod-cluster",
     lagoon.DeployTargetArgs(
         name="nonprod",
         console_url="https://kubernetes.nonprod.example.com",
-        token="<nonprod-cluster-token>",
         router_pattern="${environment}.${project}.nonprod.example.com",
         ssh_host="ssh.nonprod.example.com",
         ssh_port="22",
-        build_image="uselagoon/build-deploy-tool:latest",
+        build_image="uselagoon/build-deploy-tool:v2.21.0",
     )
 )
 
@@ -73,7 +71,7 @@ project = lagoon.Project("my-site",
         deploytarget_id=prod_target.lagoon_id,   # default target
         production_environment="main",
         branches=".*",        # allow all branches
-        pullrequests=".*",    # allow all PRs
+        pullrequests="true",  # allow all PRs
     )
 )
 
@@ -81,7 +79,7 @@ project = lagoon.Project("my-site",
 prod_routing = lagoon.DeployTargetConfig("prod-routing",
     lagoon.DeployTargetConfigArgs(
         project_id=project.lagoon_id,
-        deploytarget=prod_target.lagoon_id,
+        deploy_target_id=prod_target.lagoon_id,
         branches="^main$",
         pullrequests="false",
         weight=100,
@@ -92,9 +90,9 @@ prod_routing = lagoon.DeployTargetConfig("prod-routing",
 nonprod_routing = lagoon.DeployTargetConfig("nonprod-routing",
     lagoon.DeployTargetConfigArgs(
         project_id=project.lagoon_id,
-        deploytarget=nonprod_target.lagoon_id,
+        deploy_target_id=nonprod_target.lagoon_id,
         branches="^(?!main$).*",   # any branch that is not 'main'
-        pullrequests=".*",
+        pullrequests="true",
         weight=1,
     )
 )
