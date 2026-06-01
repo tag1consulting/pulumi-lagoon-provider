@@ -391,10 +391,9 @@ Maintenance release with CI improvements, tooling fixes, and developer experienc
 
 ## Improvements
 
-- **CodeRabbit configuration**: Added `.coderabbit.yaml` enabling sequence diagrams, high-level summaries, related issues/PRs, code review effort estimation, and architectural tone in reviews
 - **Ruff configuration**: Added `ruff.toml` with per-file-ignores for generated SDK Python files to eliminate false-positive lint noise on regeneration
 - **CodeQL configuration**: Added `.github/codeql/codeql-config.yml` to exclude generated SDK directories from CodeQL analysis
-- **CODEOWNERS**: Simplified to `@gchaix` only; CodeRabbit reviews via its own configuration rather than as a required code owner
+- **CODEOWNERS**: Simplified to `@gchaix` only
 
 ## Installation
 
