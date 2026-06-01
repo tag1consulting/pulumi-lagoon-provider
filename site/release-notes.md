@@ -7,6 +7,35 @@ nav_order: 7
 
 ---
 
+## v0.5.1 (2026-06-01)
+
+Security and maintenance release. Resolves seven reachable `golang.org/x/crypto` SSH vulnerabilities in the provider binary, adds this documentation site, and refreshes transitive dependencies and tooling. No provider API or resource behavior changes — existing programs require no updates.
+
+### Security
+
+- **`golang.org/x/crypto` SSH vulnerabilities** (GO-2026-5013, GO-2026-5015, GO-2026-5017, GO-2026-5018, GO-2026-5019, GO-2026-5020, GO-2026-5021): Upgraded `golang.org/x/crypto` from v0.50.0 to v0.52.0 in both the provider and Go SDK modules. `govulncheck` confirmed all seven were reachable through the provider's SSH key handling and reports zero reachable vulnerabilities after the upgrade.
+
+### Documentation
+
+- **GitHub Pages documentation site**: Added this Jekyll-based documentation site covering installation, quick-start, the complete resource reference, guides, examples, and troubleshooting.
+- **README and reference updates**: Documented the `User`, `UserGroupAssignment`, and `UserPlatformRole` resources, corrected resource and test counts, fixed import-ID formats, and refreshed the Go prerequisite version.
+
+### Build and CI
+
+- **Pulumi CLI pin updated to 3.244.0** so local SDK generation matches the CI toolchain.
+- **GitHub Pages deployment workflow** added to build and publish this site.
+- **AI PR review inputs**: Wired additional engine and feature inputs into the AI review workflow.
+- Removed an unused code-review tooling configuration file.
+
+### Dependency Updates
+
+- `golang.org/x/crypto` v0.50.0 → v0.52.0 (security; see above), with companion `golang.org/x/{net,sys,term,text}` upgrades
+- Transitive Go module bumps: `go-git/go-git` v5.18.0 → v5.19.1, `cyphar/filepath-securejoin` v0.4.1 → v0.6.1, `pjbgf/sha1cd` v0.3.2 → v0.6.0, and the `golang.org/x/{mod,sync,tools,exp}` suite
+- Transitive npm dependency updates in the Node.js SDK
+- Ruby 4.0.5 for the documentation site build
+
+---
+
 ## v0.5.0 (2026-05-06)
 
 Feature release exposing the project deploy key as a Pulumi output, plus Makefile portability improvements and CI enhancements.
