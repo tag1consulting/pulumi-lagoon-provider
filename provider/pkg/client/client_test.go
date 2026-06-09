@@ -102,6 +102,76 @@ func TestExecute_HTTPError(t *testing.T) {
 	}
 }
 
+func TestTruncateErrorBody(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []byte
+		contains string
+		exact    string
+	}{
+		{
+			name:  "empty body",
+			input: []byte(""),
+			exact: "",
+		},
+		{
+			name:  "short body unchanged",
+			input: []byte(`{"error":"not found"}`),
+			exact: `{"error":"not found"}`,
+		},
+		{
+			name:  "exactly at limit unchanged",
+			input: []byte(strings.Repeat("a", maxErrorBodyBytes)),
+			exact: strings.Repeat("a", maxErrorBodyBytes),
+		},
+		{
+			name:     "over limit truncated with marker",
+			input:    []byte(strings.Repeat("b", maxErrorBodyBytes+500)),
+			contains: fmt.Sprintf("...(truncated, %d more bytes)", 500),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := truncateErrorBody(tt.input)
+			if tt.exact != "" || (tt.exact == "" && tt.contains == "") {
+				if got != tt.exact {
+					t.Errorf("expected exact %q, got %q", tt.exact, got)
+				}
+				return
+			}
+			if !strings.Contains(got, tt.contains) {
+				t.Errorf("expected output to contain %q, got %q", tt.contains, got)
+			}
+			// Truncated output must start with the original prefix.
+			if !strings.HasPrefix(got, string(tt.input[:maxErrorBodyBytes])) {
+				t.Error("truncated output should start with first maxErrorBodyBytes of input")
+			}
+		})
+	}
+}
+
+func TestExecute_HTTPError_LargeBodyTruncated(t *testing.T) {
+	hugeBody := strings.Repeat("X", maxErrorBodyBytes*4)
+	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(hugeBody))
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-token", WithMaxRetries(0))
+	_, err := c.Execute(context.Background(), "query { test }", nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	msg := err.Error()
+	if len(msg) > maxErrorBodyBytes+512 {
+		t.Errorf("error message too large: %d bytes (cap ~%d)", len(msg), maxErrorBodyBytes+512)
+	}
+	if !strings.Contains(msg, "truncated") {
+		t.Errorf("expected truncation marker in error message, got: %s", msg)
+	}
+}
+
 func TestExecute_RetryOnConnectionError(t *testing.T) {
 	var attempts int32
 	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
