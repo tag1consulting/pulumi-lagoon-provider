@@ -102,6 +102,15 @@ func (c *Client) GetProjectByName(ctx context.Context, name string) (*Project, e
 }
 
 // GetProjectByID retrieves a project by ID (queries all projects and filters).
+//
+// TODO(#201): The Lagoon GraphQL API does not expose a `projectById` query as of
+// v2.30. When one becomes available, replace the allProjects scan with a targeted
+// call:
+//
+//	query ProjectById($id: Int!) { projectById(id: $id) { id name gitUrl ... } }
+//
+// Until then, this fetches all projects and filters client-side. On large
+// installations (hundreds of projects) this is measurably slow.
 func (c *Client) GetProjectByID(ctx context.Context, projectID int) (*Project, error) {
 	data, err := c.Execute(ctx, queryAllProjects, nil)
 	if err != nil {

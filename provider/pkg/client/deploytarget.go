@@ -36,6 +36,10 @@ func (c *Client) CreateDeployTarget(ctx context.Context, input map[string]any) (
 }
 
 // GetDeployTargetByID retrieves a deploy target by ID (queries all and filters).
+//
+// TODO(#201): The Lagoon GraphQL API does not expose a `kubernetesById` query as of
+// v2.30. When one becomes available, replace the allKubernetes scan with a targeted
+// call. Until then, this fetches all deploy targets and filters client-side.
 func (c *Client) GetDeployTargetByID(ctx context.Context, id int) (*DeployTarget, error) {
 	targets, err := c.GetAllDeployTargets(ctx)
 	if err != nil {
@@ -62,6 +66,9 @@ func (c *Client) GetDeployTargetByID(ctx context.Context, id int) (*DeployTarget
 }
 
 // GetDeployTargetByName retrieves a deploy target by name.
+//
+// TODO(#201): Same broad-list limitation as GetDeployTargetByID. Shares the
+// allKubernetes scan; see that function for the tracked improvement.
 func (c *Client) GetDeployTargetByName(ctx context.Context, name string) (*DeployTarget, error) {
 	targets, err := c.GetAllDeployTargets(ctx)
 	if err != nil {

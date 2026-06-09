@@ -36,6 +36,14 @@ func (c *Client) CreateGroup(ctx context.Context, name string, parentGroupName *
 }
 
 // GetGroupByName retrieves a group by name.
+//
+// TODO(#201): The Lagoon GraphQL API does not expose a `groupByName` query as of
+// v2.30. When one becomes available, replace the allGroups scan with a targeted
+// call:
+//
+//	query GroupByName($name: String!) { groupByName(name: $name) { id name } }
+//
+// Until then, this fetches all groups and filters client-side.
 func (c *Client) GetGroupByName(ctx context.Context, name string) (*Group, error) {
 	data, err := c.Execute(ctx, queryAllGroups, nil)
 	if err != nil {
