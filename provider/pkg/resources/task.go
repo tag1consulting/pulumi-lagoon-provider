@@ -89,6 +89,19 @@ func (r *Task) Create(ctx context.Context, req infer.CreateRequest[TaskArgs]) (i
 		return infer.CreateResponse[TaskState]{}, fmt.Errorf("unknown task type %q: must be 'command' or 'image'", req.Inputs.Type)
 	}
 
+	if req.Inputs.Permission != nil {
+		if err := validateTaskPermission(*req.Inputs.Permission); err != nil {
+			return infer.CreateResponse[TaskState]{}, err
+		}
+	}
+	if req.Inputs.Arguments != nil {
+		for i, arg := range *req.Inputs.Arguments {
+			if err := validateTaskArgType(arg.Type); err != nil {
+				return infer.CreateResponse[TaskState]{}, fmt.Errorf("arguments[%d]: %w", i, err)
+			}
+		}
+	}
+
 	input := map[string]any{
 		"name":    req.Inputs.Name,
 		"type":    strings.ToUpper(req.Inputs.Type),
