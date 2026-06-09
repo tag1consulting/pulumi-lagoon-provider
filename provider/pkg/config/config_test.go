@@ -449,11 +449,17 @@ func TestDiff_NeverReplace(t *testing.T) {
 			t.Errorf("field %q has Kind=%v, want Update (never replace)", field, d.Kind)
 		}
 	}
-	expectedFields := []string{"apiUrl", "token", "jwtSecret", "jwtAudience", "insecure"}
+	// "token" is intentionally absent: when jwtSecret is present on both sides,
+	// Diff skips the token comparison because the token is derived and changes
+	// every run. Only jwtSecret itself is compared.
+	expectedFields := []string{"apiUrl", "jwtSecret", "jwtAudience", "insecure"}
 	for _, f := range expectedFields {
 		if _, ok := resp.DetailedDiff[f]; !ok {
 			t.Errorf("expected %q in DetailedDiff", f)
 		}
+	}
+	if _, ok := resp.DetailedDiff["token"]; ok {
+		t.Error("expected 'token' to be absent from DetailedDiff when jwtSecret is present")
 	}
 }
 
@@ -519,5 +525,63 @@ func TestNewClient_NilOnce_CreatesNewClient(t *testing.T) {
 	// Not the same pointer — no caching without Configure
 	if c1 == c2 {
 		t.Error("expected distinct clients when clientOnce is nil")
+	}
+}
+
+func TestDiff_JWTSecret_TokenNotDiffed(t *testing.T) {
+	// When jwtSecret is the auth source, the derived token changes every run.
+	// Diff must not report a token change to avoid spurious provider updates.
+	c := &LagoonConfig{}
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
+		Inputs: LagoonConfig{JWTSecret: "my-secret", Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new"},
+		State:  LagoonConfig{JWTSecret: "my-secret", Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.old"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.HasChanges {
+		t.Errorf("expected no changes when only derived token differs (same jwtSecret); got diff: %v", resp.DetailedDiff)
+	}
+	if _, ok := resp.DetailedDiff["token"]; ok {
+		t.Error("expected 'token' to be absent from DetailedDiff when jwtSecret is the auth source")
+	}
+}
+
+func TestDiff_JWTSecretChanged_Detected(t *testing.T) {
+	// Changing jwtSecret itself must still be detected.
+	c := &LagoonConfig{}
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
+		Inputs: LagoonConfig{JWTSecret: "new-secret"},
+		State:  LagoonConfig{JWTSecret: "old-secret"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !resp.HasChanges {
+		t.Error("expected changes when jwtSecret changes")
+	}
+	if _, ok := resp.DetailedDiff["jwtSecret"]; !ok {
+		t.Error("expected 'jwtSecret' in DetailedDiff")
+	}
+	if _, ok := resp.DetailedDiff["token"]; ok {
+		t.Error("expected 'token' to be absent from DetailedDiff even when jwtSecret changes")
+	}
+}
+
+func TestDiff_ExplicitToken_NoDiffWhenUnchanged(t *testing.T) {
+	// When no jwtSecret, explicit token changes are still detected normally.
+	c := &LagoonConfig{}
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
+		Inputs: LagoonConfig{Token: "tok-v2"},
+		State:  LagoonConfig{Token: "tok-v1"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !resp.HasChanges {
+		t.Error("expected changes when explicit token changes without jwtSecret")
+	}
+	if _, ok := resp.DetailedDiff["token"]; !ok {
+		t.Error("expected 'token' in DetailedDiff for explicit token change")
 	}
 }
