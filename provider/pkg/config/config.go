@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	p "github.com/pulumi/pulumi-go-provider"
@@ -32,6 +33,12 @@ type LagoonConfig struct {
 
 	// Insecure disables SSL certificate verification.
 	Insecure bool `pulumi:"insecure,optional"`
+
+	// clientOnce and cachedClient hold a single shared Client instance.
+	// These are pointer fields so they survive struct copies from infer.GetConfig.
+	// They are initialized by Configure and nil until then.
+	clientOnce   *sync.Once
+	cachedClient *client.Client
 }
 
 // Annotate provides descriptions and defaults for config fields.
@@ -101,11 +108,26 @@ func (c *LagoonConfig) Configure(ctx context.Context) error {
 		c.JWTSecret = ""
 	}
 
+	c.clientOnce = &sync.Once{}
+
 	return nil
 }
 
-// NewClient creates a configured Lagoon API client from this config.
+// NewClient returns the shared Lagoon API client for this config.
+// The client is created once per provider configure call and reused for all
+// subsequent resource operations, preserving API-version detection cache
+// and token refresh state across operations.
 func (c *LagoonConfig) NewClient() *client.Client {
+	if c.clientOnce != nil {
+		c.clientOnce.Do(func() {
+			c.cachedClient = c.newClientUncached()
+		})
+		return c.cachedClient
+	}
+	return c.newClientUncached()
+}
+
+func (c *LagoonConfig) newClientUncached() *client.Client {
 	opts := []client.ClientOption{}
 
 	if c.Insecure {
