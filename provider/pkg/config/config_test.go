@@ -12,6 +12,33 @@ import (
 	"github.com/pulumi/pulumi-go-provider/infer"
 )
 
+// requireUnsetEnv removes the named environment variables for the duration
+// of the test and restores their original values on test cleanup. Errors
+// from os.Unsetenv and os.Setenv are surfaced via t.Fatalf / t.Errorf
+// rather than silently dropped, so a failure to mutate the environment
+// does not corrupt subsequent tests.
+//
+// Use this in place of bare os.Unsetenv + defer save/restore for tests
+// that need a variable absent. For tests that only need a variable set
+// to a specific value, prefer t.Setenv directly (it already auto-restores
+// on cleanup).
+func requireUnsetEnv(t *testing.T, keys ...string) {
+	t.Helper()
+	for _, k := range keys {
+		if v, ok := os.LookupEnv(k); ok {
+			key, val := k, v
+			t.Cleanup(func() {
+				if err := os.Setenv(key, val); err != nil {
+					t.Errorf("restore %s: %v", key, err)
+				}
+			})
+		}
+		if err := os.Unsetenv(k); err != nil {
+			t.Fatalf("unset %s: %v", k, err)
+		}
+	}
+}
+
 func TestGenerateAdminTokenFromSecret(t *testing.T) {
 	secret := "test-secret-key-for-jwt"
 	audience := "api.test"
@@ -148,23 +175,7 @@ func TestConfigure_WithJWTSecret(t *testing.T) {
 }
 
 func TestConfigure_NoAuth(t *testing.T) {
-	// Clear env vars that might interfere
-	origToken, hadToken := os.LookupEnv("LAGOON_TOKEN")
-	origSecret, hadSecret := os.LookupEnv("LAGOON_JWT_SECRET")
-	os.Unsetenv("LAGOON_TOKEN")
-	os.Unsetenv("LAGOON_JWT_SECRET")
-	defer func() {
-		if hadToken {
-			os.Setenv("LAGOON_TOKEN", origToken)
-		} else {
-			os.Unsetenv("LAGOON_TOKEN")
-		}
-		if hadSecret {
-			os.Setenv("LAGOON_JWT_SECRET", origSecret)
-		} else {
-			os.Unsetenv("LAGOON_JWT_SECRET")
-		}
-	}()
+	requireUnsetEnv(t, "LAGOON_TOKEN", "LAGOON_JWT_SECRET")
 
 	cfg := &LagoonConfig{
 		APIUrl: "https://api.test/graphql",
@@ -181,20 +192,8 @@ func TestConfigure_NoAuth(t *testing.T) {
 }
 
 func TestConfigure_EnvVarToken(t *testing.T) {
-	origToken := os.Getenv("LAGOON_TOKEN")
-	origSecret := os.Getenv("LAGOON_JWT_SECRET")
-	os.Setenv("LAGOON_TOKEN", "env-token")
-	os.Unsetenv("LAGOON_JWT_SECRET")
-	defer func() {
-		if origToken != "" {
-			os.Setenv("LAGOON_TOKEN", origToken)
-		} else {
-			os.Unsetenv("LAGOON_TOKEN")
-		}
-		if origSecret != "" {
-			os.Setenv("LAGOON_JWT_SECRET", origSecret)
-		}
-	}()
+	requireUnsetEnv(t, "LAGOON_JWT_SECRET")
+	t.Setenv("LAGOON_TOKEN", "env-token")
 
 	cfg := &LagoonConfig{
 		APIUrl: "https://api.test/graphql",
@@ -210,22 +209,8 @@ func TestConfigure_EnvVarToken(t *testing.T) {
 }
 
 func TestConfigure_EnvVarJWTSecret(t *testing.T) {
-	origToken := os.Getenv("LAGOON_TOKEN")
-	origSecret := os.Getenv("LAGOON_JWT_SECRET")
-	os.Unsetenv("LAGOON_TOKEN")
-	os.Setenv("LAGOON_JWT_SECRET", "env-jwt-secret")
-	defer func() {
-		if origToken != "" {
-			os.Setenv("LAGOON_TOKEN", origToken)
-		} else {
-			os.Unsetenv("LAGOON_TOKEN")
-		}
-		if origSecret != "" {
-			os.Setenv("LAGOON_JWT_SECRET", origSecret)
-		} else {
-			os.Unsetenv("LAGOON_JWT_SECRET")
-		}
-	}()
+	requireUnsetEnv(t, "LAGOON_TOKEN")
+	t.Setenv("LAGOON_JWT_SECRET", "env-jwt-secret")
 
 	cfg := &LagoonConfig{
 		APIUrl:      "https://api.test/graphql",
@@ -303,18 +288,7 @@ func TestConfigure_TokenPrecedence(t *testing.T) {
 }
 
 func TestConfigure_TrimsJWTSecretWhitespace(t *testing.T) {
-	origToken := os.Getenv("LAGOON_TOKEN")
-	origSecret := os.Getenv("LAGOON_JWT_SECRET")
-	os.Unsetenv("LAGOON_TOKEN")
-	os.Unsetenv("LAGOON_JWT_SECRET")
-	defer func() {
-		if origToken != "" {
-			os.Setenv("LAGOON_TOKEN", origToken)
-		}
-		if origSecret != "" {
-			os.Setenv("LAGOON_JWT_SECRET", origSecret)
-		}
-	}()
+	requireUnsetEnv(t, "LAGOON_TOKEN", "LAGOON_JWT_SECRET")
 
 	secret := "test-secret-for-trimming"
 
@@ -391,20 +365,8 @@ func TestConfigure_TrimsTokenWhitespace(t *testing.T) {
 }
 
 func TestConfigure_TrimsEnvVarWhitespace(t *testing.T) {
-	origToken := os.Getenv("LAGOON_TOKEN")
-	origSecret := os.Getenv("LAGOON_JWT_SECRET")
-	os.Setenv("LAGOON_TOKEN", "  env-token\n")
-	os.Unsetenv("LAGOON_JWT_SECRET")
-	defer func() {
-		if origToken != "" {
-			os.Setenv("LAGOON_TOKEN", origToken)
-		} else {
-			os.Unsetenv("LAGOON_TOKEN")
-		}
-		if origSecret != "" {
-			os.Setenv("LAGOON_JWT_SECRET", origSecret)
-		}
-	}()
+	requireUnsetEnv(t, "LAGOON_JWT_SECRET")
+	t.Setenv("LAGOON_TOKEN", "  env-token\n")
 
 	cfg := &LagoonConfig{
 		APIUrl: "https://api.test/graphql",
@@ -418,18 +380,7 @@ func TestConfigure_TrimsEnvVarWhitespace(t *testing.T) {
 }
 
 func TestConfigure_JWTSecretGeneratesToken(t *testing.T) {
-	origToken := os.Getenv("LAGOON_TOKEN")
-	origSecret := os.Getenv("LAGOON_JWT_SECRET")
-	os.Unsetenv("LAGOON_TOKEN")
-	os.Unsetenv("LAGOON_JWT_SECRET")
-	defer func() {
-		if origToken != "" {
-			os.Setenv("LAGOON_TOKEN", origToken)
-		}
-		if origSecret != "" {
-			os.Setenv("LAGOON_JWT_SECRET", origSecret)
-		}
-	}()
+	requireUnsetEnv(t, "LAGOON_TOKEN", "LAGOON_JWT_SECRET")
 
 	cfg := &LagoonConfig{
 		APIUrl:      "https://api.test/graphql",
