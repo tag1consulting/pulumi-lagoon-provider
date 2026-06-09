@@ -235,6 +235,87 @@ func TestRouteUpdate_ScalarFields(t *testing.T) {
 	}
 }
 
+func TestRouteUpdate_ServiceFieldApplied(t *testing.T) {
+	var capturedPatch map[string]any
+	svc := "nginx"
+	mock := &mockLagoonClient{
+		updateRouteOnProjectFn: func(_ context.Context, _ int, input map[string]any) (*client.Route, error) {
+			capturedPatch, _ = input["patch"].(map[string]any)
+			return &client.Route{ID: 1, Domain: "example.com"}, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Route{}
+	oldSvc := "node"
+	_, err := r.Update(ctx, infer.UpdateRequest[RouteArgs, RouteState]{
+		Inputs: RouteArgs{ProjectName: "p", Domain: "example.com", Service: &svc},
+		State:  RouteState{RouteArgs: RouteArgs{ProjectName: "p", Domain: "example.com", Service: &oldSvc}, LagoonID: 1},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if capturedPatch == nil {
+		t.Fatal("expected UpdateRouteOnProject to be called with a patch")
+	}
+	if v, ok := capturedPatch["service"]; !ok || v != "nginx" {
+		t.Errorf("expected patch[service]=nginx, got %v", capturedPatch["service"])
+	}
+}
+
+func TestRouteUpdate_RouteTypeFieldApplied(t *testing.T) {
+	var capturedPatch map[string]any
+	rt := "active"
+	mock := &mockLagoonClient{
+		updateRouteOnProjectFn: func(_ context.Context, _ int, input map[string]any) (*client.Route, error) {
+			capturedPatch, _ = input["patch"].(map[string]any)
+			return &client.Route{ID: 1, Domain: "example.com"}, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Route{}
+	oldRT := "standard"
+	_, err := r.Update(ctx, infer.UpdateRequest[RouteArgs, RouteState]{
+		Inputs: RouteArgs{ProjectName: "p", Domain: "example.com", RouteType: &rt},
+		State:  RouteState{RouteArgs: RouteArgs{ProjectName: "p", Domain: "example.com", RouteType: &oldRT}, LagoonID: 1},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if capturedPatch == nil {
+		t.Fatal("expected UpdateRouteOnProject to be called with a patch")
+	}
+	if v, ok := capturedPatch["type"]; !ok || v != "ACTIVE" {
+		t.Errorf("expected patch[type]=ACTIVE (uppercased), got %v", capturedPatch["type"])
+	}
+}
+
+func TestRouteUpdate_PrimaryFieldApplied(t *testing.T) {
+	var capturedPatch map[string]any
+	primary := true
+	mock := &mockLagoonClient{
+		updateRouteOnProjectFn: func(_ context.Context, _ int, input map[string]any) (*client.Route, error) {
+			capturedPatch, _ = input["patch"].(map[string]any)
+			return &client.Route{ID: 1, Domain: "example.com"}, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Route{}
+	oldPrimary := false
+	_, err := r.Update(ctx, infer.UpdateRequest[RouteArgs, RouteState]{
+		Inputs: RouteArgs{ProjectName: "p", Domain: "example.com", Primary: &primary},
+		State:  RouteState{RouteArgs: RouteArgs{ProjectName: "p", Domain: "example.com", Primary: &oldPrimary}, LagoonID: 1},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if capturedPatch == nil {
+		t.Fatal("expected UpdateRouteOnProject to be called with a patch")
+	}
+	if v, ok := capturedPatch["primary"]; !ok || v != true {
+		t.Errorf("expected patch[primary]=true, got %v", capturedPatch["primary"])
+	}
+}
+
 func TestRouteUpdate_AnnotationReconciliation(t *testing.T) {
 	removeCalled := false
 	addCalled := false

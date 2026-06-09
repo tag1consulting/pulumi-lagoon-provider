@@ -212,11 +212,25 @@ func (r *Route) Update(ctx context.Context, req infer.UpdateRequest[RouteArgs, R
 
 	// Build scalar patch
 	patch := map[string]any{}
+	if ptrDiffers(args.Service, state.Service) {
+		setOptional(patch, "service", args.Service)
+	}
 	if ptrBoolDiffers(args.TLSAcme, state.TLSAcme) {
 		setOptionalBool(patch, "tlsAcme", args.TLSAcme)
 	}
 	if ptrDiffers(args.Insecure, state.Insecure) {
 		setOptional(patch, "insecure", args.Insecure)
+	}
+	if ptrDiffers(args.RouteType, state.RouteType) {
+		if args.RouteType != nil {
+			upper := strings.ToUpper(*args.RouteType)
+			patch["type"] = upper
+		} else {
+			patch["type"] = nil
+		}
+	}
+	if ptrBoolDiffers(args.Primary, state.Primary) {
+		setOptionalBool(patch, "primary", args.Primary)
 	}
 	if ptrDiffers(args.MonitoringPath, state.MonitoringPath) {
 		setOptional(patch, "monitoringPath", args.MonitoringPath)
