@@ -63,6 +63,12 @@ var (
 )
 
 // getAllNotifications retrieves all notifications of all types.
+//
+// TODO(#201): The Lagoon GraphQL API does not expose per-type targeted notification
+// lookup queries (e.g. `notificationSlackByName`) as of v2.30. All notification
+// reads go through this broad allNotifications fetch and filter client-side.
+// When targeted queries become available, getNotificationByName should call them
+// directly instead.
 func (c *Client) getAllNotifications(ctx context.Context) ([]Notification, error) {
 	data, err := c.Execute(ctx, queryAllNotifications, nil)
 	if err != nil {
