@@ -161,8 +161,9 @@ get_secret_value() {
 curl_insecure_for_url() {
     local url="$1"
     local host
-    # Strip scheme, then take everything before the next /, :, or end
-    host=$(echo "$url" | sed -E 's#^[a-zA-Z][a-zA-Z0-9+.-]*://##' | sed -E 's#[/:?#].*$##')
+    # Strip scheme and any userinfo (user[:pass]@), then take everything
+    # before the next /, :, ?, #, or end of string.
+    host=$(echo "$url" | sed -E 's#^[a-zA-Z][a-zA-Z0-9+.-]*://([^@/]*@)?##' | sed -E 's#[/:?#].*$##')
     case "$host" in
         localhost|127.0.0.1|::1)
             echo "-k"
