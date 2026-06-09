@@ -48,6 +48,12 @@ func (s *VariableState) Annotate(a infer.Annotator) {
 }
 
 func (r *Variable) Create(ctx context.Context, req infer.CreateRequest[VariableArgs]) (infer.CreateResponse[VariableState], error) {
+	if err := validateVariableScope(req.Inputs.Scope); err != nil {
+		return infer.CreateResponse[VariableState]{}, err
+	}
+	if err := validatePositiveID("projectId", req.Inputs.ProjectID); err != nil {
+		return infer.CreateResponse[VariableState]{}, err
+	}
 	client := clientFor(ctx)
 
 	if req.DryRun {
@@ -72,6 +78,12 @@ func (r *Variable) Create(ctx context.Context, req infer.CreateRequest[VariableA
 }
 
 func (r *Variable) Update(ctx context.Context, req infer.UpdateRequest[VariableArgs, VariableState]) (infer.UpdateResponse[VariableState], error) {
+	if err := validateVariableScope(req.Inputs.Scope); err != nil {
+		return infer.UpdateResponse[VariableState]{}, err
+	}
+	if err := validatePositiveID("projectId", req.Inputs.ProjectID); err != nil {
+		return infer.UpdateResponse[VariableState]{}, err
+	}
 	client := clientFor(ctx)
 
 	if req.DryRun {

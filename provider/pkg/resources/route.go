@@ -113,6 +113,9 @@ func (r *Route) Create(ctx context.Context, req infer.CreateRequest[RouteArgs]) 
 	if err := validateRouteEnums(args.Insecure, args.RouteType); err != nil {
 		return infer.CreateResponse[RouteState]{}, err
 	}
+	if err := validateRouteListLimits(args); err != nil {
+		return infer.CreateResponse[RouteState]{}, err
+	}
 
 	input := map[string]any{
 		"project": args.ProjectName,
@@ -207,6 +210,9 @@ func (r *Route) Update(ctx context.Context, req infer.UpdateRequest[RouteArgs, R
 	state := req.State
 
 	if err := validateRouteEnums(args.Insecure, args.RouteType); err != nil {
+		return infer.UpdateResponse[RouteState]{}, err
+	}
+	if err := validateRouteListLimits(args); err != nil {
 		return infer.UpdateResponse[RouteState]{}, err
 	}
 

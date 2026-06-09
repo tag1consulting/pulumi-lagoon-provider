@@ -317,6 +317,40 @@ func TestVariableUpdate_APIError(t *testing.T) {
 	}
 }
 
+func TestVariableCreate_InvalidScope_ReturnsError(t *testing.T) {
+	ctx := testCtx(&mockLagoonClient{})
+	r := &Variable{}
+	_, err := r.Create(ctx, infer.CreateRequest[VariableArgs]{
+		Inputs: VariableArgs{Name: "V", Value: "x", ProjectID: 1, Scope: "invalid_scope"},
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid scope, got nil")
+	}
+}
+
+func TestVariableCreate_ZeroProjectID_ReturnsError(t *testing.T) {
+	ctx := testCtx(&mockLagoonClient{})
+	r := &Variable{}
+	_, err := r.Create(ctx, infer.CreateRequest[VariableArgs]{
+		Inputs: VariableArgs{Name: "V", Value: "x", ProjectID: 0, Scope: "build"},
+	})
+	if err == nil {
+		t.Fatal("expected error for zero projectId, got nil")
+	}
+}
+
+func TestVariableUpdate_InvalidScope_ReturnsError(t *testing.T) {
+	ctx := testCtx(&mockLagoonClient{})
+	r := &Variable{}
+	_, err := r.Update(ctx, infer.UpdateRequest[VariableArgs, VariableState]{
+		Inputs: VariableArgs{Name: "V", Value: "x", ProjectID: 1, Scope: "bad_scope"},
+		State:  VariableState{VariableArgs: VariableArgs{Name: "V", Value: "old", ProjectID: 1, Scope: "build"}, LagoonID: 1},
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid scope on update, got nil")
+	}
+}
+
 func TestVariableRead_RefreshFromState(t *testing.T) {
 	mock := &mockLagoonClient{
 		getVariableFn: func(_ context.Context, name string, _ int, _ *int) (*client.Variable, error) {

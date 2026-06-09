@@ -674,3 +674,49 @@ func TestRouteDiff_NoChanges(t *testing.T) {
 		t.Errorf("expected no changes, got: %v", resp.DetailedDiff)
 	}
 }
+
+func TestRouteCreate_TooManyAnnotations_ReturnsError(t *testing.T) {
+	anns := make([]RouteAnnotationInput, 11)
+	for i := range anns {
+		anns[i] = RouteAnnotationInput{Key: "k", Value: "v"}
+	}
+	ctx := testCtx(&mockLagoonClient{})
+	r := &Route{}
+	_, err := r.Create(ctx, infer.CreateRequest[RouteArgs]{
+		Inputs: RouteArgs{ProjectName: "proj", Domain: "ex.com", Annotations: &anns},
+	})
+	if err == nil {
+		t.Fatal("expected error for >10 annotations, got nil")
+	}
+}
+
+func TestRouteCreate_TooManyAlternativeNames_ReturnsError(t *testing.T) {
+	names := make([]string, 26)
+	for i := range names {
+		names[i] = "alt.example.com"
+	}
+	ctx := testCtx(&mockLagoonClient{})
+	r := &Route{}
+	_, err := r.Create(ctx, infer.CreateRequest[RouteArgs]{
+		Inputs: RouteArgs{ProjectName: "proj", Domain: "ex.com", AlternativeNames: &names},
+	})
+	if err == nil {
+		t.Fatal("expected error for >25 alternativeNames, got nil")
+	}
+}
+
+func TestRouteUpdate_TooManyPathRoutes_ReturnsError(t *testing.T) {
+	prs := make([]RoutePathRouteInput, 11)
+	for i := range prs {
+		prs[i] = RoutePathRouteInput{Path: "/", ToService: "svc"}
+	}
+	ctx := testCtx(&mockLagoonClient{})
+	r := &Route{}
+	_, err := r.Update(ctx, infer.UpdateRequest[RouteArgs, RouteState]{
+		Inputs: RouteArgs{ProjectName: "proj", Domain: "ex.com", PathRoutes: &prs},
+		State:  RouteState{RouteArgs: RouteArgs{ProjectName: "proj", Domain: "ex.com"}, LagoonID: 1},
+	})
+	if err == nil {
+		t.Fatal("expected error for >10 pathRoutes on update, got nil")
+	}
+}

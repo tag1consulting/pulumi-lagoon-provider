@@ -386,3 +386,29 @@ func TestTaskRead_APIError(t *testing.T) {
 		t.Fatal("expected error when read API fails")
 	}
 }
+
+func TestTaskCreate_InvalidPermission_ReturnsError(t *testing.T) {
+	cmd := "drush cr"
+	ctx := testCtx(&mockLagoonClient{})
+	r := &Task{}
+	perm := "admin"
+	_, err := r.Create(ctx, infer.CreateRequest[TaskArgs]{
+		Inputs: TaskArgs{Name: "t", Type: "command", Service: "cli", Command: &cmd, Permission: &perm},
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid permission, got nil")
+	}
+}
+
+func TestTaskCreate_InvalidArgType_ReturnsError(t *testing.T) {
+	cmd := "drush cr"
+	ctx := testCtx(&mockLagoonClient{})
+	r := &Task{}
+	args := []TaskArgumentInput{{Name: "env", DisplayName: "Env", Type: "bad_type"}}
+	_, err := r.Create(ctx, infer.CreateRequest[TaskArgs]{
+		Inputs: TaskArgs{Name: "t", Type: "command", Service: "cli", Command: &cmd, Arguments: &args},
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid argument type, got nil")
+	}
+}
