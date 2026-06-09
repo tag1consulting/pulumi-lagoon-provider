@@ -288,7 +288,9 @@ func (c *Client) DetectAPIVersion(ctx context.Context) string {
 	probeQuery := `query { __type(name: "EnvVariableByNameInput") { name } }`
 	data, err := c.Execute(ctx, probeQuery, nil)
 	if err != nil {
-		// Don't cache — transient errors shouldn't poison the version detection
+		// Transient error (network, auth, 5xx) — do not cache. Return "legacy"
+		// so the caller can proceed, but leave apiVersionSet=false so the next
+		// operation retries the probe instead of permanently treating this as legacy.
 		return "legacy"
 	}
 
@@ -298,16 +300,17 @@ func (c *Client) DetectAPIVersion(ctx context.Context) string {
 		} `json:"__type"`
 	}
 	if err := json.Unmarshal(data, &result); err != nil {
-		// Unmarshal failed — don't cache, may be transient
+		// Malformed response — do not cache; may be transient.
 		return "legacy"
 	}
 	if result.Type == nil {
-		// Valid response but type not found — this is a real legacy API
+		// Valid response, type absent — definitively a legacy API; cache the result.
 		c.apiVersion = "legacy"
 		c.apiVersionSet = true
 		return "legacy"
 	}
 
+	// Type present — definitively new API; cache the result.
 	c.apiVersion = "new"
 	c.apiVersionSet = true
 	return c.apiVersion

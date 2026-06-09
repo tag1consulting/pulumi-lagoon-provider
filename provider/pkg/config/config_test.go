@@ -490,3 +490,34 @@ func TestDiff_PartialChange(t *testing.T) {
 		t.Error("expected 'token' in DetailedDiff")
 	}
 }
+
+func TestNewClient_ReusesClient(t *testing.T) {
+	for _, k := range []string{"LAGOON_TOKEN", "LAGOON_JWT_SECRET", "LAGOON_API_URL", "LAGOON_JWT_AUDIENCE", "LAGOON_INSECURE"} {
+		t.Setenv(k, "")
+	}
+	t.Setenv("LAGOON_TOKEN", "test-token")
+	cfg := &LagoonConfig{APIUrl: "https://api.example.com/graphql"}
+	if err := cfg.Configure(context.TODO()); err != nil {
+		t.Fatalf("Configure failed: %v", err)
+	}
+	c1 := cfg.NewClient()
+	c2 := cfg.NewClient()
+	if c1 != c2 {
+		t.Error("expected NewClient to return the same client instance on repeated calls")
+	}
+}
+
+func TestNewClient_NilOnce_CreatesNewClient(t *testing.T) {
+	// Without Configure (no clientOnce), NewClient still works — it just
+	// creates a fresh client each time rather than reusing one.
+	cfg := &LagoonConfig{APIUrl: "https://api.example.com/graphql", Token: "tok"}
+	c1 := cfg.NewClient()
+	c2 := cfg.NewClient()
+	if c1 == nil || c2 == nil {
+		t.Error("expected non-nil clients")
+	}
+	// Not the same pointer — no caching without Configure
+	if c1 == c2 {
+		t.Error("expected distinct clients when clientOnce is nil")
+	}
+}

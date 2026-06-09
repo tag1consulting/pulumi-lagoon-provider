@@ -344,16 +344,26 @@ func TestDetectAPIVersion_Legacy(t *testing.T) {
 	}
 }
 
-func TestDetectAPIVersion_Error(t *testing.T) {
+func TestDetectAPIVersion_Error_NotCached(t *testing.T) {
+	calls := 0
 	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
-		return nil, fmt.Errorf("some error")
+		calls++
+		return nil, fmt.Errorf("transient error")
 	})
 	defer server.Close()
 
 	c := NewClient(server.URL, "token")
-	version := c.DetectAPIVersion(context.Background())
-	if version != "legacy" {
-		t.Errorf("expected 'legacy' on error, got %s", version)
+	v1 := c.DetectAPIVersion(context.Background())
+	if v1 != "legacy" {
+		t.Errorf("expected 'legacy' on error, got %s", v1)
+	}
+	v2 := c.DetectAPIVersion(context.Background())
+	if v2 != "legacy" {
+		t.Errorf("expected 'legacy' on second error, got %s", v2)
+	}
+	// Both calls must have probed the server — error result must NOT be cached
+	if calls != 2 {
+		t.Errorf("expected 2 probe calls (error not cached), got %d", calls)
 	}
 }
 
