@@ -34,7 +34,7 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Install Pulumi CLI
-        uses: pulumi/actions@v7
+        uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d  # v7.0.0
         with:
           pulumi-version: ${{ steps.pulumi-version.outputs.version }}
 
@@ -67,7 +67,7 @@ jobs:
           cache-dependency-path: provider/go.sum
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v7
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89  # v7.2.2
         with:
           args: release --clean
           version: '~> 2'
@@ -260,7 +260,7 @@ jobs:
           path: dist/
 
       - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
         with:
           repository-url: https://test.pypi.org/legacy/
 
@@ -282,7 +282,7 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
 
   publish-npm:
     name: Publish to npm
@@ -423,7 +423,7 @@ jobs:
           path: dist/
 
       - name: NuGet login (OIDC trusted publishing)
-        uses: NuGet/login@v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841  # v1.2.0
         id: nuget_login
         with:
           user: gchaix

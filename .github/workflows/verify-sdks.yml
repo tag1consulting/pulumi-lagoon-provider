@@ -28,7 +28,7 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Install Pulumi CLI
-        uses: pulumi/actions@v7
+        uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d  # v7.0.0
         with:
           pulumi-version: ${{ steps.pulumi-version.outputs.version }}
 
