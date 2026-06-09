@@ -3,6 +3,7 @@ package resources
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -332,6 +333,59 @@ func TestRouteUpdate_EnvironmentDetach(t *testing.T) {
 	}
 	if !detachCalled {
 		t.Error("expected RemoveRouteFromEnvironment to be called when clearing environment")
+	}
+}
+
+func TestRouteUpdate_RefreshesUpdatedTimestamp(t *testing.T) {
+	tlsAcme := false
+	mock := &mockLagoonClient{
+		updateRouteOnProjectFn: func(_ context.Context, _ int, _ map[string]any) (*client.Route, error) {
+			return &client.Route{ID: 1, Domain: "example.com"}, nil
+		},
+		getRouteByDomainFn: func(_ context.Context, projectName, domain string) (*client.Route, error) {
+			return &client.Route{ID: 1, Domain: domain, ProjectName: projectName, Updated: "2026-06-09T20:30:00Z"}, nil
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Route{}
+	oldTLS := true
+	resp, err := r.Update(ctx, infer.UpdateRequest[RouteArgs, RouteState]{
+		Inputs: RouteArgs{ProjectName: "p", Domain: "example.com", TLSAcme: &tlsAcme},
+		State:  RouteState{RouteArgs: RouteArgs{ProjectName: "p", Domain: "example.com", TLSAcme: &oldTLS}, LagoonID: 1, Created: "2026-06-09T20:00:00Z", Updated: "2026-06-09T20:00:00Z"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Output.Updated != "2026-06-09T20:30:00Z" {
+		t.Errorf("expected Updated=2026-06-09T20:30:00Z (refreshed from API), got %q", resp.Output.Updated)
+	}
+	if resp.Output.Created != "2026-06-09T20:00:00Z" {
+		t.Errorf("Created should be preserved, got %q", resp.Output.Created)
+	}
+}
+
+func TestRouteUpdate_FallsBackToStateUpdatedOnReadFailure(t *testing.T) {
+	tlsAcme := false
+	mock := &mockLagoonClient{
+		updateRouteOnProjectFn: func(_ context.Context, _ int, _ map[string]any) (*client.Route, error) {
+			return &client.Route{ID: 1, Domain: "example.com"}, nil
+		},
+		getRouteByDomainFn: func(_ context.Context, _, _ string) (*client.Route, error) {
+			return nil, errors.New("transient API error")
+		},
+	}
+	ctx := testCtx(mock)
+	r := &Route{}
+	oldTLS := true
+	resp, err := r.Update(ctx, infer.UpdateRequest[RouteArgs, RouteState]{
+		Inputs: RouteArgs{ProjectName: "p", Domain: "example.com", TLSAcme: &tlsAcme},
+		State:  RouteState{RouteArgs: RouteArgs{ProjectName: "p", Domain: "example.com", TLSAcme: &oldTLS}, LagoonID: 1, Updated: "2026-06-09T20:00:00Z"},
+	})
+	if err != nil {
+		t.Fatalf("Update should not fail when refresh fails (mutation already succeeded): %v", err)
+	}
+	if resp.Output.Updated != "2026-06-09T20:00:00Z" {
+		t.Errorf("expected fallback to state.Updated=2026-06-09T20:00:00Z, got %q", resp.Output.Updated)
 	}
 }
 
