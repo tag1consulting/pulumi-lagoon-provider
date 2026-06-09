@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // LagoonAPIError represents an error returned by the Lagoon GraphQL API.
@@ -61,6 +62,19 @@ func (e *LagoonValidationError) Error() string {
 	return msg
 }
 
+// LagoonRateLimitError represents an HTTP 429 Too Many Requests response.
+// It is retryable; RetryAfter indicates the minimum wait before the next attempt.
+type LagoonRateLimitError struct {
+	RetryAfter time.Duration
+}
+
+func (e *LagoonRateLimitError) Error() string {
+	if e.RetryAfter > 0 {
+		return fmt.Sprintf("Lagoon rate limit exceeded; retry after %s", e.RetryAfter)
+	}
+	return "Lagoon rate limit exceeded"
+}
+
 // Sentinel errors for errors.Is() checking.
 var (
 	ErrAPI            = errors.New("lagoon api error")
@@ -68,6 +82,7 @@ var (
 	ErrNotFound       = errors.New("lagoon resource not found")
 	ErrValidation     = errors.New("lagoon validation error")
 	ErrDuplicateEntry = errors.New("lagoon duplicate entry")
+	ErrRateLimit      = errors.New("lagoon rate limit")
 )
 
 // isDuplicateMessage returns true if a message indicates a duplicate entry.
@@ -115,3 +130,4 @@ func (e *LagoonAPIError) Is(target error) bool {
 func (e *LagoonConnectionError) Is(target error) bool  { return target == ErrConnection }
 func (e *LagoonNotFoundError) Is(target error) bool    { return target == ErrNotFound }
 func (e *LagoonValidationError) Is(target error) bool  { return target == ErrValidation }
+func (e *LagoonRateLimitError) Is(target error) bool   { return target == ErrRateLimit }
