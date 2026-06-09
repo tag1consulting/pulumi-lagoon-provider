@@ -147,6 +147,37 @@ get_secret_value() {
         -o jsonpath="{.data.$key}" 2>/dev/null | base64 -d 2>/dev/null
 }
 
+# Emit '-k' (disable TLS verification) for curl ONLY when the target URL is
+# local (http to localhost / 127.0.0.1) or the caller has explicitly opted in
+# via LAGOON_INSECURE_TLS=1. Used by dev tooling that talks to dev Keycloak
+# (kind cluster, port-forwards, self-signed nip.io endpoints).
+#
+# Usage:
+#   curl -s $(curl_insecure_for_url "$URL") -X POST "$URL" ...
+#
+# For localhost/127.0.0.1 targets, prints "-k" (TLS verification is moot for
+# the loopback case but harmless; matches prior behavior). For any other
+# target, prints nothing unless LAGOON_INSECURE_TLS=1 is set.
+curl_insecure_for_url() {
+    local url="$1"
+    local host
+    # Strip scheme and any userinfo (user[:pass]@), then take everything
+    # before the next /, :, ?, #, or end of string.
+    host=$(echo "$url" | sed -E 's#^[a-zA-Z][a-zA-Z0-9+.-]*://([^@/]*@)?##' | sed -E 's#[/:?#].*$##')
+    case "$host" in
+        localhost|127.0.0.1|::1)
+            echo "-k"
+            ;;
+        *)
+            if [ "${LAGOON_INSECURE_TLS:-}" = "1" ]; then
+                log_warn "LAGOON_INSECURE_TLS=1: disabling TLS verification for $host" >&2
+                echo "-k"
+            fi
+            # Verify by default for non-localhost URLs
+            ;;
+    esac
+}
+
 # Print current configuration (for debugging)
 print_config() {
     echo "Current configuration:"

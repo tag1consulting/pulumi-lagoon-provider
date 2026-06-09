@@ -9,10 +9,13 @@
 # See scripts/common.sh for configuration options.
 #
 # Additional configuration:
-#   KEYCLOAK_URL      - Keycloak base URL (default: http://localhost:8080)
-#   LAGOON_USERNAME   - Lagoon admin username (default: lagoonadmin)
-#   LAGOON_PASSWORD   - Lagoon admin password (fetched from secret if not set)
-#   CLIENT_ID         - Keycloak client ID (default: lagoon-ui)
+#   KEYCLOAK_URL         - Keycloak base URL (default: http://localhost:8080)
+#   LAGOON_USERNAME      - Lagoon admin username (default: lagoonadmin)
+#   LAGOON_PASSWORD      - Lagoon admin password (fetched from secret if not set)
+#   CLIENT_ID            - Keycloak client ID (default: lagoon-ui)
+#   LAGOON_INSECURE_TLS  - Set to 1 to disable TLS verification against
+#                          non-localhost endpoints (e.g. self-signed nip.io
+#                          dev clusters). Default: verify TLS.
 
 set -e
 
@@ -46,8 +49,11 @@ if [ -n "$CLIENT_SECRET" ]; then
     TOKEN_DATA="${TOKEN_DATA}&client_secret=${CLIENT_SECRET}"
 fi
 
-# Get token
-TOKEN_RESPONSE=$(curl -s -k -X POST "${KEYCLOAK_URL}/auth/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" \
+# Get token. Verify TLS by default for non-localhost endpoints; opt out via
+# LAGOON_INSECURE_TLS=1 (e.g. self-signed dev clusters).
+TOKEN_URL="${KEYCLOAK_URL}/auth/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token"
+# shellcheck disable=SC2046  # word splitting is intentional: helper emits flag(s) or nothing
+TOKEN_RESPONSE=$(curl -s $(curl_insecure_for_url "$TOKEN_URL") -X POST "$TOKEN_URL" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -d "$TOKEN_DATA" 2>&1)
 
