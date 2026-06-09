@@ -236,13 +236,22 @@ if install_lagoon_components:
 # =============================================================================
 
 lagoon_core = None
-if prod_provider is not None and install_lagoon_components and lagoon_secrets is not None:
+if (
+    prod_provider is not None
+    and install_lagoon_components
+    and lagoon_secrets is not None
+    and prod_harbor is not None
+):
     pulumi.log.info("Installing Lagoon core on production cluster...")
 
     # Build dependency list - include Harbor and CoreDNS if available
-    lagoon_core_deps = [prod_ingress.service, prod_cert, lagoon_core_ns, prod_coredns]
-    if prod_harbor is not None:
-        lagoon_core_deps.append(prod_harbor.release)
+    lagoon_core_deps = [
+        prod_ingress.service,
+        prod_cert,
+        lagoon_core_ns,
+        prod_coredns,
+        prod_harbor.release,
+    ]
 
     lagoon_core = install_lagoon_core(
         "prod-lagoon-core",
