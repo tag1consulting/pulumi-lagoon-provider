@@ -19,7 +19,7 @@ import (
 // All resources access this via infer.GetConfig[LagoonConfig](ctx).
 type LagoonConfig struct {
 	// APIUrl is the Lagoon GraphQL API endpoint.
-	APIUrl string `pulumi:"apiUrl,optional" provider:"secret"`
+	APIUrl string `pulumi:"apiUrl,optional"`
 
 	// Token is a pre-configured JWT authentication token.
 	Token string `pulumi:"token,optional" provider:"secret"`

@@ -54,8 +54,7 @@
           "environment": [
             "LAGOON_API_URL"
           ]
-        },
-        "secret": true
+        }
       },
       "insecure": {
         "type": "boolean",
@@ -189,8 +188,7 @@
           "environment": [
             "LAGOON_API_URL"
           ]
-        },
-        "secret": true
+        }
       },
       "insecure": {
         "type": "boolean",
@@ -242,8 +240,7 @@
           "environment": [
             "LAGOON_API_URL"
           ]
-        },
-        "secret": true
+        }
       },
       "insecure": {
         "type": "boolean",
