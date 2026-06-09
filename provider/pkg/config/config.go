@@ -55,6 +55,11 @@ func (c *LagoonConfig) Annotate(a infer.Annotator) {
 // Configure validates the config and prepares it for use.
 // Called by the Pulumi engine when the provider is configured.
 func (c *LagoonConfig) Configure(ctx context.Context) error {
+	// p.GetLogger returns a Logger value (not a pointer), and when the
+	// context carries no logger key it falls back to a slog-backed sink
+	// rather than returning a nil sink. Tests can therefore call
+	// Configure with context.TODO() without a nil-deref on Debugf. See
+	// pulumi-go-provider/logging.go.
 	log := p.GetLogger(ctx)
 
 	c.Token = strings.TrimSpace(c.Token)
