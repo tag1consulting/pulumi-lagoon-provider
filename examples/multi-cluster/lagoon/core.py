@@ -71,13 +71,21 @@ def install_lagoon_core(
     keycloak_url = domain_config.lagoon_keycloak_url
     webhook_url = f"https://{domain_config.lagoon_webhook}{domain_config._port_suffix}"
 
-    # Harbor URL and registry - required by lagoon-core chart
-    # Use the provided Harbor or a default
-    harbor_url = harbor.url if harbor else f"https://{domain_config.harbor}"
-    # Registry is the Harbor hostname without protocol
+    # Harbor URL and registry - required by lagoon-core chart for image pushes.
+    # We require a real Harbor object rather than substituting a placeholder
+    # password: a literal fallback would silently configure Lagoon to
+    # authenticate against a registry that does not exist with a known-in-
+    # the-clear credential, which is misleading rather than helpful when the
+    # caller forgot to install Harbor.
+    if harbor is None:
+        raise ValueError(
+            "install_lagoon_core requires a Harbor instance (got harbor=None). "
+            "Install Harbor first via install_harbor() or set "
+            "install_harbor_registry=True in the example config."
+        )
+    harbor_url = harbor.url
     registry = harbor_url.replace("https://", "").replace("http://", "")
-    # Harbor admin password - required for Lagoon to push images
-    harbor_admin_password = harbor.admin_password if harbor else "Harbor2024!"
+    harbor_admin_password = harbor.admin_password
 
     # Internal Keycloak URL for API communication (must include /auth path)
     keycloak_internal_url = (
