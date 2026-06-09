@@ -169,10 +169,17 @@ func (c *LagoonConfig) Diff(_ context.Context, req infer.DiffRequest[LagoonConfi
 	if strings.TrimSpace(req.Inputs.APIUrl) != strings.TrimSpace(req.State.APIUrl) {
 		diff["apiUrl"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if strings.TrimSpace(req.Inputs.Token) != strings.TrimSpace(req.State.Token) {
-		diff["token"] = p.PropertyDiff{Kind: p.Update}
+	// Only diff `token` when it is the explicit credential on both sides.
+	// When jwtSecret is present, Configure derives a fresh token each time;
+	// diffing that derived value produces noise because JWTs change every run.
+	inputSecret := strings.TrimSpace(req.Inputs.JWTSecret)
+	stateSecret := strings.TrimSpace(req.State.JWTSecret)
+	if inputSecret == "" && stateSecret == "" {
+		if strings.TrimSpace(req.Inputs.Token) != strings.TrimSpace(req.State.Token) {
+			diff["token"] = p.PropertyDiff{Kind: p.Update}
+		}
 	}
-	if strings.TrimSpace(req.Inputs.JWTSecret) != strings.TrimSpace(req.State.JWTSecret) {
+	if inputSecret != stateSecret {
 		diff["jwtSecret"] = p.PropertyDiff{Kind: p.Update}
 	}
 	if normalizeAudience(req.Inputs.JWTAudience) != normalizeAudience(req.State.JWTAudience) {
