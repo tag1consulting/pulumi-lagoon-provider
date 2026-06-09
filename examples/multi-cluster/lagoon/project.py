@@ -120,6 +120,7 @@ def create_example_drupal_project(
     deploy_targets: DeployTargetPair,
     git_url: str = "https://github.com/lagoon-examples/drupal-base.git",
     production_environment: str = "main",
+    branches_override: Optional[str] = None,
     lagoon_provider: Optional[pulumi_lagoon.Provider] = None,
     opts: Optional[pulumi.ResourceOptions] = None,
 ) -> ExampleProjectOutputs:
@@ -135,6 +136,9 @@ def create_example_drupal_project(
         deploy_targets: The deploy target pair (prod/nonprod)
         git_url: Git repository URL (default: Lagoon's Drupal example)
         production_environment: Name of the production branch (default: "main")
+        branches_override: Optional branch regex; when set, overrides the computed pattern.
+            Used by the e2e test suite to perform an in-place update assertion via
+            `pulumi config set exampleProjectBranches`. Normal deployments leave this None.
         lagoon_provider: Native Lagoon provider instance
         opts: Pulumi resource options
 
@@ -143,6 +147,15 @@ def create_example_drupal_project(
     """
     # Merge provider into opts
     provider_opts = pulumi.ResourceOptions(provider=lagoon_provider) if lagoon_provider else None
+
+    # Compute the branch pattern. When branches_override is provided (e.g. via the
+    # exampleProjectBranches Pulumi config key), use it verbatim so the e2e suite can
+    # trigger an in-place update without changing any other field or forcing a replace.
+    branches_pattern = (
+        branches_override
+        if branches_override is not None
+        else f"^({re.escape(production_environment)}|develop|feature/.*)$"
+    )
 
     # Create the project
     # The deploytarget_id here is the "default" target, but deploy target
@@ -156,7 +169,7 @@ def create_example_drupal_project(
             deploytarget_id=deploy_targets.prod_target.lagoon_id,
             production_environment=production_environment,
             # Branch pattern - which branches can be deployed
-            branches=f"^({re.escape(production_environment)}|develop|feature/.*)$",
+            branches=branches_pattern,
             # PR pattern - which PRs can be deployed
             pullrequests=".*",
         ),
