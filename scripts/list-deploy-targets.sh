@@ -33,8 +33,11 @@ if [ -z "$LAGOON_TOKEN" ]; then
     exit 1
 fi
 
-# Query deploy targets
-RESPONSE=$(curl -s -k -H "Authorization: Bearer $LAGOON_TOKEN" \
+# Query deploy targets. Verify TLS by default for non-localhost endpoints;
+# opt out via LAGOON_INSECURE_TLS=1 (e.g. self-signed dev clusters).
+# shellcheck disable=SC2046  # word splitting is intentional: helper emits flag(s) or nothing
+RESPONSE=$(curl -s $(curl_insecure_for_url "$LAGOON_API_URL") \
+    -H "Authorization: Bearer $LAGOON_TOKEN" \
     -H "Content-Type: application/json" \
     -d '{"query": "{ allKubernetes { id name cloudProvider cloudRegion consoleUrl disabled } }"}' \
     "$LAGOON_API_URL")
