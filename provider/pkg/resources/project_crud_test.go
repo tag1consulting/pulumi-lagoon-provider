@@ -69,41 +69,10 @@ func TestProjectCreate_DryRun(t *testing.T) {
 	}
 }
 
-func TestProjectCreate_DuplicateEntry_Adopts(t *testing.T) {
+func TestProjectCreate_DuplicateEntry_ReturnsError(t *testing.T) {
 	mock := &mockLagoonClient{
 		createProjectFn: func(_ context.Context, _ map[string]any) (*client.Project, error) {
 			return nil, &client.LagoonAPIError{Message: "Duplicate entry"}
-		},
-		getProjectByNameFn: func(_ context.Context, name string) (*client.Project, error) {
-			return &client.Project{ID: 99, Name: name}, nil
-		},
-		updateProjectFn: func(_ context.Context, id int, _ map[string]any) (*client.Project, error) {
-			return &client.Project{ID: id, Name: "myproject", Created: "2024-01-01"}, nil
-		},
-	}
-	ctx := testCtx(mock)
-	r := &Project{}
-	resp, err := r.Create(ctx, infer.CreateRequest[ProjectArgs]{
-		Inputs: ProjectArgs{Name: "myproject", GitURL: "git@example.com:repo.git", DeploytargetID: 1},
-	})
-	if err != nil {
-		t.Fatalf("Create with duplicate should adopt: %v", err)
-	}
-	if resp.ID != "99" {
-		t.Errorf("expected adopted ID '99', got %q", resp.ID)
-	}
-	if resp.Output.LagoonID != 99 {
-		t.Errorf("expected LagoonID 99, got %d", resp.Output.LagoonID)
-	}
-}
-
-func TestProjectCreate_DuplicateEntry_LookupFails(t *testing.T) {
-	mock := &mockLagoonClient{
-		createProjectFn: func(_ context.Context, _ map[string]any) (*client.Project, error) {
-			return nil, &client.LagoonAPIError{Message: "Duplicate entry"}
-		},
-		getProjectByNameFn: func(_ context.Context, _ string) (*client.Project, error) {
-			return nil, fmt.Errorf("network error")
 		},
 	}
 	ctx := testCtx(mock)
@@ -112,7 +81,13 @@ func TestProjectCreate_DuplicateEntry_LookupFails(t *testing.T) {
 		Inputs: ProjectArgs{Name: "myproject", GitURL: "git@example.com:repo.git", DeploytargetID: 1},
 	})
 	if err == nil {
-		t.Fatal("expected error when lookup fails")
+		t.Fatal("expected error when project already exists")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("expected 'already exists' in error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "pulumi import") {
+		t.Errorf("expected 'pulumi import' hint in error, got: %v", err)
 	}
 }
 
@@ -361,31 +336,6 @@ func TestProjectRead_InvalidID(t *testing.T) {
 	_, err := r.Read(ctx, infer.ReadRequest[ProjectArgs, ProjectState]{ID: "not-a-number"})
 	if err == nil {
 		t.Fatal("expected error for non-numeric ID")
-	}
-}
-
-func TestProjectCreate_DuplicateAdopt_UpdateFails(t *testing.T) {
-	mock := &mockLagoonClient{
-		createProjectFn: func(_ context.Context, _ map[string]any) (*client.Project, error) {
-			return nil, &client.LagoonAPIError{Message: "Duplicate entry 'myproject' for key 'name'"}
-		},
-		getProjectByNameFn: func(_ context.Context, name string) (*client.Project, error) {
-			return &client.Project{ID: 99, Name: name}, nil
-		},
-		updateProjectFn: func(_ context.Context, _ int, _ map[string]any) (*client.Project, error) {
-			return nil, fmt.Errorf("update failed")
-		},
-	}
-	ctx := testCtx(mock)
-	r := &Project{}
-	_, err := r.Create(ctx, infer.CreateRequest[ProjectArgs]{
-		Inputs: ProjectArgs{Name: "myproject", GitURL: "git@example.com:repo.git", DeploytargetID: 1},
-	})
-	if err == nil {
-		t.Fatal("expected error when adopt-update fails")
-	}
-	if !strings.Contains(err.Error(), "failed to update") {
-		t.Errorf("expected error to mention update failure, got: %v", err)
 	}
 }
 

@@ -74,28 +74,25 @@ func TestDeployTargetCreate_DryRun(t *testing.T) {
 	}
 }
 
-func TestDeployTargetCreate_DuplicateAdopts(t *testing.T) {
+func TestDeployTargetCreate_DuplicateReturnsError(t *testing.T) {
 	mock := &mockLagoonClient{
 		createDeployTargetFn: func(_ context.Context, _ map[string]any) (*client.DeployTarget, error) {
 			return nil, &client.LagoonAPIError{Message: "Duplicate entry"}
 		},
-		getDeployTargetByNameFn: func(_ context.Context, name string) (*client.DeployTarget, error) {
-			return &client.DeployTarget{ID: 99, Name: name}, nil
-		},
-		updateDeployTargetFn: func(_ context.Context, id int, _ map[string]any) (*client.DeployTarget, error) {
-			return &client.DeployTarget{ID: id, Name: "mycluster", Created: "2024-01-01"}, nil
-		},
 	}
 	ctx := testCtx(mock)
 	r := &DeployTarget{}
-	resp, err := r.Create(ctx, infer.CreateRequest[DeployTargetArgs]{
+	_, err := r.Create(ctx, infer.CreateRequest[DeployTargetArgs]{
 		Inputs: DeployTargetArgs{Name: "mycluster", ConsoleURL: "https://k8s.example.com"},
 	})
-	if err != nil {
-		t.Fatalf("Create with duplicate should adopt: %v", err)
+	if err == nil {
+		t.Fatal("expected error when deploy target already exists")
 	}
-	if resp.ID != "99" {
-		t.Errorf("expected adopted ID '99', got %q", resp.ID)
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("expected 'already exists' in error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "pulumi import") {
+		t.Errorf("expected 'pulumi import' hint in error, got: %v", err)
 	}
 }
 
@@ -334,31 +331,6 @@ func TestDeployTargetRead_InvalidID(t *testing.T) {
 	}
 }
 
-func TestDeployTargetCreate_DuplicateAdopt_UpdateFails(t *testing.T) {
-	mock := &mockLagoonClient{
-		createDeployTargetFn: func(_ context.Context, _ map[string]any) (*client.DeployTarget, error) {
-			return nil, &client.LagoonAPIError{Message: "Duplicate entry 'mycluster' for key 'name'"}
-		},
-		getDeployTargetByNameFn: func(_ context.Context, name string) (*client.DeployTarget, error) {
-			return &client.DeployTarget{ID: 99, Name: name}, nil
-		},
-		updateDeployTargetFn: func(_ context.Context, _ int, _ map[string]any) (*client.DeployTarget, error) {
-			return nil, fmt.Errorf("update failed")
-		},
-	}
-	ctx := testCtx(mock)
-	r := &DeployTarget{}
-	_, err := r.Create(ctx, infer.CreateRequest[DeployTargetArgs]{
-		Inputs: DeployTargetArgs{Name: "mycluster", ConsoleURL: "https://k8s.example.com"},
-	})
-	if err == nil {
-		t.Fatal("expected error when adopt-update fails")
-	}
-	if !strings.Contains(err.Error(), "failed to update") {
-		t.Errorf("expected error to mention update failure, got: %v", err)
-	}
-}
-
 func TestDeployTargetUpdate_APIError(t *testing.T) {
 	mock := &mockLagoonClient{
 		updateDeployTargetFn: func(_ context.Context, _ int, _ map[string]any) (*client.DeployTarget, error) {
@@ -407,21 +379,3 @@ func TestDeployTargetCreate_APIError(t *testing.T) {
 	}
 }
 
-func TestDeployTargetCreate_DuplicateAdopt_LookupFails(t *testing.T) {
-	mock := &mockLagoonClient{
-		createDeployTargetFn: func(_ context.Context, _ map[string]any) (*client.DeployTarget, error) {
-			return nil, &client.LagoonAPIError{Message: "Duplicate entry 'mycluster' for key 'name'"}
-		},
-		getDeployTargetByNameFn: func(_ context.Context, _ string) (*client.DeployTarget, error) {
-			return nil, fmt.Errorf("network error")
-		},
-	}
-	ctx := testCtx(mock)
-	r := &DeployTarget{}
-	_, err := r.Create(ctx, infer.CreateRequest[DeployTargetArgs]{
-		Inputs: DeployTargetArgs{Name: "mycluster", ConsoleURL: "https://k8s.example.com"},
-	})
-	if err == nil {
-		t.Fatal("expected error when lookup fails")
-	}
-}

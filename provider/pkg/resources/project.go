@@ -84,23 +84,10 @@ func (r *Project) Create(ctx context.Context, req infer.CreateRequest[ProjectArg
 
 	project, err := c.CreateProject(ctx, input)
 	if err != nil {
-		if !client.IsDuplicateEntry(err) {
-			return infer.CreateResponse[ProjectState]{}, fmt.Errorf("failed to create project: %w", err)
+		if client.IsDuplicateEntry(err) {
+			return infer.CreateResponse[ProjectState]{}, fmt.Errorf("project %q already exists: use pulumi import to bring it under management", req.Inputs.Name)
 		}
-
-		// Resource already exists — adopt it by looking up by name and updating
-		existing, lookupErr := c.GetProjectByName(ctx, req.Inputs.Name)
-		if lookupErr != nil {
-			return infer.CreateResponse[ProjectState]{}, fmt.Errorf("project %q already exists but failed to look up: %w", req.Inputs.Name, lookupErr)
-		}
-
-		// Update the existing resource to match desired inputs
-		// Remove name — it's not updatable
-		delete(input, "name")
-		project, err = c.UpdateProject(ctx, existing.ID, input)
-		if err != nil {
-			return infer.CreateResponse[ProjectState]{}, fmt.Errorf("project %q already exists but failed to update: %w", req.Inputs.Name, err)
-		}
+		return infer.CreateResponse[ProjectState]{}, fmt.Errorf("failed to create project: %w", err)
 	}
 
 	return infer.CreateResponse[ProjectState]{
