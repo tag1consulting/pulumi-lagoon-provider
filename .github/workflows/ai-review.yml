@@ -1,8 +1,20 @@
 name: AI PR Review
 
 # pull_request_target runs the workflow from the base branch so that secrets
-# and repo variables are available even for fork PRs.  This is safe because the
-# AI review action only *reads* the checked-out code — it never executes it.
+# and repo variables are available even for fork PRs. This is safe only as
+# long as the AI review action treats the checked-out code as untrusted data
+# and never executes it. That guarantee is documented as an explicit invariant
+# of tag1consulting/ai-pr-review (SECURITY.md → "Security invariants").
+#
+# Defense-in-depth: this workflow additionally gates on author_association
+# (OWNER/MEMBER/COLLABORATOR), so a fork PR from an arbitrary actor will not
+# trigger a secret-bearing run even if the action invariant ever regressed.
+# Mirror of the gate already used by ai-review-commands.yml for slash commands.
+#
+# Note: tag1consulting/ai-pr-review/container-action@main is intentionally a
+# mutable ref. This is a dogfooding/canary repo and we own the action; the
+# mutable-ref supply-chain risk is accepted, with the action invariant above
+# as the load-bearing mitigation.
 on:
   pull_request_target:
     types: [opened, synchronize, ready_for_review]
@@ -18,7 +30,8 @@ jobs:
       !github.event.pull_request.draft &&
       github.actor != 'dependabot[bot]' &&
       github.actor != 'renovate[bot]' &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-ai-review')
+      !contains(github.event.pull_request.labels.*.name, 'skip-ai-review') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
