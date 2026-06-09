@@ -197,12 +197,12 @@ func (c *Client) executeOnce(ctx context.Context, query string, variables map[st
 
 	if resp.StatusCode >= 500 {
 		return nil, &LagoonConnectionError{
-			Message: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(respBody)),
+			Message: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, truncateErrorBody(respBody)),
 		}
 	}
 	if resp.StatusCode >= 400 {
 		return nil, &LagoonAPIError{
-			Message: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(respBody)),
+			Message: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, truncateErrorBody(respBody)),
 		}
 	}
 
@@ -316,6 +316,23 @@ func (c *Client) DetectAPIVersion(ctx context.Context) string {
 // IsNewAPI returns true if the API is v2.30.0+.
 func (c *Client) IsNewAPI(ctx context.Context) bool {
 	return c.DetectAPIVersion(ctx) == "new"
+}
+
+// maxErrorBodyBytes caps how much of an upstream HTTP response body is
+// embedded into a returned error message. Upstream bodies can be large or
+// occasionally surface unexpected content; bounding the size keeps logs
+// readable and limits how much arbitrary server output reaches operators.
+const maxErrorBodyBytes = 1024
+
+// truncateErrorBody returns the body unchanged if it fits within
+// maxErrorBodyBytes, otherwise the first maxErrorBodyBytes bytes followed
+// by a "...(truncated, N more bytes)" marker that records how much was
+// dropped so the truncation is visible in error output.
+func truncateErrorBody(body []byte) string {
+	if len(body) <= maxErrorBodyBytes {
+		return string(body)
+	}
+	return fmt.Sprintf("%s...(truncated, %d more bytes)", body[:maxErrorBodyBytes], len(body)-maxErrorBodyBytes)
 }
 
 // extractField extracts a top-level field from a raw JSON data response.
