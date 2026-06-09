@@ -152,6 +152,96 @@ func TestExecute_NoRetryOnAPIError(t *testing.T) {
 	}
 }
 
+func TestExecute_RetryOn429_Succeeds(t *testing.T) {
+	var attempts int32
+	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
+		count := atomic.AddInt32(&attempts, 1)
+		if count < 3 {
+			w.Header().Set("Retry-After", "0")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		resp := map[string]any{"data": map[string]any{"ok": true}}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token", WithMaxRetries(3))
+	c.baseDelay = 1 * time.Millisecond
+	c.maxDelay = 1 * time.Millisecond
+	data, err := c.Execute(context.Background(), "query { ok }", nil)
+	if err != nil {
+		t.Fatalf("expected success after 429 retries, got: %v", err)
+	}
+	if data == nil {
+		t.Fatal("expected non-nil data")
+	}
+	if atomic.LoadInt32(&attempts) != 3 {
+		t.Errorf("expected 3 attempts, got %d", atomic.LoadInt32(&attempts))
+	}
+}
+
+func TestExecute_ExhaustedRetries_Returns429Error(t *testing.T) {
+	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusTooManyRequests)
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token", WithMaxRetries(2))
+	c.baseDelay = 1 * time.Millisecond
+	c.maxDelay = 1 * time.Millisecond
+	_, err := c.Execute(context.Background(), "query { ok }", nil)
+	if err == nil {
+		t.Fatal("expected error after exhausting retries")
+	}
+	if !errors.Is(err, ErrRateLimit) {
+		t.Errorf("expected ErrRateLimit, got: %v", err)
+	}
+}
+
+func TestExecute_RetryAfterHeader_Honored(t *testing.T) {
+	var attempts int32
+	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
+		count := atomic.AddInt32(&attempts, 1)
+		if count == 1 {
+			w.Header().Set("Retry-After", "1") // 1 second
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		resp := map[string]any{"data": map[string]any{"ok": true}}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token", WithMaxRetries(2))
+	c.baseDelay = 1 * time.Millisecond
+	c.maxDelay = 1 * time.Millisecond
+	start := time.Now()
+	data, err := c.Execute(context.Background(), "query { ok }", nil)
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("expected success: %v", err)
+	}
+	if data == nil {
+		t.Fatal("expected non-nil data")
+	}
+	// Retry-After: 1 means wait at least 1 second
+	if elapsed < 1*time.Second {
+		t.Errorf("expected at least 1s wait for Retry-After, got %v", elapsed)
+	}
+}
+
+func TestRetryDelay_CappedAtMaxDelay(t *testing.T) {
+	c := &Client{baseDelay: 1 * time.Second, maxDelay: 5 * time.Second}
+	// At attempt 10, uncapped exponential would be 512s. It should be capped at 5s (plus jitter).
+	delay := c.retryDelay(10, 0)
+	if delay > 7*time.Second { // 5s + 25% jitter headroom
+		t.Errorf("expected delay capped near maxDelay (5s), got %v", delay)
+	}
+}
+
 func TestExecute_ContextCancellation(t *testing.T) {
 	server := mockGraphQLServerRaw(t, func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(5 * time.Second)

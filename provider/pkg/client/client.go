@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/rand"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +27,7 @@ type Client struct {
 	// Retry configuration
 	maxRetries int
 	baseDelay  time.Duration
+	maxDelay   time.Duration
 
 	// Token refresh
 	tokenFunc  func() (string, error) // optional: generates a fresh token
@@ -73,6 +76,7 @@ func NewClient(apiURL, token string, opts ...ClientOption) *Client {
 		verifySSL:  true,
 		maxRetries: 3,
 		baseDelay:  1 * time.Second,
+		maxDelay:   30 * time.Second,
 	}
 
 	for _, opt := range opts {
@@ -115,13 +119,13 @@ func (c *Client) Execute(ctx context.Context, query string, variables map[string
 	}
 
 	var lastErr error
+	var nextDelay time.Duration
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		if attempt > 0 {
-			delay := c.baseDelay * time.Duration(math.Pow(2, float64(attempt-1)))
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
-			case <-time.After(delay):
+			case <-time.After(nextDelay):
 			}
 		}
 
@@ -130,16 +134,40 @@ func (c *Client) Execute(ctx context.Context, query string, variables map[string
 			return data, nil
 		}
 
-		// Only retry on connection/transport errors, not API errors
+		// Retry on rate limit errors, honoring the Retry-After header.
+		var rlErr *LagoonRateLimitError
+		if errors.As(err, &rlErr) {
+			lastErr = err
+			nextDelay = c.retryDelay(attempt+1, rlErr.RetryAfter)
+			continue
+		}
+		// Retry on connection/transport errors with jittered exponential backoff.
 		var connErr *LagoonConnectionError
 		if isConnectionError(err, &connErr) {
 			lastErr = err
+			nextDelay = c.retryDelay(attempt+1, 0)
 			continue
 		}
 		return nil, err
 	}
 
 	return nil, lastErr
+}
+
+// retryDelay returns the wait duration for a retry attempt.
+// minDelay overrides the backoff when set (e.g. from a Retry-After header).
+func (c *Client) retryDelay(attempt int, minDelay time.Duration) time.Duration {
+	exp := c.baseDelay * time.Duration(math.Pow(2, float64(attempt-1)))
+	if exp > c.maxDelay {
+		exp = c.maxDelay
+	}
+	// Add up to 25% jitter so concurrent retries don't all fire at once.
+	jitter := time.Duration(rand.Int63n(int64(exp) / 4)) //nolint:gosec // non-crypto jitter
+	delay := exp + jitter
+	if minDelay > delay {
+		delay = minDelay
+	}
+	return delay
 }
 
 func isConnectionError(err error, target **LagoonConnectionError) bool {
@@ -195,6 +223,15 @@ func (c *Client) executeOnce(ctx context.Context, query string, variables map[st
 		return nil, &LagoonConnectionError{Message: "failed to read response body", Cause: err}
 	}
 
+	if resp.StatusCode == 429 {
+		var retryAfter time.Duration
+		if ra := resp.Header.Get("Retry-After"); ra != "" {
+			if secs, err := strconv.Atoi(ra); err == nil && secs > 0 {
+				retryAfter = time.Duration(secs) * time.Second
+			}
+		}
+		return nil, &LagoonRateLimitError{RetryAfter: retryAfter}
+	}
 	if resp.StatusCode >= 500 {
 		return nil, &LagoonConnectionError{
 			Message: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(respBody)),
