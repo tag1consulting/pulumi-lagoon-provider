@@ -276,12 +276,34 @@ func (r *Route) Update(ctx context.Context, req infer.UpdateRequest[RouteArgs, R
 		}
 	}
 
+	// Refresh the updated timestamp from the server. Lagoon stamps `updated`
+	// on every mutation that touches the route (scalar patch, annotation
+	// reconcile, alternative-name reconcile, path-route reconcile, environment
+	// attachment), and we may have called several of those above. Rather
+	// than thread the timestamp out of every reconcile path, do a single
+	// targeted read here so the returned state always carries a fresh value
+	// instead of dropping the field. If the read fails we fall back to the
+	// state's prior timestamp rather than failing the whole update — the
+	// mutation already succeeded and the client will see the freshness on
+	// the next refresh.
+	updated := state.Updated
+	refreshed, err := c.GetRouteByDomain(ctx, args.ProjectName, args.Domain)
+	switch {
+	case err != nil:
+		p.GetLogger(ctx).Warningf(
+			"Route %s on project %s updated, but failed to refresh updated timestamp: %v",
+			args.Domain, args.ProjectName, err)
+	case refreshed != nil && refreshed.Updated != "":
+		updated = refreshed.Updated
+	}
+
 	return infer.UpdateResponse[RouteState]{
 		Output: RouteState{
 			RouteArgs: args,
 			LagoonID:  state.LagoonID,
 			Source:    state.Source,
 			Created:   state.Created,
+			Updated:   updated,
 		},
 	}, nil
 }
