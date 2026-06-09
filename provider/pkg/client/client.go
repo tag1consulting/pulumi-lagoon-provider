@@ -162,7 +162,11 @@ func (c *Client) retryDelay(attempt int, minDelay time.Duration) time.Duration {
 		exp = c.maxDelay
 	}
 	// Add up to 25% jitter so concurrent retries don't all fire at once.
-	jitter := time.Duration(rand.Int63n(int64(exp) / 4)) //nolint:gosec // non-crypto jitter
+	// Guard against exp==0 (e.g. baseDelay unset) to avoid rand.Int63n(0) panic.
+	var jitter time.Duration
+	if exp > 0 {
+		jitter = time.Duration(rand.Int63n(int64(exp) / 4)) //nolint:gosec // non-crypto jitter
+	}
 	delay := exp + jitter
 	if minDelay > delay {
 		delay = minDelay
@@ -229,6 +233,8 @@ func (c *Client) executeOnce(ctx context.Context, query string, variables map[st
 			if secs, err := strconv.Atoi(ra); err == nil && secs > 0 {
 				retryAfter = time.Duration(secs) * time.Second
 			}
+			// Non-integer Retry-After values (e.g. HTTP-date, fractional seconds) are
+			// silently ignored; retryAfter stays 0 and backoff uses the exponential default.
 		}
 		return nil, &LagoonRateLimitError{RetryAfter: retryAfter}
 	}

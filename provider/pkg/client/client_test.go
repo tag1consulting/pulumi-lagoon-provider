@@ -626,3 +626,12 @@ func TestHTTP4xxReturnsAPIError(t *testing.T) {
 		t.Error("HTTP 400 should NOT be a LagoonConnectionError")
 	}
 }
+
+func TestRetryDelay_ZeroBaseDelay_NoPanic(t *testing.T) {
+	// rand.Int63n(0) panics; guard must prevent that when exp is zero.
+	c := &Client{baseDelay: 0, maxDelay: 30 * time.Second}
+	delay := c.retryDelay(1, 0)
+	if delay != 0 {
+		t.Errorf("expected 0 delay with zero baseDelay, got %v", delay)
+	}
+}
