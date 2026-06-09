@@ -89,23 +89,10 @@ func (r *DeployTarget) Create(ctx context.Context, req infer.CreateRequest[Deplo
 
 	dt, err := c.CreateDeployTarget(ctx, input)
 	if err != nil {
-		if !client.IsDuplicateEntry(err) {
-			return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("failed to create deploy target: %w", err)
+		if client.IsDuplicateEntry(err) {
+			return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("deploy target %q already exists: use pulumi import to bring it under management", req.Inputs.Name)
 		}
-
-		// Resource already exists — adopt it by looking up by name and updating
-		existing, lookupErr := c.GetDeployTargetByName(ctx, req.Inputs.Name)
-		if lookupErr != nil {
-			return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("deploy target %q already exists but failed to look up: %w", req.Inputs.Name, lookupErr)
-		}
-
-		// Update the existing resource to match desired inputs
-		// Remove name — it's not updatable via the UpdateKubernetes mutation
-		delete(input, "name")
-		dt, err = c.UpdateDeployTarget(ctx, existing.ID, input)
-		if err != nil {
-			return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("deploy target %q already exists but failed to update: %w", req.Inputs.Name, err)
-		}
+		return infer.CreateResponse[DeployTargetState]{}, fmt.Errorf("failed to create deploy target: %w", err)
 	}
 
 	return infer.CreateResponse[DeployTargetState]{
