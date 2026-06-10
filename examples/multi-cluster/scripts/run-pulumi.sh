@@ -109,59 +109,16 @@ start_port_forwards() {
     log_info "Port-forwards ready"
 }
 
-# Get admin JWT token (signed with JWTSECRET for full API access)
+# Get admin JWT token (signed with JWTSECRET for full API access).
+# Delegates to scripts/get-admin-jwt.sh so the token-signing logic lives in
+# one place and can be sourced independently by e2e-assertions.sh and other
+# scripts that need a deploy-target-capable token.
 get_admin_jwt_token() {
     log_info "Getting admin JWT token..."
-
-    # Get JWTSECRET from core secrets
-    local jwt_secret
-    jwt_secret=$(kubectl --context "$CONTEXT" -n "$NAMESPACE" get secret "$CORE_SECRETS" \
-        -o jsonpath='{.data.JWTSECRET}' | base64 -d)
-
-    if [ -z "$jwt_secret" ]; then
-        log_error "Could not get JWTSECRET from $CORE_SECRETS"
-        exit 1
-    fi
-
-    # Write secret to temp file to avoid shell escaping issues
-    local secret_file
-    secret_file=$(mktemp)
-    echo "$jwt_secret" > "$secret_file"
-
-    # Generate admin JWT token using Python
-    local token
-    token=$(python3 << EOF
-import jwt
-import time
-
-with open('$secret_file', 'r') as f:
-    secret = f.read().strip()
-
-now = int(time.time())
-payload = {
-    'role': 'admin',
-    'iss': 'lagoon-api',
-    'sub': 'lagoonadmin',
-    'aud': 'api.dev',
-    'iat': now,
-    'exp': now + 3600  # 1 hour validity
-}
-print(jwt.encode(payload, secret, algorithm='HS256'))
-EOF
-)
-
-    # Clean up temp file
-    rm -f "$secret_file"
-
-    if [ -z "$token" ] || echo "$token" | grep -q "Traceback\|Error\|ModuleNotFoundError"; then
-        log_error "Failed to generate admin JWT token"
-        echo "$token" >&2
-        exit 1
-    fi
-
-    export LAGOON_TOKEN="$token"
-    export LAGOON_API_URL="http://localhost:7080/graphql"
-
+    # Pass the context/namespace/secret that this wrapper already resolved so
+    # get-admin-jwt.sh uses the same values (the sourced script respects env overrides).
+    KUBE_CONTEXT="$CONTEXT" LAGOON_NAMESPACE="$NAMESPACE" CORE_SECRETS="$CORE_SECRETS" \
+        source "$SCRIPT_DIR/../../../../scripts/get-admin-jwt.sh"
     log_info "Admin token acquired (valid for 1 hour)"
 }
 

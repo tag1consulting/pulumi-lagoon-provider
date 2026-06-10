@@ -498,11 +498,16 @@ if lagoon_core is not None and config.create_example_project:
     # Create the example Drupal project with deploy target configurations
     # - 'main' branch deploys to prod cluster
     # - All other branches and PRs deploy to nonprod cluster
+    #
+    # branches_override is normally None (computed from production_environment).
+    # The e2e test suite sets exampleProjectBranches via `pulumi config set` to
+    # trigger an in-place update assertion without replacing the resource.
     example_project = create_example_drupal_project(
         config.example_project_name,
         deploy_targets=deploy_targets,
         git_url=config.example_project_git_url,
         production_environment="main",
+        branches_override=config.example_project_branches,
         lagoon_provider=lagoon_provider,
         opts=pulumi.ResourceOptions(
             depends_on=[deploy_targets.prod_target, deploy_targets.nonprod_target],

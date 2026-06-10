@@ -328,6 +328,19 @@ class MultiClusterConfig:
             or "https://github.com/lagoon-examples/drupal-base.git"
         )
 
+    @property
+    def example_project_branches(self) -> Optional[str]:
+        """Branch regex for the example project (default: None, computed from production_environment).
+
+        When set, overrides the computed branch pattern. Used by the e2e test suite to perform
+        an in-place update assertion without forcing a resource replace:
+            pulumi config set exampleProjectBranches '^(main|develop|feature/.*|hotfix/.*)$'
+
+        When unset (the default), project.py computes the pattern from the production_environment
+        name, preserving identical behavior for normal deployments.
+        """
+        return self._config.get("exampleProjectBranches")
+
     def get_domain_config(self) -> DomainConfig:
         """Get domain configuration based on Pulumi config."""
         return DomainConfig(base=self.base_domain)

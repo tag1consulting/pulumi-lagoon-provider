@@ -21,6 +21,7 @@
         multi-cluster-up multi-cluster-down multi-cluster-preview multi-cluster-status multi-cluster-clusters \
         multi-cluster-deploy multi-cluster-verify multi-cluster-port-forwards multi-cluster-port-forwards-all \
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
+        e2e e2e-build e2e-setup e2e-deploy e2e-assert e2e-teardown \
         clean clean-all \
         go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet go-sdk-all go-install check-release-version release-prep go-proxy-warmup check-versions check-pulumi-version
 
@@ -321,6 +322,132 @@ multi-cluster-info:
 	@cd $(MULTI_CLUSTER_DIR) && $(MAKE) show-access-info
 
 #==============================================================================
+# E2E Test Suite
+#==============================================================================
+#
+# Runs a full end-to-end test of the provider against a real Lagoon deployment
+# using the multi-cluster example. Expected wall-clock: 45-90 minutes.
+#
+# Quick usage:
+#   make e2e                         # full two-cluster run
+#   E2E_SKIP_NONPROD=1 make e2e      # prod-only smoke run (~half the time)
+#   E2E_KEEP_CLUSTERS_ON_FAILURE=1 make e2e   # keep clusters up for post-mortem
+#
+# Release gate: run `make e2e` after the release PR merges and before tagging.
+# The suite must pass before running `git tag vX.Y.Z && git push origin vX.Y.Z`.
+#
+# Prerequisites: Docker, Kind, kubectl, Helm, Pulumi CLI (version from .pulumiversion),
+# jq, Python 3.9+, and Go toolchain. All are assumed to be on PATH.
+
+# E2E configuration variables (all overridable via environment)
+E2E_HELM_TIMEOUT           ?= 1800
+E2E_SKIP_NONPROD           ?= 0
+E2E_KEEP_CLUSTERS_ON_FAILURE ?= 0
+E2E_POD_WAIT_RETRIES       ?= 30
+E2E_STACK_NAME             ?= e2e
+E2E_UPDATE_BRANCHES        ?= ^(main|develop|feature/.*|hotfix/.*)$$
+
+# e2e-build: compile the provider, regenerate the Python SDK, and install the plugin.
+# Puts pulumi-resource-lagoon in $GOPATH/bin so Pulumi resolves the local build.
+e2e-build: check-pulumi-version go-build go-sdk-python go-install
+	@echo "[e2e-build] Provider built and installed."
+	@echo "[e2e-build] Plugin path: $$(which pulumi-resource-lagoon 2>/dev/null || echo 'NOT FOUND - add $$(go env GOPATH)/bin to PATH')"
+
+# e2e-setup: initialize the Pulumi project in the multi-cluster example.
+# Uses a local backend (no Pulumi Cloud account required).
+e2e-setup:
+	@echo "[e2e-setup] Initializing local Pulumi backend and stack '$(E2E_STACK_NAME)'..."
+	@cd $(MULTI_CLUSTER_DIR) && \
+		if [ ! -d venv ]; then \
+			python3 -m venv venv; \
+		fi && \
+		./venv/bin/pip install -q -r requirements.txt && \
+		PULUMI_BACKEND_URL="file://$(shell cd $(MULTI_CLUSTER_DIR) && pwd)/.pulumi-e2e" \
+		pulumi stack select $(E2E_STACK_NAME) 2>/dev/null || \
+		PULUMI_BACKEND_URL="file://$(shell cd $(MULTI_CLUSTER_DIR) && pwd)/.pulumi-e2e" \
+		pulumi stack init $(E2E_STACK_NAME)
+	@if [ "$(E2E_HELM_TIMEOUT)" != "1800" ]; then \
+		cd $(MULTI_CLUSTER_DIR) && \
+		PULUMI_BACKEND_URL="file://$(shell cd $(MULTI_CLUSTER_DIR) && pwd)/.pulumi-e2e" \
+		pulumi config set helmTimeout "$(E2E_HELM_TIMEOUT)"; \
+	fi
+	@echo "[e2e-setup] Stack ready."
+
+# e2e-deploy: run the two-phase multi-cluster deploy (same as `make multi-cluster-deploy`
+# but with the e2e stack name and configurable Helm timeout).
+# Phase 1 tolerates API-unreachable errors (clusters are still coming up).
+# Phase 2 creates the native provider resources after port-forwards are established.
+e2e-deploy:
+	@echo "[e2e-deploy] Starting two-phase multi-cluster deploy (this takes 45-90 minutes)..."
+	@cd $(MULTI_CLUSTER_DIR) && \
+		E2E_POD_WAIT_RETRIES=$(E2E_POD_WAIT_RETRIES) \
+		E2E_SKIP_NONPROD=$(E2E_SKIP_NONPROD) \
+		PULUMI_BACKEND_URL="file://$(shell cd $(MULTI_CLUSTER_DIR) && pwd)/.pulumi-e2e" \
+		$(MAKE) deploy
+	@echo "[e2e-deploy] Deploy complete."
+
+# e2e-assert: run the four assertion groups against the deployed stack.
+e2e-assert:
+	@echo "[e2e-assert] Running assertion suite..."
+	@cd $(MULTI_CLUSTER_DIR) && \
+		LAGOON_PRESET=multi-prod \
+		E2E_UPDATE_BRANCHES="$(E2E_UPDATE_BRANCHES)" \
+		E2E_PULUMI_DIR="$(shell cd $(MULTI_CLUSTER_DIR) && pwd)" \
+		PULUMI_BACKEND_URL="file://$(shell cd $(MULTI_CLUSTER_DIR) && pwd)/.pulumi-e2e" \
+		$(CURDIR)/scripts/e2e-assertions.sh
+	@echo "[e2e-assert] All assertions passed."
+
+# e2e-teardown: destroy all resources and delete Kind clusters.
+# Safe to run even if the deploy was partial (destroy is idempotent for missing resources).
+# Skips cluster deletion when E2E_KEEP_CLUSTERS_ON_FAILURE=1 and there are active clusters
+# (useful for post-mortem debugging).
+e2e-teardown:
+	@echo "[e2e-teardown] Destroying Pulumi stack resources..."
+	@cd $(MULTI_CLUSTER_DIR) && \
+		PULUMI_BACKEND_URL="file://$(shell cd $(MULTI_CLUSTER_DIR) && pwd)/.pulumi-e2e" \
+		./scripts/run-pulumi.sh destroy --yes --non-interactive 2>/dev/null || \
+		echo "[e2e-teardown] WARNING: pulumi destroy failed or stack was already clean."
+	@cd $(MULTI_CLUSTER_DIR) && \
+		PULUMI_BACKEND_URL="file://$(shell cd $(MULTI_CLUSTER_DIR) && pwd)/.pulumi-e2e" \
+		pulumi stack rm $(E2E_STACK_NAME) --yes 2>/dev/null || true
+	@rm -rf $(MULTI_CLUSTER_DIR)/.pulumi-e2e
+	@echo "[e2e-teardown] Deleting Kind clusters..."
+	@kind delete cluster --name lagoon-prod   2>/dev/null || true
+	@kind delete cluster --name lagoon-nonprod 2>/dev/null || true
+	@echo "[e2e-teardown] Stopping port-forwards..."
+	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@echo "[e2e-teardown] Done."
+
+# e2e: the full end-to-end release gate. Runs build -> setup -> deploy -> assert,
+# with teardown guaranteed via a shell trap (so clusters are cleaned up even on failure,
+# unless E2E_KEEP_CLUSTERS_ON_FAILURE=1).
+#
+# Usage:
+#   make e2e
+#   E2E_KEEP_CLUSTERS_ON_FAILURE=1 make e2e   # keep clusters on failure for debugging
+#   E2E_SKIP_NONPROD=1 make e2e               # prod-only smoke run
+e2e: e2e-build e2e-setup
+	@bash -euo pipefail -c '\
+		trap_handler() { \
+			echo ""; \
+			echo "[e2e] Caught exit signal."; \
+			if [ "$(E2E_KEEP_CLUSTERS_ON_FAILURE)" = "1" ]; then \
+				echo "[e2e] E2E_KEEP_CLUSTERS_ON_FAILURE=1: skipping teardown for debugging."; \
+				echo "[e2e] Clusters still up: $$(kind get clusters 2>/dev/null | tr "\\n" " ")"; \
+				echo "[e2e] When done: make e2e-teardown"; \
+			else \
+				echo "[e2e] Running teardown..."; \
+				$(MAKE) e2e-teardown; \
+			fi; \
+		}; \
+		trap trap_handler EXIT; \
+		$(MAKE) e2e-deploy && \
+		$(MAKE) e2e-assert; \
+		trap - EXIT; \
+		$(MAKE) e2e-teardown; \
+	'
+
+#==============================================================================
 # Cleanup
 #==============================================================================
 
@@ -562,10 +689,14 @@ release-prep: check-release-version
 	@echo "Remaining steps:"
 	@echo "  1. Fill in RELEASE_NOTES.md (scaffold inserted at top of file)"
 	@echo "  2. Commit, push, and open PR to main"
-	@echo "  3. After merge: git tag v$(VERSION) && git push origin v$(VERSION)"
-	@echo "  4. Tag Go module: git tag sdk/go/lagoon/v$(VERSION) v$(VERSION)^{} && git push origin sdk/go/lagoon/v$(VERSION)"
-	@echo "  5. Create GitHub release (triggers publish.yml: PyPI, npm, NuGet, Go proxy warm-up)"
-	@echo "  6. Verify: make go-proxy-warmup VERSION=$(VERSION)  (or check CI)"
+	@echo "  3. After PR merges: run the e2e suite as a pre-tag gate:"
+	@echo "       make e2e"
+	@echo "     Expected wall-clock: 45-90 minutes. Must pass before tagging."
+	@echo "     Use E2E_SKIP_NONPROD=1 for a faster prod-only smoke run."
+	@echo "  4. After e2e passes: git tag v$(VERSION) && git push origin v$(VERSION)"
+	@echo "  5. Tag Go module: git tag sdk/go/lagoon/v$(VERSION) v$(VERSION)^{} && git push origin sdk/go/lagoon/v$(VERSION)"
+	@echo "  6. Create GitHub release (triggers publish.yml: PyPI, npm, NuGet, Go proxy warm-up)"
+	@echo "  7. Verify: make go-proxy-warmup VERSION=$(VERSION)  (or check CI)"
 
 # Warm the Go module proxy so the SDK is immediately available via go get and
 # appears on pkg.go.dev.  The sdk/go/lagoon/vVERSION tag must already exist
