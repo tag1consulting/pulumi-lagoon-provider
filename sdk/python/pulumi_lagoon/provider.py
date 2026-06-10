@@ -178,7 +178,7 @@ class Provider(pulumi.ProviderResource):
 
             if api_url is None:
                 api_url = (_utilities.get_env('LAGOON_API_URL') or 'https://api.lagoon.sh/graphql')
-            __props__.__dict__["api_url"] = None if api_url is None else pulumi.Output.secret(api_url)
+            __props__.__dict__["api_url"] = api_url
             if insecure is None:
                 insecure = (_utilities.get_env_bool('LAGOON_INSECURE') or False)
             __props__.__dict__["insecure"] = pulumi.Output.from_input(insecure).apply(pulumi.runtime.to_json) if insecure is not None else None
@@ -191,7 +191,7 @@ class Provider(pulumi.ProviderResource):
             if token is None:
                 token = _utilities.get_env('LAGOON_TOKEN')
             __props__.__dict__["token"] = None if token is None else pulumi.Output.secret(token)
-        secret_opts = pulumi.ResourceOptions(additional_secret_outputs=["apiUrl", "jwtSecret", "token"])
+        secret_opts = pulumi.ResourceOptions(additional_secret_outputs=["jwtSecret", "token"])
         opts = pulumi.ResourceOptions.merge(opts, secret_opts)
         super(Provider, __self__).__init__(
             'lagoon',
