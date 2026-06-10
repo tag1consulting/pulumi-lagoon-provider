@@ -49,7 +49,7 @@ fi
 # Generate the HS256 token via Python; secret is passed via stdin to avoid
 # shell-escaping issues and to prevent the value from touching disk.
 # PyJWT must be available in the active venv.
-_token=$(echo "$_jwt_secret" | python3 - <<EOF
+_token=$(printf '%s' "$_jwt_secret" | python3 - <<EOF
 import jwt, time, sys
 secret = sys.stdin.read().strip()
 now = int(time.time())
