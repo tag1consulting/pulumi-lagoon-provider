@@ -145,23 +145,33 @@ pulumi config rm exampleProjectBranches 2>/dev/null || true
 
 # 2d. destroy: the native resources (DeployTarget, Project) are removed cleanly
 info "  2d. pulumi destroy (native resources only; clusters remain)..."
-"$RUN_PULUMI" destroy --yes --non-interactive --target-dependents \
-    --target "$(pulumi stack --show-urns 2>/dev/null | grep -E 'lagoon:lagoon:' | tr '\n' ',')" \
-    2>&1 | tail -10 || {
-    # If targeted destroy fails (e.g. URN enumeration issue), fall back to full destroy
-    warn "  2d. Targeted destroy failed; falling back to full stack destroy"
+# Enumerate Lagoon resource URNs via stack export (more reliable than --show-urns,
+# which is not guaranteed across all CLI versions).
+_lagoon_urns=$(pulumi stack export 2>/dev/null \
+    | jq -r '.deployment.resources[].urn | select(test("lagoon:lagoon:"))' 2>/dev/null || true)
+if [ -n "$_lagoon_urns" ]; then
+    _target_args=()
+    while IFS= read -r _urn; do
+        _target_args+=(--target "$_urn")
+    done <<< "$_lagoon_urns"
+    "$RUN_PULUMI" destroy --yes --non-interactive --target-dependents "${_target_args[@]}" \
+        2>&1 | tail -10 || {
+        warn "  2d. Targeted destroy failed; falling back to full stack destroy"
+        "$RUN_PULUMI" destroy --yes --non-interactive 2>&1 | tail -10
+    }
+else
+    warn "  2d. No Lagoon URNs found via stack export; falling back to full stack destroy"
     "$RUN_PULUMI" destroy --yes --non-interactive 2>&1 | tail -10
-}
+fi
 pass "  2d. destroy succeeded"
 echo ""
 
 # =============================================================================
 # Group 3: Live API readback via GraphQL
 # =============================================================================
-# Note: Group 3 runs BEFORE Group 2's destroy, so re-deploy the native
-# resources first. The full ordering is: Group 1 (after deploy) -> Group 3
-# (live check) -> Group 2 (CRUD lifecycle including destroy) -> Group 4.
-# The assertion script re-deploys here to allow Group 3 to run after Group 1.
+# Group 2 (above) destroyed the native resources. Re-deploy them here so that
+# the live GraphQL readback in Group 3 has something to query.
+# Execution order: Group 1 -> Group 2 (CRUD including destroy) -> re-deploy -> Group 3 -> Group 4.
 
 info "Group 3: Live API readback — resources must exist server-side..."
 

@@ -27,8 +27,6 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 _CONTEXT="${KUBE_CONTEXT:-kind-lagoon-prod}"
 _NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
 _CORE_SECRETS="${CORE_SECRETS:-prod-core-lagoon-core-secrets}"
@@ -48,17 +46,12 @@ if [ -z "$_jwt_secret" ]; then
     exit 1
 fi
 
-# Write secret to a temp file to avoid shell-escaping issues with special characters
-_secret_file=$(mktemp)
-echo "$_jwt_secret" > "$_secret_file"
-
-# Generate the HS256 token via Python; PyJWT must be available in the active venv
-_token=$(python3 - <<EOF
+# Generate the HS256 token via Python; secret is passed via stdin to avoid
+# shell-escaping issues and to prevent the value from touching disk.
+# PyJWT must be available in the active venv.
+_token=$(echo "$_jwt_secret" | python3 - <<EOF
 import jwt, time, sys
-
-with open('$_secret_file', 'r') as f:
-    secret = f.read().strip()
-
+secret = sys.stdin.read().strip()
 now = int(time.time())
 payload = {
     'role': 'admin',
@@ -71,8 +64,6 @@ payload = {
 print(jwt.encode(payload, secret, algorithm='HS256'))
 EOF
 )
-
-rm -f "$_secret_file"
 
 if [ -z "$_token" ] || echo "$_token" | grep -qE "Traceback|Error:|ModuleNotFoundError"; then
     _log_error "Failed to generate admin JWT token"
