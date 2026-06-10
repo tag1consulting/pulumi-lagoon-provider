@@ -46,12 +46,13 @@ if [ -z "$_jwt_secret" ]; then
     exit 1
 fi
 
-# Generate the HS256 token via Python; secret is passed via stdin to avoid
-# shell-escaping issues and to prevent the value from touching disk.
+# Generate the HS256 token via Python; secret is passed via an env var to avoid
+# shell-escaping issues, disk writes, and the SC2259 pipe-vs-heredoc conflict.
+# (A heredoc overrides piped stdin, so env var is the correct approach here.)
 # PyJWT must be available in the active venv.
-_token=$(printf '%s' "$_jwt_secret" | python3 - <<EOF
-import jwt, time, sys
-secret = sys.stdin.read().strip()
+_token=$(_JWTSECRET="$_jwt_secret" python3 - <<EOF
+import jwt, time, os
+secret = os.environ['_JWTSECRET']
 now = int(time.time())
 payload = {
     'role': 'admin',
