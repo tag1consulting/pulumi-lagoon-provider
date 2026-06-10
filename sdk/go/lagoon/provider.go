@@ -56,9 +56,6 @@ func NewProvider(ctx *pulumi.Context,
 			args.Token = pulumi.StringPtr(d.(string))
 		}
 	}
-	if args.ApiUrl != nil {
-		args.ApiUrl = pulumi.ToSecret(args.ApiUrl).(pulumi.StringPtrInput)
-	}
 	if args.JwtSecret != nil {
 		args.JwtSecret = pulumi.ToSecret(args.JwtSecret).(pulumi.StringPtrInput)
 	}
@@ -66,7 +63,6 @@ func NewProvider(ctx *pulumi.Context,
 		args.Token = pulumi.ToSecret(args.Token).(pulumi.StringPtrInput)
 	}
 	secrets := pulumi.AdditionalSecretOutputs([]string{
-		"apiUrl",
 		"jwtSecret",
 		"token",
 	})

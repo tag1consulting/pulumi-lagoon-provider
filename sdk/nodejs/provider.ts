@@ -47,14 +47,14 @@ export class Provider extends pulumi.ProviderResource {
         let resourceInputs: pulumi.Inputs = {};
         opts = opts || {};
         {
-            resourceInputs["apiUrl"] = (args?.apiUrl ? pulumi.secret(args.apiUrl) : undefined) ?? (utilities.getEnv("LAGOON_API_URL") || "https://api.lagoon.sh/graphql");
+            resourceInputs["apiUrl"] = (args?.apiUrl) ?? (utilities.getEnv("LAGOON_API_URL") || "https://api.lagoon.sh/graphql");
             resourceInputs["insecure"] = pulumi.output((args?.insecure) ?? (utilities.getEnvBoolean("LAGOON_INSECURE") || false)).apply(JSON.stringify);
             resourceInputs["jwtAudience"] = (args?.jwtAudience) ?? (utilities.getEnv("LAGOON_JWT_AUDIENCE") || "api.dev");
             resourceInputs["jwtSecret"] = (args?.jwtSecret ? pulumi.secret(args.jwtSecret) : undefined) ?? utilities.getEnv("LAGOON_JWT_SECRET");
             resourceInputs["token"] = (args?.token ? pulumi.secret(args.token) : undefined) ?? utilities.getEnv("LAGOON_TOKEN");
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
-        const secretOpts = { additionalSecretOutputs: ["apiUrl", "jwtSecret", "token"] };
+        const secretOpts = { additionalSecretOutputs: ["jwtSecret", "token"] };
         opts = pulumi.mergeOptions(opts, secretOpts);
         super(Provider.__pulumiType, name, resourceInputs, opts);
     }

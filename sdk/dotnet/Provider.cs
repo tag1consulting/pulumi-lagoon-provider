@@ -58,7 +58,6 @@ namespace Tag1Consulting.Lagoon
                 PluginDownloadURL = "github://api.github.com/tag1consulting/pulumi-lagoon-provider",
                 AdditionalSecretOutputs =
                 {
-                    "apiUrl",
                     "jwtSecret",
                     "token",
                 },
@@ -72,21 +71,11 @@ namespace Tag1Consulting.Lagoon
 
     public sealed class ProviderArgs : global::Pulumi.ResourceArgs
     {
-        [Input("apiUrl")]
-        private Input<string>? _apiUrl;
-
         /// <summary>
         /// The Lagoon GraphQL API endpoint URL.
         /// </summary>
-        public Input<string>? ApiUrl
-        {
-            get => _apiUrl;
-            set
-            {
-                var emptySecret = Output.CreateSecret(0);
-                _apiUrl = Output.Tuple<Input<string>?, int>(value, emptySecret).Apply(t => t.Item1);
-            }
-        }
+        [Input("apiUrl")]
+        public Input<string>? ApiUrl { get; set; }
 
         /// <summary>
         /// Disable SSL certificate verification when connecting to the Lagoon API.
