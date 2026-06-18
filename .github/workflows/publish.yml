@@ -19,7 +19,7 @@ jobs:
     name: Regenerate SDKs with pinned Pulumi CLI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -56,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -79,7 +79,7 @@ jobs:
     needs: regenerate-sdks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Remove checked-out SDKs before overlay
         run: rm -rf sdk/ provider/schema.json
@@ -163,7 +163,7 @@ jobs:
     needs: regenerate-sdks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Remove checked-out SDKs before overlay
         run: rm -rf sdk/ provider/schema.json
@@ -324,7 +324,7 @@ jobs:
     needs: regenerate-sdks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Remove checked-out SDKs before overlay
         run: rm -rf sdk/ provider/schema.json

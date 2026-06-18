@@ -12,7 +12,7 @@ jobs:
     name: Build distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -45,7 +45,7 @@ jobs:
     name: Build Node.js distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -135,7 +135,7 @@ jobs:
     name: Build .NET distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v5
@@ -187,7 +187,7 @@ jobs:
     name: Verify Go SDK compiles
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v6
