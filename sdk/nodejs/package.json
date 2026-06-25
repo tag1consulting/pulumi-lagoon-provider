@@ -1,34 +1,37 @@
 {
-    "name": "@tag1consulting/pulumi-lagoon",
-    "description": "Manage Lagoon hosting platform resources as infrastructure-as-code.",
+  "name": "@tag1consulting/pulumi-lagoon",
+  "description": "Manage Lagoon hosting platform resources as infrastructure-as-code.",
+  "version": "0.5.1",
+  "keywords": [
+    "lagoon",
+    "hosting",
+    "kubernetes",
+    "pulumi"
+  ],
+  "homepage": "https://github.com/tag1consulting/pulumi-lagoon-provider",
+  "repository": "https://github.com/tag1consulting/pulumi-lagoon-provider",
+  "license": "Apache-2.0",
+  "main": "bin/index.js",
+  "files": [
+    "bin/"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@pulumi/pulumi": "^3.248.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18",
+    "typescript": "^4.3.5"
+  },
+  "pulumi": {
+    "resource": true,
+    "name": "lagoon",
     "version": "0.5.1",
-    "keywords": [
-        "lagoon",
-        "hosting",
-        "kubernetes",
-        "pulumi"
-    ],
-    "homepage": "https://github.com/tag1consulting/pulumi-lagoon-provider",
-    "repository": "https://github.com/tag1consulting/pulumi-lagoon-provider",
-    "license": "Apache-2.0",
-    "main": "bin/index.js",
-    "files": [
-        "bin/"
-    ],
-    "scripts": {
-        "build": "tsc"
-    },
-    "dependencies": {
-        "@pulumi/pulumi": "^3.142.0"
-    },
-    "devDependencies": {
-        "@types/node": "^18",
-        "typescript": "^4.3.5"
-    },
-    "pulumi": {
-        "resource": true,
-        "name": "lagoon",
-        "version": "0.5.1",
-        "server": "github://api.github.com/tag1consulting/pulumi-lagoon-provider"
-    }
+    "server": "github://api.github.com/tag1consulting/pulumi-lagoon-provider"
+  },
+  "overrides": {
+    "protobufjs": "^7.6.4"
+  }
 }
