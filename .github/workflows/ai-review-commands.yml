@@ -1,7 +1,42 @@
+# AI PR Review — slash commands
+#
+# Thin wrapper forwarding PR comment events to the reusable workflow in
+# tag1consulting/ai-pr-review, which handles command parsing, review
+# dispatch, and dismiss/thread-resolution logic. Mirrors upstream's
+# examples/workflows/comment-triggers.yml, kept as a separate file (rather
+# than upstream's unified pr-review.yml) because ai-review.yml uses
+# pull_request_target for fork-PR hardening — see the comment block there.
+#
+# Supported commands (post as a PR comment):
+#   /ai-pr-review rescan                  — force full diff, re-run review
+#   /ai-pr-review review-full             — run in full mode (all agents)
+#   /ai-pr-review skip                    — add skip-ai-review label to suppress next review
+#   /ai-pr-review dismiss                 — reply to an INLINE finding to dismiss it
+#   /ai-pr-review dismiss F<n>            — dismiss a BODY-LEVEL finding by its stable ID
+#   /ai-pr-review help                    — post the command list as a reply
+#   /ai-pr-review false-positive [F<n>] [reason] — persist a false-positive verdict
+#   /ai-pr-review wont-fix [F<n>] [reason]       — persist a "won't fix" verdict
+#   /ai-pr-review feedback <text>                — persist free-form feedback
+#   /ai-pr-review explain [F<n>]                 — request an expanded explanation
+#   /ai-pr-review revise [F<n>] <hint>           — request a revised verdict
+#
+# NOTE: `dismiss` requires a GH_TOKEN secret (PAT or GitHub App token) with
+# repo scope to call the resolveReviewThread GraphQL mutation — GITHUB_TOKEN
+# is blocked from that mutation by GitHub's integration security model.
+# `false-positive`/`wont-fix`/`feedback` need the same PAT: the upstream
+# feedback-command job's "Invoke Python slash handler" step (which persists
+# to the ai-pr-review-bot branch) also authenticates with secrets.github-token,
+# not the plain actions token. Only `rescan`, `review-full`, `skip`, and
+# `help` work under GITHUB_TOKEN alone. This repo does not currently define a
+# GH_TOKEN PAT secret, so `dismiss`/`false-positive`/`wont-fix`/`feedback`
+# will fail when invoked until one is added. See
+# docs/slash-commands.md#pat-requirement in tag1consulting/ai-pr-review.
 name: AI PR Review — slash commands
 
 on:
   issue_comment:
+    types: [created]
+  pull_request_review_comment:
     types: [created]
 
 permissions:
@@ -10,159 +45,49 @@ permissions:
   pull-requests: write
 
 jobs:
-  handle-command:
-    if: |
-      github.event.issue.pull_request &&
+  slash-commands:
+    if: >-
       startsWith(github.event.comment.body, '/ai-pr-review') &&
-      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Parse command
-        id: cmd
-        env:
-          COMMENT: ${{ github.event.comment.body }}
-        run: |
-          command=$(echo "$COMMENT" | head -1 | tr -d '\r' | awk '{print $2}')
-          case "$command" in
-            rescan|review-full|skip|help)
-              echo "command=$command" >> "$GITHUB_OUTPUT"
-              echo "valid=true"       >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              echo "valid=false" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-
-      - name: React — seen
-        if: steps.cmd.outputs.valid == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COMMENT_ID: ${{ github.event.comment.id }}
-        run: |
-          gh api \
-            "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}/reactions" \
-            -f content=eyes
-
-      - name: Reply with help text
-        if: steps.cmd.outputs.command == 'help'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          gh pr comment "$PR_NUMBER" \
-            --repo ${{ github.repository }} \
-            --body "$(cat <<'EOF'
-          **AI PR Review commands:**
-          - `/ai-pr-review rescan` — force full diff re-review
-          - `/ai-pr-review review-full` — run all agents (full mode)
-          - `/ai-pr-review skip` — suppress the next automated review
-          - `/ai-pr-review help` — show this message
-          EOF
-          )"
-
-      - name: Add skip label
-        if: steps.cmd.outputs.command == 'skip'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          gh pr edit "$PR_NUMBER" \
-            --repo ${{ github.repository }} \
-            --add-label skip-ai-review
-
-      - name: Checkout PR head
-        if: |
-          steps.cmd.outputs.command == 'rescan' ||
-          steps.cmd.outputs.command == 'review-full'
-        uses: actions/checkout@v7
-        with:
-          ref: refs/pull/${{ github.event.issue.number }}/head
-          fetch-depth: 0
-
-      - name: Get PR metadata
-        if: |
-          steps.cmd.outputs.command == 'rescan' ||
-          steps.cmd.outputs.command == 'review-full'
-        id: pr
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          pr_json=$(gh pr view "$PR_NUMBER" \
-            --repo ${{ github.repository }} \
-            --json baseRefName,headRefOid)
-          echo "base=$(echo "$pr_json" | jq -r .baseRefName)" >> "$GITHUB_OUTPUT"
-          echo "sha=$(echo  "$pr_json" | jq -r .headRefOid)"  >> "$GITHUB_OUTPUT"
-
-      - name: React — launching
-        if: |
-          steps.cmd.outputs.command == 'rescan' ||
-          steps.cmd.outputs.command == 'review-full'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COMMENT_ID: ${{ github.event.comment.id }}
-        run: |
-          gh api \
-            "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}/reactions" \
-            -f content=rocket
-
-      - name: Run review (rescan)
-        if: steps.cmd.outputs.command == 'rescan'
-        uses: tag1consulting/ai-pr-review/container-action@main
-        with:
-          provider: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
-          api-key: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
-          base-url: ${{ vars.AI_REVIEW_BASE_URL || '' }}
-          model-standard: ${{ vars.AI_REVIEW_MODEL_STANDARD || '' }}
-          model-premium: ${{ vars.AI_REVIEW_MODEL_PREMIUM || '' }}
-          github-token: ${{ github.token }}
-          pr-number: ${{ github.event.issue.number }}
-          base-ref: ${{ steps.pr.outputs.base }}
-          head-sha: ${{ steps.pr.outputs.sha }}
-          force-full-diff: 'true'
-          enable-suggestions: 'true'
-
-      - name: Run review (review-full)
-        if: steps.cmd.outputs.command == 'review-full'
-        uses: tag1consulting/ai-pr-review/container-action@main
-        with:
-          provider: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
-          api-key: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
-          base-url: ${{ vars.AI_REVIEW_BASE_URL || '' }}
-          model-standard: ${{ vars.AI_REVIEW_MODEL_STANDARD || '' }}
-          model-premium: ${{ vars.AI_REVIEW_MODEL_PREMIUM || '' }}
-          github-token: ${{ github.token }}
-          pr-number: ${{ github.event.issue.number }}
-          base-ref: ${{ steps.pr.outputs.base }}
-          head-sha: ${{ steps.pr.outputs.sha }}
-          review-mode: 'full'
-          force-full-diff: 'true'
-          enable-suggestions: 'true'
-
-      - name: React — done
-        if: |
-          success() && (
-            steps.cmd.outputs.command == 'rescan' ||
-            steps.cmd.outputs.command == 'review-full'
-          )
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COMMENT_ID: ${{ github.event.comment.id }}
-        run: |
-          gh api \
-            "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}/reactions" \
-            -f content="+1"
-
-      - name: React — failed
-        if: |
-          failure() && (
-            steps.cmd.outputs.command == 'rescan' ||
-            steps.cmd.outputs.command == 'review-full'
-          )
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COMMENT_ID: ${{ github.event.comment.id }}
-        run: |
-          gh api \
-            "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}/reactions" \
-            -f content=confused
+      contains(
+        fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+        github.event.comment.author_association
+      ) &&
+      (github.event_name == 'pull_request_review_comment' ||
+       (github.event_name == 'issue_comment' && github.event.issue.pull_request))
+    uses: tag1consulting/ai-pr-review/.github/workflows/slash-commands.yml@main
+    with:
+      event-name: ${{ github.event_name }}
+      comment-body: ${{ github.event.comment.body }}
+      comment-id: ${{ github.event.comment.id }}
+      comment-author-association: ${{ github.event.comment.author_association }}
+      issue-number: ${{ github.event.issue.number || '' }}
+      pr-number: ${{ github.event.pull_request.number || '' }}
+      in-reply-to-id: ${{ github.event.comment.in_reply_to_id || '' }}
+      is-pull-request: ${{ github.event.issue.pull_request && 'true' || 'false' }}
+      repository: ${{ github.repository }}
+      repository-owner: ${{ github.repository_owner }}
+      repository-name: ${{ github.event.repository.name }}
+      actor-login: ${{ github.event.comment.user.login }}
+      provider: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
+      base-url: ${{ vars.AI_REVIEW_BASE_URL || '' }}
+      image-tag: ${{ vars.AI_REVIEW_IMAGE_TAG || 'latest' }}
+      review-mode-default: ${{ vars.AI_REVIEW_MODE_DEFAULT || 'quick' }}
+      # Learning loop (false-positive / wont-fix / feedback / explain / revise).
+      # Persistent feedback commands require GH_TOKEN with contents:write on
+      # the ai-pr-review-bot branch. OWNER/MEMBER only (enforced upstream).
+      enable-feedback-loop: ${{ vars.AI_REVIEW_FEEDBACK_LOOP || 'false' }}
+      # Analyzer / agent filtering — forwarded to rescan and review-full so
+      # both stay aligned with ai-review.yml. Unset here (repo runs all
+      # eligible analyzers and agents); set the corresponding repo variables
+      # if that changes.
+      analyzers: ${{ vars.AI_REVIEW_ANALYZERS || '' }}
+      exclude-analyzers: ${{ vars.AI_REVIEW_EXCLUDE_ANALYZERS || '' }}
+      agents: ${{ vars.AI_REVIEW_AGENTS || '' }}
+      exclude-agents: ${{ vars.AI_REVIEW_EXCLUDE_AGENTS || '' }}
+    secrets:
+      api-key: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
+      # Falls back to GITHUB_TOKEN when no GH_TOKEN PAT is configured (see
+      # NOTE above) — dismiss/false-positive/wont-fix/feedback fail cleanly
+      # in that case; add a GH_TOKEN repo secret to enable them.
+      github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+      actions-token: ${{ secrets.GITHUB_TOKEN }}
