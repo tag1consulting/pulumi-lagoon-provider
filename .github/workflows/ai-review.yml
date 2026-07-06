@@ -43,7 +43,7 @@ jobs:
         uses: tag1consulting/ai-pr-review/container-action@main
         with:
           # vars.AI_REVIEW_IMAGE_TAG pins the container image (default 'latest';
-          # this repo dogfoods 'dev' ahead of the Epic 4 default-engine flip).
+          # this repo dogfoods 'dev' ahead of general availability).
           image-tag: ${{ vars.AI_REVIEW_IMAGE_TAG || 'latest' }}
           provider: ${{ vars.AI_REVIEW_PROVIDER || 'bedrock-proxy' }}
           api-key: ${{ secrets.AI_REVIEW_API_KEY || secrets.TAG1_BEDROCK_API_KEY }}
@@ -56,13 +56,11 @@ jobs:
           head-sha: ${{ github.event.pull_request.head.sha }}
           review-mode: 'quick'
           enable-suggestions: 'true'
-          # vars.AI_PR_REVIEW_ENGINE selects the compute engine (default 'bash';
-          # the Epic 3 capabilities below require 'python').
-          engine: ${{ vars.AI_PR_REVIEW_ENGINE || 'bash' }}
           # vars.AI_REVIEW_IGNORE_MERGE_COMMITS strips upstream base-branch
           # merge commits before diffing (default false).
           ignore-merge-commits: ${{ vars.AI_REVIEW_IGNORE_MERGE_COMMITS || 'false' }}
-          # --- Epic 3: opt-in capabilities (Python engine only) ---
+          # --- Opt-in capabilities (Python engine only, which is the sole
+          # engine since v2.0.0 removed the bash engine) ---
           # vars.AI_REVIEW_CONTEXT_ENRICHMENT injects tree-sitter symbol
           # context into agent prompts (default false).
           context-enrichment: ${{ vars.AI_REVIEW_CONTEXT_ENRICHMENT || 'false' }}
