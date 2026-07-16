@@ -335,7 +335,7 @@ jobs:
           name: regenerated-sdks
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0'
 
@@ -378,7 +378,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0'
 
@@ -412,7 +412,7 @@ jobs:
       id-token: write
     steps:
       - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0'
 
