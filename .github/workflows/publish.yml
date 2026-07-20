@@ -90,7 +90,7 @@ jobs:
           name: regenerated-sdks
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.14'
 
@@ -140,7 +140,7 @@ jobs:
         python-version: ['3.9', '3.11', '3.12', '3.13', '3.14']
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
