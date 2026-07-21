@@ -346,6 +346,9 @@ E2E_KEEP_CLUSTERS_ON_FAILURE ?= 0
 E2E_POD_WAIT_RETRIES       ?= 30
 E2E_STACK_NAME             ?= e2e
 E2E_UPDATE_BRANCHES        ?= ^(main|develop|feature/.*|hotfix/.*)$$
+# Empty passphrase disables encryption for this throwaway local-backend stack;
+# e2e state holds no real secrets and is destroyed by e2e-teardown every run.
+export PULUMI_CONFIG_PASSPHRASE ?=
 
 # e2e-build: compile the provider, regenerate the Python SDK, and install the plugin.
 # Puts pulumi-resource-lagoon in $GOPATH/bin so Pulumi resolves the local build.
@@ -357,6 +360,7 @@ e2e-build: check-pulumi-version go-build go-sdk-python go-install
 # Uses a local backend (no Pulumi Cloud account required).
 e2e-setup:
 	@echo "[e2e-setup] Initializing local Pulumi backend and stack '$(E2E_STACK_NAME)'..."
+	@mkdir -p $(MULTI_CLUSTER_DIR)/.pulumi-e2e
 	@cd $(MULTI_CLUSTER_DIR) && \
 		if [ ! -d venv ]; then \
 			python3 -m venv venv; \
@@ -383,7 +387,7 @@ e2e-deploy:
 		E2E_POD_WAIT_RETRIES=$(E2E_POD_WAIT_RETRIES) \
 		E2E_SKIP_NONPROD=$(E2E_SKIP_NONPROD) \
 		PULUMI_BACKEND_URL="file://$(shell cd $(MULTI_CLUSTER_DIR) && pwd)/.pulumi-e2e" \
-		$(MAKE) deploy
+		$(MAKE) deploy STACK_NAME=$(E2E_STACK_NAME)
 	@echo "[e2e-deploy] Deploy complete."
 
 # e2e-assert: run the four assertion groups against the deployed stack.
@@ -500,6 +504,10 @@ clean-all: clean
 PROVIDER_VERSION ?= 0.5.2
 PROVIDER_BIN     := provider/bin/pulumi-resource-lagoon
 GO_BIN           ?= $(if $(GOPATH),$(GOPATH)/bin,$(HOME)/go/bin)
+# e2e-build installs the locally-built provider plugin into GO_BIN so Pulumi's
+# ambient-plugin discovery finds it on PATH instead of downloading a GitHub
+# release (which 404s for an unreleased version like the one being e2e-tested).
+export PATH := $(GO_BIN):$(PATH)
 
 go-build:
 	cd provider && mkdir -p bin && CGO_ENABLED=0 go build -ldflags "-X main.Version=$(PROVIDER_VERSION)" \

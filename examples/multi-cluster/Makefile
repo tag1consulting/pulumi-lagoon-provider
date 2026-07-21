@@ -19,6 +19,10 @@
         deploy verify wait-for-pods test-api test-ui show-access-info \
         test test-unit test-config test-cors test-operational
 
+# Stack name for `setup`/`deploy`; overridden by e2e (see e2e-deploy in root Makefile)
+# so it reuses the stack e2e-setup already created instead of selecting/creating 'dev'.
+STACK_NAME ?= dev
+
 # Default target
 help:
 	@echo "Multi-cluster Lagoon Example"
@@ -74,7 +78,7 @@ setup:
 	@./venv/bin/pip install --upgrade pip -q
 	@./venv/bin/pip install -r requirements.txt -q
 	@echo "Ensuring Pulumi stack exists..."
-	@pulumi stack select dev 2>/dev/null || pulumi stack init dev
+	@pulumi stack select $(STACK_NAME) 2>/dev/null || pulumi stack init $(STACK_NAME)
 	@echo "Setup complete."
 
 # Check cluster health
