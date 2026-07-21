@@ -7,6 +7,24 @@ nav_order: 7
 
 ---
 
+## v0.5.2 (2026-07-21)
+
+Security and maintenance release. Closes the `js-yaml` quadratic-CPU-consumption advisory (GHSA-52cp-r559-cp3m) left open by an incomplete automated dependency update, plus routine transitive dependency and CI tooling refreshes. No provider API or resource behavior changes — existing programs require no updates.
+
+### Security
+
+- **`js-yaml` quadratic CPU consumption** (GHSA-52cp-r559-cp3m): Upgraded `js-yaml` from v4.2.0 to v4.3.0 in `sdk/nodejs` and `claude/ts-test`. An automated dependency update batch had already fixed a critical `tar` decompression DoS and a high-severity `brace-expansion` DoS in the same npm dependency tree, but an internal error while bumping `@opentelemetry/core` caused `js-yaml` to silently drop out of that batch. `npm audit` now reports zero vulnerabilities in both directories.
+- **`@opentelemetry/core` transitive bump**: `claude/ts-test` picks up the `@opentelemetry/core` v1.30.1 → v2.9.0+ bump previously applied only to `sdk/nodejs`, resolving 13 related moderate-severity advisories across the `@opentelemetry/*` package family.
+
+### Dependency Updates
+
+- `golang.org/x/net` v0.53.0/v0.54.0 → v0.55.0 (and transitive `golang.org/x/{crypto,sys,term,text}` peers) across the provider, Go SDK, and internal Go test harness modules
+- GitHub Actions tooling: `actions/setup-go` v7, `actions/setup-dotnet` v6, `actions/setup-node` v7, `actions/setup-python` v7, `pypa/gh-action-pypi-publish` v1.14.1
+- `ruby` v4.0.6 for the documentation site build
+- Modernized the AI PR review slash-command workflow to use the upstream reusable workflow in place of a hand-rolled parser
+
+---
+
 ## v0.5.1 (2026-06-01)
 
 Security and maintenance release. Resolves seven reachable `golang.org/x/crypto` SSH vulnerabilities in the provider binary, adds this documentation site, and refreshes transitive dependencies and tooling. No provider API or resource behavior changes — existing programs require no updates.
