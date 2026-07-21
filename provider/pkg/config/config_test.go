@@ -4,12 +4,14 @@ import (
 	"context"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 )
 
 // requireUnsetEnv removes the named environment variables for the duration
@@ -513,8 +515,8 @@ func TestNewClient_ReusesClient(t *testing.T) {
 	}
 }
 
-func TestNewClient_NilOnce_CreatesNewClient(t *testing.T) {
-	// Without Configure (no clientOnce), NewClient still works — it just
+func TestNewClient_NilHolder_CreatesNewClient(t *testing.T) {
+	// Without Configure (no clientHolder), NewClient still works — it just
 	// creates a fresh client each time rather than reusing one.
 	cfg := &LagoonConfig{APIUrl: "https://api.example.com/graphql", Token: "tok"}
 	c1 := cfg.NewClient()
@@ -524,7 +526,53 @@ func TestNewClient_NilOnce_CreatesNewClient(t *testing.T) {
 	}
 	// Not the same pointer — no caching without Configure
 	if c1 == c2 {
-		t.Error("expected distinct clients when clientOnce is nil")
+		t.Error("expected distinct clients when clientHolder is nil")
+	}
+}
+
+// TestNewClient_ConcurrentStructCopies_ShareSameClient reproduces the scenario
+// that crashes DeployTarget.Create (and any other resource) under concurrent
+// Pulumi resource operations: infer.GetConfig returns independent value
+// copies of LagoonConfig for each operation. Regression test for the bug
+// where cachedClient was a plain *client.Client field — shared clientOnce
+// meant sync.Once.Do ran exactly once total, but only the copy that won the
+// race ever had its cachedClient field populated; every other copy's
+// NewClient() returned nil, and callers dereferencing that nil *Client
+// panicked. See GitHub issue #265.
+func TestNewClient_ConcurrentStructCopies_ShareSameClient(t *testing.T) {
+	for _, k := range []string{"LAGOON_TOKEN", "LAGOON_JWT_SECRET", "LAGOON_API_URL", "LAGOON_JWT_AUDIENCE", "LAGOON_INSECURE"} {
+		t.Setenv(k, "")
+	}
+	t.Setenv("LAGOON_TOKEN", "test-token")
+	cfg := &LagoonConfig{APIUrl: "https://api.example.com/graphql"}
+	if err := cfg.Configure(context.TODO()); err != nil {
+		t.Fatalf("Configure failed: %v", err)
+	}
+
+	const goroutines = 20
+	clients := make([]*client.Client, goroutines)
+	var wg sync.WaitGroup
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			// infer.GetConfig returns a value copy of the config struct on
+			// every call; simulate that here by copying cfg by value before
+			// calling NewClient, exactly as concurrent resource Create/Update
+			// calls would each observe their own copy.
+			copyOfCfg := *cfg
+			clients[i] = copyOfCfg.NewClient()
+		}(i)
+	}
+	wg.Wait()
+
+	for i, c := range clients {
+		if c == nil {
+			t.Fatalf("goroutine %d got a nil client", i)
+		}
+		if c != clients[0] {
+			t.Errorf("goroutine %d got a different client instance than goroutine 0; expected all struct copies to share the same cached client", i)
+		}
 	}
 }
 

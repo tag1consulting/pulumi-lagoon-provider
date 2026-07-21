@@ -34,11 +34,22 @@ type LagoonConfig struct {
 	// Insecure disables SSL certificate verification.
 	Insecure bool `pulumi:"insecure,optional"`
 
-	// clientOnce and cachedClient hold a single shared Client instance.
-	// These are pointer fields so they survive struct copies from infer.GetConfig.
-	// They are initialized by Configure and nil until then.
-	clientOnce   *sync.Once
-	cachedClient *client.Client
+	// clientHolder holds the single shared Client instance for this provider
+	// instance. It is a pointer to a holder struct (not the sync.Once/client
+	// fields directly) so that every copy of LagoonConfig produced by
+	// infer.GetConfig shares the same underlying Once and client slot; a
+	// *sync.Once field alone shares the Once but each copy would still have
+	// its own independent *client.Client field, so only the copy that wins
+	// the Once race would ever see a non-nil client. It is initialized by
+	// Configure and nil until then.
+	clientHolder *clientHolder
+}
+
+// clientHolder is the shared, once-initialized Client instance referenced by
+// all copies of a given LagoonConfig.
+type clientHolder struct {
+	once   sync.Once
+	client *client.Client
 }
 
 // Annotate provides descriptions and defaults for config fields.
@@ -113,7 +124,7 @@ func (c *LagoonConfig) Configure(ctx context.Context) error {
 		c.JWTSecret = ""
 	}
 
-	c.clientOnce = &sync.Once{}
+	c.clientHolder = &clientHolder{}
 
 	return nil
 }
@@ -121,13 +132,17 @@ func (c *LagoonConfig) Configure(ctx context.Context) error {
 // NewClient returns the shared Lagoon API client for this config.
 // The client is created once per provider configure call and reused for all
 // subsequent resource operations, preserving API-version detection cache
-// and token refresh state across operations.
+// and token refresh state across operations. All copies of LagoonConfig
+// produced by infer.GetConfig after Configure share the same clientHolder
+// pointer, so concurrent resource operations correctly observe the one
+// cached client instead of racing to populate independent copies of it.
 func (c *LagoonConfig) NewClient() *client.Client {
-	if c.clientOnce != nil {
-		c.clientOnce.Do(func() {
-			c.cachedClient = c.newClientUncached()
+	if c.clientHolder != nil {
+		h := c.clientHolder
+		h.once.Do(func() {
+			h.client = c.newClientUncached()
 		})
-		return c.cachedClient
+		return h.client
 	}
 	return c.newClientUncached()
 }
