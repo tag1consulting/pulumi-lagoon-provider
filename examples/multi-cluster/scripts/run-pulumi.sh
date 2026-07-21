@@ -118,7 +118,7 @@ get_admin_jwt_token() {
     # Pass the context/namespace/secret that this wrapper already resolved so
     # get-admin-jwt.sh uses the same values (the sourced script respects env overrides).
     KUBE_CONTEXT="$CONTEXT" LAGOON_NAMESPACE="$NAMESPACE" CORE_SECRETS="$CORE_SECRETS" \
-        source "$SCRIPT_DIR/../../../../scripts/get-admin-jwt.sh"
+        source "$SCRIPT_DIR/../../../scripts/get-admin-jwt.sh"
     log_info "Admin token acquired (valid for 1 hour)"
 }
 
