@@ -1,3 +1,41 @@
+# Release v0.5.2 (2026-07-21)
+
+Security and maintenance release. Closes the `js-yaml` quadratic-CPU-consumption
+advisory (GHSA-52cp-r559-cp3m) left open by an incomplete automated dependency
+update, plus routine transitive dependency and CI tooling refreshes. No provider
+API or resource behavior changes — existing programs require no updates.
+
+## Security
+
+- **`js-yaml` quadratic CPU consumption (GHSA-52cp-r559-cp3m)**: Upgraded
+  `js-yaml` from v4.2.0 to v4.3.0 (the patched version) in `sdk/nodejs` and
+  `claude/ts-test`. An automated Dependabot security batch had already fixed
+  a critical `tar` decompression DoS and a high-severity `brace-expansion`
+  DoS in the same npm dependency tree, but an internal Dependabot error while
+  bumping `@opentelemetry/core` caused `js-yaml` to silently drop out of that
+  batch, leaving two high-severity alerts open. `npm audit` now reports zero
+  vulnerabilities in both directories.
+- **`@opentelemetry/core` transitive bump**: `claude/ts-test` picks up the
+  `@opentelemetry/core` v1.30.1 → v2.9.0+ bump that had previously only been
+  applied to `sdk/nodejs`, resolving 13 related moderate-severity advisories
+  across the `@opentelemetry/*` package family.
+
+## Maintenance
+
+- Bumped `golang.org/x/net` to v0.55.0 (and its transitive `golang.org/x/crypto`,
+  `golang.org/x/sys`, `golang.org/x/term`, `golang.org/x/text` peers) across the
+  provider, Go SDK, and internal Go test harness modules.
+- Bumped GitHub Actions tooling: `actions/setup-go` to v7, `actions/setup-dotnet`
+  to v6, `actions/setup-node` to v7, `actions/setup-python` to v7,
+  `pypa/gh-action-pypi-publish` to v1.14.1.
+- Bumped `ruby` to v4.0.6 for the GitHub Pages documentation site build.
+- Modernized the `ai-review-commands.yml` slash-command workflow to use the
+  upstream `tag1consulting/ai-pr-review` reusable `slash-commands.yml` workflow
+  in place of a hand-rolled bash parser, and dropped the dead `engine` input
+  from `ai-review.yml`.
+
+---
+
 # Release v0.5.1 (2026-06-01)
 
 Security and maintenance release. Resolves seven reachable `golang.org/x/crypto`
