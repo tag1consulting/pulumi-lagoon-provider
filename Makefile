@@ -680,6 +680,7 @@ release-prep: check-release-version
 	$(MAKE) PROVIDER_VERSION=$(VERSION) go-build go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet
 	sed -i.bak 's/^  version = .*/  version = "$(VERSION)"/' sdk/python/pyproject.toml && rm -f sdk/python/pyproject.toml.bak
 	jq --indent 4 --arg v "$(VERSION)" '.version = $$v | .pulumi.version = $$v' sdk/nodejs/package.json > sdk/nodejs/package.json.tmp && mv sdk/nodejs/package.json.tmp sdk/nodejs/package.json
+	sed -i.bak '3s/"version": "[^"]*"/"version": "$(VERSION)"/; 9s/"version": "[^"]*"/"version": "$(VERSION)"/' sdk/nodejs/package-lock.json && rm -f sdk/nodejs/package-lock.json.bak
 	sed -i.bak 's|<Version>.*</Version>|<Version>$(VERSION)</Version>|' sdk/dotnet/Tag1Consulting.Lagoon.csproj && rm -f sdk/dotnet/Tag1Consulting.Lagoon.csproj.bak
 	echo "$(VERSION)" > sdk/dotnet/version.txt
 	@echo "=== Running tests ==="
