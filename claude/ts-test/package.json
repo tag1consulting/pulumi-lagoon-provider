@@ -14,6 +14,6 @@
     "typescript": "^4.3.5"
   },
   "overrides": {
-    "protobufjs": "^7.6.4"
+    "protobufjs": "^7.6.5"
   }
 }
