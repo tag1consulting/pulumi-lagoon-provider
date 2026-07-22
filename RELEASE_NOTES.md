@@ -1,10 +1,10 @@
 # Release v0.5.3 (2026-07-21)
 
-Bug fix release closing a nil-pointer panic that could crash the provider under concurrent resource operations, plus a local e2e release-gate harness repair. No provider API or schema changes — existing programs require no updates.
+Bug fix release closing a nil-pointer panic that could crash the provider under concurrent resource operations, plus a local e2e release-gate harness repair. No provider API or schema changes: existing programs require no updates.
 
 ## Bug Fixes
 
-- **Nil-pointer panic under concurrent resource creation** ([#265](https://github.com/tag1consulting/pulumi-lagoon-provider/issues/265)): `LagoonConfig` cached its Lagoon API client via a `*sync.Once` field plus a separate `*client.Client` field. `infer.GetConfig` returns independent value copies of the provider config per resource operation; the `*sync.Once` pointer was correctly shared across those copies, but the `*client.Client` field was not, so only the copy whose goroutine won the `sync.Once` race ever had a populated client — every other concurrent copy's `NewClient()` returned nil, and the next call into that nil client (e.g. `DeployTarget.Create`) panicked. This reliably crashed the provider when creating two or more `DeployTarget`s concurrently, as in the `examples/multi-cluster` example, leaving stack outputs empty. Fixed by routing the cached client through a single shared holder struct instead of two independently-copied fields.
+- **Nil-pointer panic under concurrent resource creation** ([#265](https://github.com/tag1consulting/pulumi-lagoon-provider/issues/265)): `LagoonConfig` cached its Lagoon API client via a `*sync.Once` field plus a separate `*client.Client` field. `infer.GetConfig` returns independent value copies of the provider config per resource operation; the `*sync.Once` pointer was correctly shared across those copies, but the `*client.Client` field was not, so only the copy whose goroutine won the `sync.Once` race ever had a populated client. Every other concurrent copy's `NewClient()` returned nil, and the next call into that nil client (e.g. `DeployTarget.Create`) panicked. This reliably crashed the provider when creating two or more `DeployTarget`s concurrently, as in the `examples/multi-cluster` example, leaving stack outputs empty. Fixed by routing the cached client through a single shared holder struct instead of two independently-copied fields.
 
 ## Build & CI
 
