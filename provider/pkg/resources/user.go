@@ -178,3 +178,15 @@ func nilIfEmpty(s string) *string {
 	}
 	return &s
 }
+
+// Compile-time assertions that User satisfies the infer lifecycle
+// interfaces it implements, with the pointer-typed generic parameters that
+// match its infer.Resource(&User{}) registration. See
+// pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[UserArgs, UserState] = (*User)(nil)
+	_ infer.CustomUpdate[UserArgs, UserState] = (*User)(nil)
+	_ infer.CustomDelete[UserState]           = (*User)(nil)
+	_ infer.CustomRead[UserArgs, UserState]   = (*User)(nil)
+	_ infer.CustomDiff[UserArgs, UserState]   = (*User)(nil)
+)

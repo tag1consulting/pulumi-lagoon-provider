@@ -257,3 +257,15 @@ func (r *Project) Diff(ctx context.Context, req infer.DiffRequest[ProjectArgs, P
 		DeleteBeforeReplace: true,
 	}, nil
 }
+
+// Compile-time assertions that Project satisfies the infer lifecycle
+// interfaces it implements, with the pointer-typed generic parameters that
+// match its infer.Resource(&Project{}) registration. See
+// pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[ProjectArgs, ProjectState] = (*Project)(nil)
+	_ infer.CustomUpdate[ProjectArgs, ProjectState] = (*Project)(nil)
+	_ infer.CustomDelete[ProjectState]              = (*Project)(nil)
+	_ infer.CustomRead[ProjectArgs, ProjectState]   = (*Project)(nil)
+	_ infer.CustomDiff[ProjectArgs, ProjectState]   = (*Project)(nil)
+)

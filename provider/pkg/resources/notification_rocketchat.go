@@ -134,3 +134,15 @@ func (r *NotificationRocketChat) Diff(ctx context.Context, req infer.DiffRequest
 	}
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil
 }
+
+// Compile-time assertions that NotificationRocketChat satisfies the infer
+// lifecycle interfaces it implements, with the pointer-typed generic
+// parameters that match its infer.Resource(&NotificationRocketChat{})
+// registration. See pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[NotificationRocketChatArgs, NotificationRocketChatState] = (*NotificationRocketChat)(nil)
+	_ infer.CustomUpdate[NotificationRocketChatArgs, NotificationRocketChatState] = (*NotificationRocketChat)(nil)
+	_ infer.CustomDelete[NotificationRocketChatState]                             = (*NotificationRocketChat)(nil)
+	_ infer.CustomRead[NotificationRocketChatArgs, NotificationRocketChatState]   = (*NotificationRocketChat)(nil)
+	_ infer.CustomDiff[NotificationRocketChatArgs, NotificationRocketChatState]   = (*NotificationRocketChat)(nil)
+)

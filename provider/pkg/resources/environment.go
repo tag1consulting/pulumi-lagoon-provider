@@ -336,3 +336,15 @@ func (r *Environment) Diff(ctx context.Context, req infer.DiffRequest[Environmen
 		DeleteBeforeReplace: true,
 	}, nil
 }
+
+// Compile-time assertions that Environment satisfies the infer lifecycle
+// interfaces it implements, with the pointer-typed generic parameters that
+// match its infer.Resource(&Environment{}) registration. See
+// pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[EnvironmentArgs, EnvironmentState] = (*Environment)(nil)
+	_ infer.CustomUpdate[EnvironmentArgs, EnvironmentState] = (*Environment)(nil)
+	_ infer.CustomDelete[EnvironmentState]                  = (*Environment)(nil)
+	_ infer.CustomRead[EnvironmentArgs, EnvironmentState]   = (*Environment)(nil)
+	_ infer.CustomDiff[EnvironmentArgs, EnvironmentState]   = (*Environment)(nil)
+)

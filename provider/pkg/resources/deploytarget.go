@@ -313,3 +313,15 @@ func (r *DeployTarget) Diff(ctx context.Context, req infer.DiffRequest[DeployTar
 		HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true,
 	}, nil
 }
+
+// Compile-time assertions that DeployTarget satisfies the infer lifecycle
+// interfaces it implements, with the pointer-typed generic parameters that
+// match its infer.Resource(&DeployTarget{}) registration. See
+// pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[DeployTargetArgs, DeployTargetState] = (*DeployTarget)(nil)
+	_ infer.CustomUpdate[DeployTargetArgs, DeployTargetState] = (*DeployTarget)(nil)
+	_ infer.CustomDelete[DeployTargetState]                   = (*DeployTarget)(nil)
+	_ infer.CustomRead[DeployTargetArgs, DeployTargetState]   = (*DeployTarget)(nil)
+	_ infer.CustomDiff[DeployTargetArgs, DeployTargetState]   = (*DeployTarget)(nil)
+)

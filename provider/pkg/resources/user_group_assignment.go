@@ -198,3 +198,15 @@ func (r *UserGroupAssignment) Diff(ctx context.Context, req infer.DiffRequest[Us
 	// the create step fails mid-replace.
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff}, nil
 }
+
+// Compile-time assertions that UserGroupAssignment satisfies the infer
+// lifecycle interfaces it implements, with the pointer-typed generic
+// parameters that match its infer.Resource(&UserGroupAssignment{})
+// registration. See pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[UserGroupAssignmentArgs, UserGroupAssignmentState] = (*UserGroupAssignment)(nil)
+	_ infer.CustomUpdate[UserGroupAssignmentArgs, UserGroupAssignmentState] = (*UserGroupAssignment)(nil)
+	_ infer.CustomDelete[UserGroupAssignmentState]                          = (*UserGroupAssignment)(nil)
+	_ infer.CustomRead[UserGroupAssignmentArgs, UserGroupAssignmentState]   = (*UserGroupAssignment)(nil)
+	_ infer.CustomDiff[UserGroupAssignmentArgs, UserGroupAssignmentState]   = (*UserGroupAssignment)(nil)
+)

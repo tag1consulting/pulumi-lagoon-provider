@@ -779,3 +779,15 @@ func reconcileEnvironment(ctx context.Context, c LagoonClient, domain, project s
 	}
 	return nil
 }
+
+// Compile-time assertions that Route satisfies the infer lifecycle
+// interfaces it implements, with the pointer-typed generic parameters that
+// match its infer.Resource(&Route{}) registration. See
+// pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[RouteArgs, RouteState] = (*Route)(nil)
+	_ infer.CustomUpdate[RouteArgs, RouteState] = (*Route)(nil)
+	_ infer.CustomDelete[RouteState]            = (*Route)(nil)
+	_ infer.CustomRead[RouteArgs, RouteState]   = (*Route)(nil)
+	_ infer.CustomDiff[RouteArgs, RouteState]   = (*Route)(nil)
+)

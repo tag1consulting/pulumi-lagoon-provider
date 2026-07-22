@@ -80,6 +80,7 @@ artifacts.
      - `Create`: handle "already exists" by adopting the existing resource
      - `Delete`: treat "not found" as success (idempotent)
      - `Diff`: return `DetailedDiff` distinguishing `Update` vs `UpdateReplace`
+   - Add a compile-time interface assertion for each lifecycle method you implement (e.g., `var _ infer.CustomDiff[<Resource>Args, <Resource>State] = (*<Resource>)(nil)`), matching the pointer-ness of the resource's `infer.Resource(&<Resource>{})` registration. This turns a mismatched generic parameter (which the framework would otherwise silently ignore, falling back to default behavior) into a build failure. See any existing resource file for the pattern, and pulumi-lagoon-provider#272 for the background.
    - Add a `<resource>_crud_test.go` using the mock client in `mock_client_test.go`
 
 5. **Register the resource** in the provider constructor (see `provider/pkg/provider/`).

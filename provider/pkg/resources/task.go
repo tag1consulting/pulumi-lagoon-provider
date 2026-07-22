@@ -315,3 +315,15 @@ func taskArgumentsDiffer(a, b *[]TaskArgumentInput) bool {
 	}
 	return false
 }
+
+// Compile-time assertions that Task satisfies the infer lifecycle interfaces
+// it implements, with the pointer-typed generic parameters that match its
+// infer.Resource(&Task{}) registration. Task has no Update method (task
+// definitions are always replaced), so no CustomUpdate assertion applies.
+// See pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[TaskArgs, TaskState] = (*Task)(nil)
+	_ infer.CustomDelete[TaskState]           = (*Task)(nil)
+	_ infer.CustomRead[TaskArgs, TaskState]   = (*Task)(nil)
+	_ infer.CustomDiff[TaskArgs, TaskState]   = (*Task)(nil)
+)

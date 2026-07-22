@@ -212,3 +212,15 @@ func (r *Variable) Diff(ctx context.Context, req infer.DiffRequest[VariableArgs,
 		DeleteBeforeReplace: true,
 	}, nil
 }
+
+// Compile-time assertions that Variable satisfies the infer lifecycle
+// interfaces it implements, with the pointer-typed generic parameters that
+// match its infer.Resource(&Variable{}) registration. See
+// pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[VariableArgs, VariableState] = (*Variable)(nil)
+	_ infer.CustomUpdate[VariableArgs, VariableState] = (*Variable)(nil)
+	_ infer.CustomDelete[VariableState]               = (*Variable)(nil)
+	_ infer.CustomRead[VariableArgs, VariableState]   = (*Variable)(nil)
+	_ infer.CustomDiff[VariableArgs, VariableState]   = (*Variable)(nil)
+)

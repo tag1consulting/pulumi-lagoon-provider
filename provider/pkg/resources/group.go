@@ -134,3 +134,15 @@ func (r *Group) Diff(ctx context.Context, req infer.DiffRequest[GroupArgs, Group
 	}
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil
 }
+
+// Compile-time assertions that Group satisfies the infer lifecycle
+// interfaces it implements, with the pointer-typed generic parameters that
+// match its infer.Resource(&Group{}) registration. See
+// pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[GroupArgs, GroupState] = (*Group)(nil)
+	_ infer.CustomUpdate[GroupArgs, GroupState] = (*Group)(nil)
+	_ infer.CustomDelete[GroupState]            = (*Group)(nil)
+	_ infer.CustomRead[GroupArgs, GroupState]   = (*Group)(nil)
+	_ infer.CustomDiff[GroupArgs, GroupState]   = (*Group)(nil)
+)
