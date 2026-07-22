@@ -126,3 +126,15 @@ func (r *NotificationEmail) Diff(ctx context.Context, req infer.DiffRequest[Noti
 	}
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil
 }
+
+// Compile-time assertions that NotificationEmail satisfies the infer
+// lifecycle interfaces it implements, with the pointer-typed generic
+// parameters that match its infer.Resource(&NotificationEmail{})
+// registration. See pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[NotificationEmailArgs, NotificationEmailState] = (*NotificationEmail)(nil)
+	_ infer.CustomUpdate[NotificationEmailArgs, NotificationEmailState] = (*NotificationEmail)(nil)
+	_ infer.CustomDelete[NotificationEmailState]                        = (*NotificationEmail)(nil)
+	_ infer.CustomRead[NotificationEmailArgs, NotificationEmailState]   = (*NotificationEmail)(nil)
+	_ infer.CustomDiff[NotificationEmailArgs, NotificationEmailState]   = (*NotificationEmail)(nil)
+)

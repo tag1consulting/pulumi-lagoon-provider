@@ -168,3 +168,16 @@ func (r *UserPlatformRole) Diff(ctx context.Context, req infer.DiffRequest[UserP
 	// step fails mid-replace.
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff}, nil
 }
+
+// Compile-time assertions that UserPlatformRole satisfies the infer
+// lifecycle interfaces it implements, with the pointer-typed generic
+// parameters that match its infer.Resource(&UserPlatformRole{})
+// registration. UserPlatformRole has no Update method (role changes require
+// a replace), so no CustomUpdate assertion applies. See
+// pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[UserPlatformRoleArgs, UserPlatformRoleState] = (*UserPlatformRole)(nil)
+	_ infer.CustomDelete[UserPlatformRoleState]                       = (*UserPlatformRole)(nil)
+	_ infer.CustomRead[UserPlatformRoleArgs, UserPlatformRoleState]   = (*UserPlatformRole)(nil)
+	_ infer.CustomDiff[UserPlatformRoleArgs, UserPlatformRoleState]   = (*UserPlatformRole)(nil)
+)

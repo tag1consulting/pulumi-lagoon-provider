@@ -256,3 +256,15 @@ func (r *DeployTargetConfig) Diff(ctx context.Context, req infer.DiffRequest[Dep
 		HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true,
 	}, nil
 }
+
+// Compile-time assertions that DeployTargetConfig satisfies the infer
+// lifecycle interfaces it implements, with the pointer-typed generic
+// parameters that match its infer.Resource(&DeployTargetConfig{})
+// registration. See pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[DeployTargetConfigArgs, DeployTargetConfigState] = (*DeployTargetConfig)(nil)
+	_ infer.CustomUpdate[DeployTargetConfigArgs, DeployTargetConfigState] = (*DeployTargetConfig)(nil)
+	_ infer.CustomDelete[DeployTargetConfigState]                         = (*DeployTargetConfig)(nil)
+	_ infer.CustomRead[DeployTargetConfigArgs, DeployTargetConfigState]   = (*DeployTargetConfig)(nil)
+	_ infer.CustomDiff[DeployTargetConfigArgs, DeployTargetConfigState]   = (*DeployTargetConfig)(nil)
+)

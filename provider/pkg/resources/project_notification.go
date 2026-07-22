@@ -158,3 +158,16 @@ func (r *ProjectNotification) Diff(ctx context.Context, req infer.DiffRequest[Pr
 
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil
 }
+
+// Compile-time assertions that ProjectNotification satisfies the infer
+// lifecycle interfaces it implements, with the pointer-typed generic
+// parameters that match its infer.Resource(&ProjectNotification{})
+// registration. ProjectNotification has no Update method (all fields are
+// forceNew), so no CustomUpdate assertion applies. See
+// pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[ProjectNotificationArgs, ProjectNotificationState] = (*ProjectNotification)(nil)
+	_ infer.CustomDelete[ProjectNotificationState]                          = (*ProjectNotification)(nil)
+	_ infer.CustomRead[ProjectNotificationArgs, ProjectNotificationState]   = (*ProjectNotification)(nil)
+	_ infer.CustomDiff[ProjectNotificationArgs, ProjectNotificationState]   = (*ProjectNotification)(nil)
+)

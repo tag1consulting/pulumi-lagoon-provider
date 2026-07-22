@@ -135,3 +135,15 @@ func (r *NotificationSlack) Diff(ctx context.Context, req infer.DiffRequest[Noti
 	}
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil
 }
+
+// Compile-time assertions that NotificationSlack satisfies the infer
+// lifecycle interfaces it implements, with the pointer-typed generic
+// parameters that match its infer.Resource(&NotificationSlack{})
+// registration. See pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[NotificationSlackArgs, NotificationSlackState] = (*NotificationSlack)(nil)
+	_ infer.CustomUpdate[NotificationSlackArgs, NotificationSlackState] = (*NotificationSlack)(nil)
+	_ infer.CustomDelete[NotificationSlackState]                        = (*NotificationSlack)(nil)
+	_ infer.CustomRead[NotificationSlackArgs, NotificationSlackState]   = (*NotificationSlack)(nil)
+	_ infer.CustomDiff[NotificationSlackArgs, NotificationSlackState]   = (*NotificationSlack)(nil)
+)

@@ -224,6 +224,11 @@ func (c *LagoonConfig) Diff(_ context.Context, req infer.DiffRequest[*LagoonConf
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff}, nil
 }
 
+// Compile-time assertion that LagoonConfig satisfies infer.CustomDiff with
+// pointer-typed generic parameters, matching its infer.Config(&LagoonConfig{})
+// registration. See pulumi-lagoon-provider#267 and #272.
+var _ infer.CustomDiff[*LagoonConfig, *LagoonConfig] = (*LagoonConfig)(nil)
+
 // generateAdminToken creates an admin JWT from the configured secret.
 func (c *LagoonConfig) generateAdminToken() (string, error) {
 	return generateAdminTokenFromSecret(c.JWTSecret, c.JWTAudience)

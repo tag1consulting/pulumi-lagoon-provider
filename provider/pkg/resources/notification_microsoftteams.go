@@ -126,3 +126,15 @@ func (r *NotificationMicrosoftTeams) Diff(ctx context.Context, req infer.DiffReq
 	}
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff, DeleteBeforeReplace: true}, nil
 }
+
+// Compile-time assertions that NotificationMicrosoftTeams satisfies the
+// infer lifecycle interfaces it implements, with the pointer-typed generic
+// parameters that match its infer.Resource(&NotificationMicrosoftTeams{})
+// registration. See pulumi-lagoon-provider#272.
+var (
+	_ infer.CustomCreate[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState] = (*NotificationMicrosoftTeams)(nil)
+	_ infer.CustomUpdate[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState] = (*NotificationMicrosoftTeams)(nil)
+	_ infer.CustomDelete[NotificationMicrosoftTeamsState]                                 = (*NotificationMicrosoftTeams)(nil)
+	_ infer.CustomRead[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]   = (*NotificationMicrosoftTeams)(nil)
+	_ infer.CustomDiff[NotificationMicrosoftTeamsArgs, NotificationMicrosoftTeamsState]   = (*NotificationMicrosoftTeams)(nil)
+)
