@@ -15,7 +15,9 @@
 #   - kubectl configured with the prod context (KUBE_CONTEXT, defaults to kind-lagoon-prod)
 #   - The lagoon-core namespace (LAGOON_NAMESPACE, defaults to lagoon-core)
 #   - CORE_SECRETS secret (defaults to prod-core-lagoon-core-secrets)
-#   - Python 3 with PyJWT available (provided by the example venv)
+#   - PyJWT installed into examples/multi-cluster/venv (via `make e2e-setup` or
+#     `pip install -r examples/multi-cluster/requirements.txt`); this script
+#     resolves that venv's python3 directly rather than relying on $PATH
 #
 # Environment variables (all optional, sensible defaults for multi-cluster prod):
 #   KUBE_CONTEXT    - kubectl context (default: kind-lagoon-prod)
@@ -26,6 +28,23 @@
 #   LAGOON_API_URL  - if set, skip overriding; if unset, set to http://localhost:7080/graphql
 
 set -e
+
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_REPO_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
+
+# Resolve the venv's Python directly rather than relying on `python3` from
+# $PATH: e2e-assert's caller cd's into examples/multi-cluster before sourcing
+# this script, but a bare `python3` still resolves through the invoking
+# shell's PATH, not the venv, so PyJWT (installed only into the venv by
+# `make e2e-setup`) was silently unavailable. Check the same candidate
+# locations run-pulumi.sh already searches for the venv.
+_PYTHON="python3"
+for _venv in "./venv" "$_REPO_ROOT/examples/multi-cluster/venv" "$_REPO_ROOT/venv"; do
+    if [ -x "$_venv/bin/python3" ]; then
+        _PYTHON="$_venv/bin/python3"
+        break
+    fi
+done
 
 _CONTEXT="${KUBE_CONTEXT:-kind-lagoon-prod}"
 _NAMESPACE="${LAGOON_NAMESPACE:-lagoon-core}"
@@ -49,8 +68,8 @@ fi
 # Generate the HS256 token via Python; secret is passed via an env var to avoid
 # shell-escaping issues, disk writes, and the SC2259 pipe-vs-heredoc conflict.
 # (A heredoc overrides piped stdin, so env var is the correct approach here.)
-# PyJWT must be available in the active venv.
-_token=$(_JWTSECRET="$_jwt_secret" python3 - <<EOF
+# PyJWT must be available in the interpreter resolved above.
+_token=$(_JWTSECRET="$_jwt_secret" "$_PYTHON" - <<EOF
 import jwt, time, os
 secret = os.environ['_JWTSECRET']
 now = int(time.time())
