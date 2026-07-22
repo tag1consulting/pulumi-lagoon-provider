@@ -10,7 +10,7 @@ This provider allows you to declaratively manage Lagoon hosting platform resourc
 
 ## Project Status
 
-**Status**: v0.5.3 Released (Native Go Provider)
+**Status**: v0.5.4 Released (Native Go Provider)
 
 The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), Go (`github.com/tag1consulting/pulumi-lagoon-provider/sdk/go/lagoon`), and NuGet (`Tag1Consulting.Lagoon`). v0.2.0 introduced the native Go provider with Python, TypeScript, and Go SDKs (replacing the v0.1.x Python dynamic provider); v0.3.0 added the .NET/C# SDK.
 
@@ -20,7 +20,7 @@ The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1cons
 - Go-based native provider using `pulumi-go-provider` v1.3.0 (`infer` package)
 - Generated SDKs for Python, TypeScript, Go, and .NET/C# from a single schema
 - Published to PyPI (`pulumi-lagoon`), npm (`@tag1consulting/pulumi-lagoon`), Go module, and NuGet (`Tag1Consulting.Lagoon`)
-- 690+ unit tests in `provider/`; comprehensive resource CRUD lifecycle
+- 730+ unit tests in `provider/`; comprehensive resource CRUD lifecycle
 
 > **Historical note**: v0.1.x was a Python dynamic provider, fully superseded in v0.2.0. The legacy code was removed in v0.2.7 (issue #77).
 

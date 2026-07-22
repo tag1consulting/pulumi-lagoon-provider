@@ -111,7 +111,7 @@ Unit tests use a mock GraphQL server and require no live Lagoon instance:
 make go-test
 ```
 
-There are 690+ unit tests covering all resource types. New resources must include:
+There are 730+ unit tests covering all resource types. New resources must include:
 - `provider/pkg/client/<resource>_test.go`
 - `provider/pkg/resources/<resource>_crud_test.go`
 
