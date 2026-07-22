@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/pulumi/pulumi/sdk/v3/go/property"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 )
 
@@ -405,9 +406,9 @@ func TestConfigure_JWTSecretGeneratesToken(t *testing.T) {
 
 func TestDiff_NoChanges(t *testing.T) {
 	c := &LagoonConfig{}
-	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
-		Inputs: LagoonConfig{APIUrl: "https://api.test/graphql", Token: "tok", JWTAudience: "api.dev"},
-		State:  LagoonConfig{APIUrl: "https://api.test/graphql", Token: "tok", JWTAudience: "api.dev"},
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[*LagoonConfig, *LagoonConfig]{
+		Inputs: &LagoonConfig{APIUrl: "https://api.test/graphql", Token: "tok", JWTAudience: "api.dev"},
+		State:  &LagoonConfig{APIUrl: "https://api.test/graphql", Token: "tok", JWTAudience: "api.dev"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -419,9 +420,9 @@ func TestDiff_NoChanges(t *testing.T) {
 
 func TestDiff_WhitespaceDifferencesIgnored(t *testing.T) {
 	c := &LagoonConfig{}
-	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
-		Inputs: LagoonConfig{Token: "my-token\n", JWTSecret: " secret "},
-		State:  LagoonConfig{Token: "my-token", JWTSecret: "secret"},
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[*LagoonConfig, *LagoonConfig]{
+		Inputs: &LagoonConfig{Token: "my-token\n", JWTSecret: " secret "},
+		State:  &LagoonConfig{Token: "my-token", JWTSecret: "secret"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -433,9 +434,9 @@ func TestDiff_WhitespaceDifferencesIgnored(t *testing.T) {
 
 func TestDiff_NeverReplace(t *testing.T) {
 	c := &LagoonConfig{}
-	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
-		Inputs: LagoonConfig{APIUrl: "https://new-api.test/graphql", Token: "new-tok", JWTSecret: "new-secret", JWTAudience: "api.prod", Insecure: true},
-		State:  LagoonConfig{APIUrl: "https://old-api.test/graphql", Token: "old-tok", JWTSecret: "old-secret", JWTAudience: "api.dev", Insecure: false},
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[*LagoonConfig, *LagoonConfig]{
+		Inputs: &LagoonConfig{APIUrl: "https://new-api.test/graphql", Token: "new-tok", JWTSecret: "new-secret", JWTAudience: "api.prod", Insecure: true},
+		State:  &LagoonConfig{APIUrl: "https://old-api.test/graphql", Token: "old-tok", JWTSecret: "old-secret", JWTAudience: "api.dev", Insecure: false},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -467,9 +468,9 @@ func TestDiff_NeverReplace(t *testing.T) {
 
 func TestDiff_AudienceDefaultEquivalence(t *testing.T) {
 	c := &LagoonConfig{}
-	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
-		Inputs: LagoonConfig{JWTAudience: ""},
-		State:  LagoonConfig{JWTAudience: "api.dev"},
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[*LagoonConfig, *LagoonConfig]{
+		Inputs: &LagoonConfig{JWTAudience: ""},
+		State:  &LagoonConfig{JWTAudience: "api.dev"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -481,9 +482,9 @@ func TestDiff_AudienceDefaultEquivalence(t *testing.T) {
 
 func TestDiff_PartialChange(t *testing.T) {
 	c := &LagoonConfig{}
-	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
-		Inputs: LagoonConfig{APIUrl: "https://api.test/graphql", Token: "new-tok"},
-		State:  LagoonConfig{APIUrl: "https://api.test/graphql", Token: "old-tok"},
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[*LagoonConfig, *LagoonConfig]{
+		Inputs: &LagoonConfig{APIUrl: "https://api.test/graphql", Token: "new-tok"},
+		State:  &LagoonConfig{APIUrl: "https://api.test/graphql", Token: "old-tok"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -580,9 +581,9 @@ func TestDiff_JWTSecret_TokenNotDiffed(t *testing.T) {
 	// When jwtSecret is the auth source, the derived token changes every run.
 	// Diff must not report a token change to avoid spurious provider updates.
 	c := &LagoonConfig{}
-	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
-		Inputs: LagoonConfig{JWTSecret: "my-secret", Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new"},
-		State:  LagoonConfig{JWTSecret: "my-secret", Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.old"},
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[*LagoonConfig, *LagoonConfig]{
+		Inputs: &LagoonConfig{JWTSecret: "my-secret", Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new"},
+		State:  &LagoonConfig{JWTSecret: "my-secret", Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.old"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -598,9 +599,9 @@ func TestDiff_JWTSecret_TokenNotDiffed(t *testing.T) {
 func TestDiff_JWTSecretChanged_Detected(t *testing.T) {
 	// Changing jwtSecret itself must still be detected.
 	c := &LagoonConfig{}
-	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
-		Inputs: LagoonConfig{JWTSecret: "new-secret"},
-		State:  LagoonConfig{JWTSecret: "old-secret"},
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[*LagoonConfig, *LagoonConfig]{
+		Inputs: &LagoonConfig{JWTSecret: "new-secret"},
+		State:  &LagoonConfig{JWTSecret: "old-secret"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -619,9 +620,9 @@ func TestDiff_JWTSecretChanged_Detected(t *testing.T) {
 func TestDiff_ExplicitToken_NoDiffWhenUnchanged(t *testing.T) {
 	// When no jwtSecret, explicit token changes are still detected normally.
 	c := &LagoonConfig{}
-	resp, err := c.Diff(context.Background(), infer.DiffRequest[LagoonConfig, LagoonConfig]{
-		Inputs: LagoonConfig{Token: "tok-v2"},
-		State:  LagoonConfig{Token: "tok-v1"},
+	resp, err := c.Diff(context.Background(), infer.DiffRequest[*LagoonConfig, *LagoonConfig]{
+		Inputs: &LagoonConfig{Token: "tok-v2"},
+		State:  &LagoonConfig{Token: "tok-v1"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -631,5 +632,90 @@ func TestDiff_ExplicitToken_NoDiffWhenUnchanged(t *testing.T) {
 	}
 	if _, ok := resp.DetailedDiff["token"]; !ok {
 		t.Error("expected 'token' in DetailedDiff for explicit token change")
+	}
+}
+
+// ==================== Diff dispatch through the real framework (issue #267) ====================
+
+// dummyArgs/dummyState/dummyResource exist only so infer.NewProviderBuilder has
+// at least one resource to validate against (infer.Config alone is not enough
+// to build a provider). They are not exercised by the assertions below.
+type dummyArgs struct{}
+type dummyState struct{ dummyArgs }
+
+type dummyResource struct{}
+
+func (dummyResource) Create(_ context.Context, req infer.CreateRequest[dummyArgs]) (infer.CreateResponse[dummyState], error) {
+	return infer.CreateResponse[dummyState]{ID: "dummy", Output: dummyState{req.Inputs}}, nil
+}
+
+// TestDiffConfig_DispatchesToCustomDiff is a regression test for issue #267: the
+// provider is wired exactly as production does it (infer.Config(&LagoonConfig{})
+// registers the pointer type, not the value type), and the resulting DiffConfig
+// RPC entry point is called directly - the same path the Pulumi engine calls on
+// every refresh/preview/up. Before the fix, LagoonConfig.Diff was declared with
+// infer.DiffRequest[LagoonConfig, LagoonConfig] (value type parameters), which
+// does not satisfy the CustomDiff[*LagoonConfig, *LagoonConfig] interface the
+// framework actually checks for when the config is registered as a pointer.
+// That mismatch silently fell through to infer's default diffing, which treats
+// any changed field (including the JWT-derived token, expected to change every
+// run) as forcing a full provider replace. Calling c.Diff(...) directly, as the
+// other tests in this file do, cannot catch this: it bypasses the framework's
+// interface-satisfaction check entirely and always succeeds. Only a real
+// DiffConfig RPC call through a built provider exercises the actual bug.
+func TestDiffConfig_DispatchesToCustomDiff(t *testing.T) {
+	// Without the fix, DiffConfig falls through to infer's default diffing
+	// path, which calls GetSchema and needs provider.RunInfo from the
+	// context - context this minimal test harness doesn't provide, so the
+	// fallback path panics instead of just returning a wrong-but-clean
+	// result. Recover so a regression here reports as a normal test
+	// failure rather than crashing the whole test binary.
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("DiffConfig panicked: %v (this happens when LagoonConfig.Diff is not dispatched by the "+
+				"framework and infer's default diffing fallback runs instead - see issue #267)", r)
+		}
+	}()
+
+	prov, err := infer.NewProviderBuilder().
+		WithResources(infer.Resource(&dummyResource{})).
+		WithConfig(infer.Config(&LagoonConfig{})).
+		Build()
+	if err != nil {
+		t.Fatalf("failed to build provider: %v", err)
+	}
+	if prov.DiffConfig == nil {
+		t.Fatal("provider.DiffConfig is nil; infer.Config did not wire up DiffConfig")
+	}
+
+	sameSecret := property.New("same-secret")
+	req := p.DiffRequest{
+		Urn: "urn:pulumi:test::test::pulumi:providers:lagoon::lagoon-provider",
+		State: property.NewMap(map[string]property.Value{
+			"apiUrl":    property.New("https://api.test/graphql"),
+			"jwtSecret": sameSecret,
+			"token":     property.New("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.old"),
+		}),
+		Inputs: property.NewMap(map[string]property.Value{
+			"apiUrl":    property.New("https://api.test/graphql"),
+			"jwtSecret": sameSecret,
+			"token":     property.New("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new"),
+		}),
+	}
+
+	resp, err := prov.DiffConfig(context.Background(), req)
+	if err != nil {
+		t.Fatalf("DiffConfig returned an error: %v", err)
+	}
+	for field, d := range resp.DetailedDiff {
+		if d.Kind == p.UpdateReplace || d.Kind == p.AddReplace || d.Kind == p.DeleteReplace {
+			t.Errorf("DiffConfig marked field %q as %v for a token-only change with identical jwtSecret on "+
+				"both sides; this means LagoonConfig.Diff was not dispatched by the framework and infer's "+
+				"default force-replace-on-any-change fallback ran instead (issue #267). Full DetailedDiff: %+v",
+				field, d.Kind, resp.DetailedDiff)
+		}
+	}
+	if _, ok := resp.DetailedDiff["token"]; ok {
+		t.Errorf("expected 'token' to be absent from DetailedDiff when jwtSecret is unchanged; got: %+v", resp.DetailedDiff)
 	}
 }

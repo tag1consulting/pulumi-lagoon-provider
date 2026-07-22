@@ -172,7 +172,25 @@ func (c *LagoonConfig) newClientUncached() *client.Client {
 // how the provider authenticates or connects, not which resources it can manage.
 // Returning Update (never UpdateReplace) prevents the cascading replace of every
 // resource associated with this provider instance.
-func (c *LagoonConfig) Diff(_ context.Context, req infer.DiffRequest[LagoonConfig, LagoonConfig]) (infer.DiffResponse, error) {
+//
+// The type parameters are *LagoonConfig, not LagoonConfig: infer.Config is
+// called with a pointer (infer.Config(&LagoonConfig{})), which Go's generics
+// resolve to T = *LagoonConfig. The framework's internal dispatch then checks
+// whether *LagoonConfig implements CustomDiff[*LagoonConfig, *LagoonConfig],
+// not CustomDiff[LagoonConfig, LagoonConfig]. A value-typed signature here
+// silently fails that check and falls through to infer's default diffing,
+// which treats every changed field (including the JWT-derived token, which
+// changes on every Configure call by design) as forcing a full provider
+// replace. See pulumi-lagoon-provider#267.
+func (c *LagoonConfig) Diff(_ context.Context, req infer.DiffRequest[*LagoonConfig, *LagoonConfig]) (infer.DiffResponse, error) {
+	inputs, state := req.Inputs, req.State
+	if inputs == nil {
+		inputs = &LagoonConfig{}
+	}
+	if state == nil {
+		state = &LagoonConfig{}
+	}
+
 	diff := map[string]p.PropertyDiff{}
 	normalizeAudience := func(v string) string {
 		v = strings.TrimSpace(v)
@@ -181,26 +199,26 @@ func (c *LagoonConfig) Diff(_ context.Context, req infer.DiffRequest[LagoonConfi
 		}
 		return v
 	}
-	if strings.TrimSpace(req.Inputs.APIUrl) != strings.TrimSpace(req.State.APIUrl) {
+	if strings.TrimSpace(inputs.APIUrl) != strings.TrimSpace(state.APIUrl) {
 		diff["apiUrl"] = p.PropertyDiff{Kind: p.Update}
 	}
 	// Only diff `token` when it is the explicit credential on both sides.
 	// When jwtSecret is present, Configure derives a fresh token each time;
 	// diffing that derived value produces noise because JWTs change every run.
-	inputSecret := strings.TrimSpace(req.Inputs.JWTSecret)
-	stateSecret := strings.TrimSpace(req.State.JWTSecret)
+	inputSecret := strings.TrimSpace(inputs.JWTSecret)
+	stateSecret := strings.TrimSpace(state.JWTSecret)
 	if inputSecret == "" && stateSecret == "" {
-		if strings.TrimSpace(req.Inputs.Token) != strings.TrimSpace(req.State.Token) {
+		if strings.TrimSpace(inputs.Token) != strings.TrimSpace(state.Token) {
 			diff["token"] = p.PropertyDiff{Kind: p.Update}
 		}
 	}
 	if inputSecret != stateSecret {
 		diff["jwtSecret"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if normalizeAudience(req.Inputs.JWTAudience) != normalizeAudience(req.State.JWTAudience) {
+	if normalizeAudience(inputs.JWTAudience) != normalizeAudience(state.JWTAudience) {
 		diff["jwtAudience"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if req.Inputs.Insecure != req.State.Insecure {
+	if inputs.Insecure != state.Insecure {
 		diff["insecure"] = p.PropertyDiff{Kind: p.Update}
 	}
 	return p.DiffResponse{HasChanges: len(diff) > 0, DetailedDiff: diff}, nil
