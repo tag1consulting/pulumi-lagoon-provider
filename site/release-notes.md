@@ -7,6 +7,16 @@ nav_order: 7
 
 ---
 
+## v0.5.4 (2026-07-22)
+
+Bug fix release closing a provider replace cascade triggered by `pulumi refresh`/`preview`. No provider API or schema changes: existing programs require no updates.
+
+### Bug Fixes
+
+- **Provider replace cascade on refresh/preview** ([#267](https://github.com/tag1consulting/pulumi-lagoon-provider/issues/267)): `LagoonConfig` is registered with the framework via `infer.Config(&LagoonConfig{})`, a pointer, so Go's generics resolve the framework's internal type parameter to `*LagoonConfig`. The framework only dispatches to a custom `Diff` method if the type satisfies `CustomDiff[*LagoonConfig, *LagoonConfig]`; `Diff` was declared with value type parameters (`CustomDiff[LagoonConfig, LagoonConfig]`), which silently failed that check with no compile error and no runtime error. Every `pulumi refresh` followed by `preview`/`up` fell through to the framework's default diffing, which treats any changed field, including the JWT-derived token that changes on every `Configure` call by design, as forcing a full provider replace, cascading into replacing every resource associated with that provider instance. Fixed by correcting `Diff`'s generic type parameters to match the pointer-based registration.
+
+---
+
 ## v0.5.3 (2026-07-21)
 
 Bug fix release closing a nil-pointer panic that could crash the provider under concurrent resource operations, plus a local e2e release-gate harness repair. No provider API or schema changes: existing programs require no updates.

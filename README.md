@@ -15,7 +15,7 @@ A Pulumi provider for managing [Lagoon](https://www.lagoon.sh/) resources as inf
 
 This provider enables you to manage Lagoon hosting platform resources (projects, environments, variables, deploy targets, notifications, tasks, etc.) using Pulumi, with native SDKs for Python, TypeScript/JavaScript, Go, and .NET/C#.
 
-**Status**: v0.5.3 — Native Go Provider
+**Status**: v0.5.4 — Native Go Provider
 
 ## Supported Resources
 
@@ -293,7 +293,7 @@ CGO_ENABLED=0 go test ./... -count=1
 
 ```bash
 make go-build       # Build the provider binary
-make go-test        # Run all Go tests (690+ tests)
+make go-test        # Run all Go tests (730+ tests)
 make go-schema      # Regenerate provider schema
 make go-sdk-all     # Regenerate all language SDKs
 make go-sdk-python  # Regenerate Python SDK
