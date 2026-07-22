@@ -213,6 +213,18 @@ func (r *Project) Read(ctx context.Context, req infer.ReadRequest[ProjectArgs, P
 	}, nil
 }
 
+// deployTargetConfigPlaceholder is the literal string the Lagoon API writes into
+// a project's branches/pullrequests columns as soon as any DeployTargetConfig is
+// attached to that project (see uselagoon/lagoon
+// services/api/src/resources/deploytargetconfig/sql.ts,
+// updateProjectBranchPullrequestRegex, invoked from the addDeployTargetConfig
+// resolver). From that point on, routing is controlled per-deploy-target-config
+// and the project-level fields are cosmetic; the API always returns this exact
+// same string for both fields regardless of what was last configured, so a
+// refresh followed by a preview would otherwise show a permanent, unresolvable
+// diff against the user's desired regex. See issue #270.
+const deployTargetConfigPlaceholder = "This project is configured with DeployTargets"
+
 // Diff computes the diff between old and new project state.
 func (r *Project) Diff(ctx context.Context, req infer.DiffRequest[ProjectArgs, ProjectState]) (infer.DiffResponse, error) {
 	diff := map[string]p.PropertyDiff{}
@@ -235,10 +247,16 @@ func (r *Project) Diff(ctx context.Context, req infer.DiffRequest[ProjectArgs, P
 	if req.Inputs.ProductionEnvironment != nil && ptrDiffers(req.Inputs.ProductionEnvironment, req.State.ProductionEnvironment) {
 		diff["productionEnvironment"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if req.Inputs.Branches != nil && ptrDiffers(req.Inputs.Branches, req.State.Branches) {
+	// The state's placeholder is not real drift: the API always overwrites
+	// branches/pullrequests with this exact string once a DeployTargetConfig
+	// exists, no matter what regex was last applied, so comparing it against the
+	// user's desired input would flag an update on every single preview/up.
+	stateBranchesIsPlaceholder := req.State.Branches != nil && *req.State.Branches == deployTargetConfigPlaceholder
+	if req.Inputs.Branches != nil && !stateBranchesIsPlaceholder && ptrDiffers(req.Inputs.Branches, req.State.Branches) {
 		diff["branches"] = p.PropertyDiff{Kind: p.Update}
 	}
-	if req.Inputs.Pullrequests != nil && ptrDiffers(req.Inputs.Pullrequests, req.State.Pullrequests) {
+	statePullrequestsIsPlaceholder := req.State.Pullrequests != nil && *req.State.Pullrequests == deployTargetConfigPlaceholder
+	if req.Inputs.Pullrequests != nil && !statePullrequestsIsPlaceholder && ptrDiffers(req.Inputs.Pullrequests, req.State.Pullrequests) {
 		diff["pullrequests"] = p.PropertyDiff{Kind: p.Update}
 	}
 	if req.Inputs.OpenshiftProjectPattern != nil && ptrDiffers(req.Inputs.OpenshiftProjectPattern, req.State.OpenshiftProjectPattern) {

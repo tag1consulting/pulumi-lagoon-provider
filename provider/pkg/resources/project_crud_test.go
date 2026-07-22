@@ -6,7 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
+	"github.com/pulumi/pulumi/sdk/v3/go/property"
 	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/client"
 )
 
@@ -423,5 +425,154 @@ func TestProjectCreate_OptionalFields(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("Create with optional fields failed: %v", err)
+	}
+}
+
+// ==================== Diff: DeployTargetConfig placeholder (issue #270) ====================
+
+// TestProjectDiff_DeployTargetPlaceholder_NoDiff reproduces the scenario from
+// issue #270: once a DeployTargetConfig is attached to a project, the Lagoon
+// API overwrites the project's branches/pullrequests columns with a fixed
+// placeholder string. A refresh then picks up that placeholder as state, and
+// the next preview must not diff it against the user's actual desired regex.
+func TestProjectDiff_DeployTargetPlaceholder_NoDiff(t *testing.T) {
+	desiredBranches := "^(main|develop|feature/.*)$"
+	desiredPRs := ".*"
+	placeholder := deployTargetConfigPlaceholder
+
+	r := &Project{}
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectArgs, ProjectState]{
+		Inputs: ProjectArgs{
+			Name:         "myproject",
+			GitURL:       "git@example.com:repo.git",
+			Branches:     &desiredBranches,
+			Pullrequests: &desiredPRs,
+		},
+		State: ProjectState{
+			ProjectArgs: ProjectArgs{
+				Name:         "myproject",
+				GitURL:       "git@example.com:repo.git",
+				Branches:     &placeholder,
+				Pullrequests: &placeholder,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Diff failed: %v", err)
+	}
+	if resp.HasChanges {
+		t.Errorf("expected no changes when state holds the DeployTargetConfig placeholder; got diff: %+v", resp.DetailedDiff)
+	}
+	if _, ok := resp.DetailedDiff["branches"]; ok {
+		t.Error("expected 'branches' to be absent from DetailedDiff when state is the DeployTargetConfig placeholder")
+	}
+	if _, ok := resp.DetailedDiff["pullrequests"]; ok {
+		t.Error("expected 'pullrequests' to be absent from DetailedDiff when state is the DeployTargetConfig placeholder")
+	}
+}
+
+// TestProjectDiff_RealDrift_StillDetected ensures the placeholder special-case
+// doesn't mask genuine drift: when the state holds anything other than the
+// exact placeholder string, a real difference must still be reported.
+func TestProjectDiff_RealDrift_StillDetected(t *testing.T) {
+	desired := "^(main|develop)$"
+	stateVal := "^(main)$"
+
+	r := &Project{}
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectArgs, ProjectState]{
+		Inputs: ProjectArgs{Name: "myproject", GitURL: "git@example.com:repo.git", Branches: &desired},
+		State: ProjectState{
+			ProjectArgs: ProjectArgs{Name: "myproject", GitURL: "git@example.com:repo.git", Branches: &stateVal},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Diff failed: %v", err)
+	}
+	if !resp.HasChanges {
+		t.Error("expected changes when branches genuinely differ and state is not the DeployTargetConfig placeholder")
+	}
+	if _, ok := resp.DetailedDiff["branches"]; !ok {
+		t.Error("expected 'branches' in DetailedDiff for genuine drift")
+	}
+}
+
+// TestProjectDiff_PlaceholderLookalike_StillDetected guards against a
+// too-broad match: a value that merely resembles the placeholder (e.g. a
+// user's own regex happens to equal it, or the API string changes slightly in
+// a future Lagoon version) must not be silently swallowed. Only an exact match
+// of the documented placeholder is suppressed.
+func TestProjectDiff_PlaceholderLookalike_StillDetected(t *testing.T) {
+	desired := "^(main)$"
+	lookalike := "This project is configured with DeployTarget" // missing trailing "s"
+
+	r := &Project{}
+	resp, err := r.Diff(context.Background(), infer.DiffRequest[ProjectArgs, ProjectState]{
+		Inputs: ProjectArgs{Name: "myproject", GitURL: "git@example.com:repo.git", Branches: &desired},
+		State: ProjectState{
+			ProjectArgs: ProjectArgs{Name: "myproject", GitURL: "git@example.com:repo.git", Branches: &lookalike},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Diff failed: %v", err)
+	}
+	if !resp.HasChanges {
+		t.Error("expected changes when state is merely similar to, but not exactly, the DeployTargetConfig placeholder")
+	}
+}
+
+// TestDiffProject_DispatchesToCustomDiff is a regression test for issue #270,
+// following the same framework-dispatch pattern established for issue #267
+// (see config_test.go's TestDiffConfig_DispatchesToCustomDiff): it builds the
+// provider exactly as production does (infer.Resource(&resources.Project{}))
+// and calls the resulting provider's real Diff RPC entrypoint with property.Map
+// state/inputs, rather than calling (*Project).Diff directly. This exercises
+// the actual interface-dispatch path the Pulumi engine uses on every
+// refresh/preview/up, not just the Go method in isolation.
+func TestDiffProject_DispatchesToCustomDiff(t *testing.T) {
+	prov, err := infer.NewProviderBuilder().
+		WithResources(infer.Resource(&Project{})).
+		Build()
+	if err != nil {
+		t.Fatalf("failed to build provider: %v", err)
+	}
+	if prov.Diff == nil {
+		t.Fatal("provider.Diff is nil; infer.Resource did not wire up Diff")
+	}
+
+	req := p.DiffRequest{
+		ID:  "1",
+		Urn: "urn:pulumi:test::test::lagoon:lagoon:Project::myproject",
+		State: property.NewMap(map[string]property.Value{
+			"name":           property.New("myproject"),
+			"gitUrl":         property.New("git@example.com:repo.git"),
+			"deploytargetId": property.New(1.0),
+			"branches":       property.New(deployTargetConfigPlaceholder),
+			"pullrequests":   property.New(deployTargetConfigPlaceholder),
+			"lagoonId":       property.New(1.0),
+			"publicKey":      property.New(""),
+			"created":        property.New(""),
+		}),
+		Inputs: property.NewMap(map[string]property.Value{
+			"name":           property.New("myproject"),
+			"gitUrl":         property.New("git@example.com:repo.git"),
+			"deploytargetId": property.New(1.0),
+			"branches":       property.New("^(main|develop|feature/.*)$"),
+			"pullrequests":   property.New(".*"),
+		}),
+	}
+
+	resp, err := prov.Diff(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Diff returned an error: %v", err)
+	}
+	for field, d := range resp.DetailedDiff {
+		if d.Kind == p.UpdateReplace || d.Kind == p.AddReplace || d.Kind == p.DeleteReplace {
+			t.Errorf("Diff marked field %q as %v for a DeployTargetConfig-placeholder-only difference; "+
+				"expected no diff at all. Full DetailedDiff: %+v", field, d.Kind, resp.DetailedDiff)
+		}
+	}
+	if resp.HasChanges {
+		t.Errorf("expected no changes through the real dispatch path when state holds the DeployTargetConfig "+
+			"placeholder for branches/pullrequests; got: %+v", resp.DetailedDiff)
 	}
 }
