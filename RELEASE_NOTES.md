@@ -1,3 +1,24 @@
+# Release v0.5.5 (2026-08-10)
+
+Bug fix, security, and maintenance release. Closes a permanent, unresolvable `Project.branches`/`pullrequests` diff on every `refresh`/`preview` for projects with a `DeployTargetConfig` attached, plus two High-severity Go module advisories (a go-git symlink-following issue in worktree operations, and gRPC-Go xDS RBAC/HTTP2 vulnerabilities) and routine npm transitive dependency refreshes. No provider API or schema changes: existing programs require no updates.
+
+## Bug Fixes
+
+- **Permanent diff/replace cascade on projects with a `DeployTargetConfig`** ([#270](https://github.com/tag1consulting/pulumi-lagoon-provider/issues/270)): the Lagoon API unconditionally overwrites a project's `branches` and `pullrequests` fields with a fixed placeholder string (`"This project is configured with DeployTargets"`) as soon as any `DeployTargetConfig` is attached — confirmed directly against the Lagoon API's own source (`services/api/src/resources/deploytargetconfig/sql.ts`). A `pulumi refresh` picked up that placeholder as the resource's live state, and the next `preview`/`up` diffed it against the user's real desired regex, forcing a `Project` update on every run — which in turn made `DeployTargetConfig.projectId` (wired to `Project`'s output) "unknown" mid-preview, cascading into a replace of every `DeployTargetConfig` on that project. `Project.Diff` now special-cases an exact match against this documented placeholder on the state side only; the desired-input side is untouched, so genuine drift on `branches`/`pullrequests` is still caught normally.
+
+## Security
+
+- **go-git: Worktree operations may follow symlinks** ([GHSA-hc8v-wwc9-vgxm](https://github.com/advisories/GHSA-hc8v-wwc9-vgxm), High): Upgraded `github.com/go-git/go-git/v5` from 5.19.1 to 5.19.2 in `provider`, `sdk/go/lagoon`, and `claude/go-test`.
+- **gRPC-Go: xDS RBAC and HTTP/2 Vulnerabilities** ([GHSA-hrxh-6v49-42gf](https://github.com/advisories/GHSA-hrxh-6v49-42gf), High): Upgraded `google.golang.org/grpc` from 1.79.3 to 1.82.1 in the same three modules.
+
+## Maintenance
+
+- Bumped `tar` 7.5.20 → 7.5.22 and `brace-expansion` 5.0.7 → 5.0.8 in `sdk/nodejs` and `claude/ts-test` ([#278](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/278)), then `brace-expansion` 5.0.8 → 5.0.9 in the same two directories ([#281](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/281)).
+- Bumped `ip-address` 10.2.0 → 10.4.0 in the same two directories ([#279](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/279)).
+- Bumped the `pypa/gh-action-pypi-publish` GitHub Action from v1.14.1 to v1.14.2 (CI-only, [#277](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/277)).
+
+---
+
 # Release v0.5.4 (2026-07-22)
 
 Bug fix release closing a provider replace cascade triggered by `pulumi refresh`/`preview`. No provider API or schema changes: existing programs require no updates.
