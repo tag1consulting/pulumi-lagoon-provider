@@ -9,7 +9,7 @@ import (
 )
 
 // Version is set at build time via ldflags.
-var Version = "0.5.4"
+var Version = "0.5.5"
 
 func main() {
 	provider, err := lagoon.NewProvider(Version)

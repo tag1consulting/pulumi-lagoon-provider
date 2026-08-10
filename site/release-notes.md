@@ -7,6 +7,23 @@ nav_order: 7
 
 ---
 
+## v0.5.5 (2026-08-10)
+
+Security and maintenance release. Closes two High-severity Go module advisories (a go-git symlink-following issue in worktree operations, and gRPC-Go xDS RBAC/HTTP2 vulnerabilities) plus routine npm transitive dependency refreshes. No provider API or schema changes: existing programs require no updates.
+
+### Security
+
+- **go-git: Worktree operations may follow symlinks** ([GHSA-hc8v-wwc9-vgxm](https://github.com/advisories/GHSA-hc8v-wwc9-vgxm), High): Upgraded `github.com/go-git/go-git/v5` from 5.19.1 to 5.19.2 in `provider`, `sdk/go/lagoon`, and `claude/go-test`.
+- **gRPC-Go: xDS RBAC and HTTP/2 Vulnerabilities** ([GHSA-hrxh-6v49-42gf](https://github.com/advisories/GHSA-hrxh-6v49-42gf), High): Upgraded `google.golang.org/grpc` from 1.79.3 to 1.82.1 in the same three modules.
+
+### Maintenance
+
+- Bumped `brace-expansion` 5.0.7 → 5.0.9 and `tar` 7.5.20 → 7.5.22 in `sdk/nodejs` and `claude/ts-test` (Dependabot #278, #281).
+- Bumped `ip-address` 10.2.0 → 10.4.0 in the same two directories (#279).
+- Bumped the `pypa/gh-action-pypi-publish` GitHub Action to v1.14.2 (CI-only, #277).
+
+---
+
 ## v0.5.4 (2026-07-22)
 
 Bug fix release closing a provider replace cascade triggered by `pulumi refresh`/`preview`. No provider API or schema changes: existing programs require no updates.
