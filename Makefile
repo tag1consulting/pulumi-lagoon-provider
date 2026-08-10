@@ -23,7 +23,7 @@
         multi-cluster-test-api multi-cluster-test-ui multi-cluster-info \
         e2e e2e-build e2e-setup e2e-deploy e2e-assert e2e-teardown \
         clean clean-all \
-        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet go-sdk-all go-install check-release-version release-prep go-proxy-warmup check-versions check-pulumi-version
+        go-build go-test go-vet go-schema go-sdk-clean go-sdk-python go-sdk-nodejs go-sdk-go go-sdk-dotnet go-sdk-all go-install check-release-version release-prep release-publish go-proxy-warmup check-versions check-pulumi-version
 
 # Variables
 PYTHON := python3
@@ -702,10 +702,33 @@ release-prep: check-release-version
 	@echo "       make e2e"
 	@echo "     Expected wall-clock: 45-90 minutes. Must pass before tagging."
 	@echo "     Use E2E_SKIP_NONPROD=1 for a faster prod-only smoke run."
-	@echo "  4. After e2e passes: git tag v$(VERSION) && git push origin v$(VERSION)"
-	@echo "  5. Tag Go module: git tag sdk/go/lagoon/v$(VERSION) v$(VERSION)^{} && git push origin sdk/go/lagoon/v$(VERSION)"
-	@echo "  6. Create GitHub release (triggers publish.yml: PyPI, npm, NuGet, Go proxy warm-up)"
-	@echo "  7. Verify: make go-proxy-warmup VERSION=$(VERSION)  (or check CI)"
+	@echo "  4. After e2e passes: make release-publish VERSION=$(VERSION)"
+	@echo "     (tags both refs, verifies both landed on origin, then creates the GitHub release)"
+
+# Tag, verify, and publish a release atomically. This exists because the release
+# tag (vX.Y.Z) and the Go SDK submodule tag (sdk/go/lagoon/vX.Y.Z) used to be
+# separate manual steps before creating the GitHub release. The v0.5.5 release
+# skipped the Go tag step, which left proxy.golang.org unable to resolve `go get`
+# for that version until it was fixed after the fact. Folding tag-both-verify-both
+# into one target makes that skip structurally impossible: `gh release create`
+# (step 4 below) cannot run unless both tags already exist on origin, because
+# they're earlier commands in the same target and `make` halts on the first
+# non-zero exit.
+# Usage: make release-publish VERSION=0.3.0
+release-publish: check-release-version
+	@test -f RELEASE_NOTES_EXCERPT.md || (echo "ERROR: RELEASE_NOTES_EXCERPT.md not found. Create it from RELEASE_NOTES.md before running this target." >&2 && exit 1)
+	@echo "=== [1/4] Tagging v$(VERSION) ==="
+	git tag -m "Release v$(VERSION)" v$(VERSION)
+	git push origin v$(VERSION)
+	@echo "=== [2/4] Tagging Go SDK module sdk/go/lagoon/v$(VERSION) ==="
+	git tag -m "Go SDK v$(VERSION)" sdk/go/lagoon/v$(VERSION) v$(VERSION)^{}
+	git push origin sdk/go/lagoon/v$(VERSION)
+	@echo "=== [3/4] Verifying both tags landed on origin ==="
+	@git ls-remote --exit-code --tags origin "refs/tags/v$(VERSION)" >/dev/null || (echo "ERROR: v$(VERSION) missing on origin, aborting before release creation" >&2 && exit 1)
+	@git ls-remote --exit-code --tags origin "refs/tags/sdk/go/lagoon/v$(VERSION)" >/dev/null || (echo "ERROR: sdk/go/lagoon/v$(VERSION) missing on origin, aborting before release creation" >&2 && exit 1)
+	@echo "=== [4/4] Creating GitHub release v$(VERSION) (triggers publish.yml: PyPI, npm, NuGet, Go proxy warm-up) ==="
+	gh release create v$(VERSION) --title "v$(VERSION)" --notes-file RELEASE_NOTES_EXCERPT.md
+	@echo "=== Release v$(VERSION) created. Both tags were confirmed on origin first, so the warm-go-proxy CI job should pass on the first attempt. ==="
 
 # Warm the Go module proxy so the SDK is immediately available via go get and
 # appears on pkg.go.dev.  The sdk/go/lagoon/vVERSION tag must already exist
