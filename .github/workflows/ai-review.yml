@@ -18,6 +18,13 @@ name: AI PR Review
 # association gate defends against does not apply. renovate[bot] stays
 # excluded.
 #
+# The carve-out keys off pull_request.user.login (the PR's stable original
+# author), not github.actor (whoever triggered this specific event). A
+# Dependabot PR frequently gets updated by someone/something other than
+# Dependabot itself (e.g. clicking "Update branch" creates a merge commit
+# authored by that person), which would flip github.actor away from
+# 'dependabot[bot]' and silently defeat an actor-keyed carve-out.
+#
 # Note: tag1consulting/ai-pr-review/container-action@main is intentionally a
 # mutable ref. This is a dogfooding/canary repo and we own the action; the
 # mutable-ref supply-chain risk is accepted, with the action invariant above
@@ -39,7 +46,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-ai-review') &&
       (
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) ||
-        github.actor == 'dependabot[bot]'
+        github.event.pull_request.user.login == 'dependabot[bot]'
       )
     runs-on: ubuntu-latest
     steps:
