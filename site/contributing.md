@@ -9,7 +9,7 @@ Contributions, bug reports, and feedback are welcome. Please review the [Code of
 
 ## Prerequisites
 
-- Go 1.26+
+- Go 1.27+
 - [Pulumi CLI](https://www.pulumi.com/docs/install/) — version must match `.pulumiversion`. SDK generation output varies between CLI versions, so mismatches cause spurious diffs in the generated files. Install the pinned version with:
   ```bash
   curl -fsSL https://get.pulumi.com | sh -s -- --version $(cat .pulumiversion)

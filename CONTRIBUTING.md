@@ -4,7 +4,7 @@ Contributions, bug reports, and feedback are welcome. Please follow our [Code of
 
 ## Prerequisites
 
-- Go 1.26+
+- Go 1.27+
 - [Pulumi CLI](https://www.pulumi.com/docs/install/) — version must match `.pulumiversion` (currently 3.234.0). SDK generation output varies between CLI versions, so mismatches cause spurious diffs. Install a specific version with: `curl -fsSL https://get.pulumi.com | sh -s -- --version $(cat .pulumiversion)`
 - A running Lagoon instance with API credentials (required for integration tests only; unit tests are self-contained)
 
