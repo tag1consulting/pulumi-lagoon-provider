@@ -27,7 +27,7 @@ The provider is available on PyPI (`pip install pulumi-lagoon`), npm (`@tag1cons
 ## Development Environment
 
 ### Prerequisites
-- Go 1.26+
+- Go 1.27+
 - Pulumi CLI installed
 - Access to a Lagoon instance with API credentials
 - GraphQL API endpoint and authentication token
