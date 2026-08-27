@@ -11,6 +11,13 @@ name: AI PR Review
 # trigger a secret-bearing run even if the action invariant ever regressed.
 # Mirror of the gate already used by ai-review-commands.yml for slash commands.
 #
+# Dependabot carve-out: dependabot[bot]'s author_association on this repo is
+# CONTRIBUTOR, not COLLABORATOR, so it needs an explicit OR to pass the gate
+# above. This is safe because Dependabot PRs here are same-repo branches
+# (isCrossRepository: false), not forks, so the fork-secret-leak risk the
+# association gate defends against does not apply. renovate[bot] stays
+# excluded.
+#
 # Note: tag1consulting/ai-pr-review/container-action@main is intentionally a
 # mutable ref. This is a dogfooding/canary repo and we own the action; the
 # mutable-ref supply-chain risk is accepted, with the action invariant above
@@ -28,10 +35,12 @@ jobs:
   review:
     if: |
       !github.event.pull_request.draft &&
-      github.actor != 'dependabot[bot]' &&
       github.actor != 'renovate[bot]' &&
       !contains(github.event.pull_request.labels.*.name, 'skip-ai-review') &&
-      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+      (
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) ||
+        github.actor == 'dependabot[bot]'
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
