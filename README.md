@@ -271,7 +271,7 @@ lagoon get project --project my-project
 
 ### Prerequisites
 
-- Go 1.26+
+- Go 1.27+
 - Pulumi CLI
 - Docker, Kind, kubectl, jq (for local test clusters)
 
