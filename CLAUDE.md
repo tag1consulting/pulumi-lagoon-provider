@@ -399,3 +399,13 @@ Contributions, feedback, and bug reports are welcome! See [CONTRIBUTING.md](CONT
 - [Pulumi Native Providers](https://www.pulumi.com/docs/iac/concepts/resources/providers/)
 - [Lagoon Documentation](https://docs.lagoon.sh/)
 - [Lagoon GraphQL API](https://api.lagoon.sh/graphql)
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues at tag1consulting/pulumi-lagoon-provider, using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
