@@ -337,7 +337,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '8.0'
+          dotnet-version: '10.0.401'
 
       - name: Set version from release tag
         if: github.event_name == 'release'
@@ -380,7 +380,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '8.0'
+          dotnet-version: '10.0.401'
 
       - name: Download artifacts
         uses: actions/download-artifact@v8
@@ -414,7 +414,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '8.0'
+          dotnet-version: '10.0.401'
 
       - name: Download artifacts
         uses: actions/download-artifact@v8
