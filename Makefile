@@ -501,7 +501,7 @@ clean-all: clean
 # Go Provider (Native)
 #==============================================================================
 
-PROVIDER_VERSION ?= 0.5.5
+PROVIDER_VERSION ?= 0.5.6
 PROVIDER_BIN     := provider/bin/pulumi-resource-lagoon
 GO_BIN           ?= $(if $(GOPATH),$(GOPATH)/bin,$(HOME)/go/bin)
 # e2e-build installs the locally-built provider plugin into GO_BIN so Pulumi's
