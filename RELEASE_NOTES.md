@@ -1,3 +1,24 @@
+# Release v0.5.6 (2026-09-24)
+
+Dependency and CI maintenance release. No provider API or schema changes: existing Pulumi programs require no updates. **Consumers of the .NET SDK should review before upgrading**: this release bumps the `dotnet-sdk` build/CI toolchain from v8 to v10, a major version jump (see below).
+
+## Notable Changes
+
+- **`dotnet-sdk` v8 → v10** ([#295](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/295)): a major version bump to the .NET SDK used to build and test the `sdk/dotnet` package. The generated SDK's `TargetFramework` is unaffected (still pinned to `net8.0` in the `.csproj`, patched post-codegen per the release-prep tooling), but the build/CI environment itself now targets .NET 10. If you build the .NET SDK from source rather than consuming the published NuGet package, verify your local toolchain against this change before upgrading.
+- **Go 1.27 CI rollout completed** ([#285](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/285), [#288](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/288)): finished migrating CI to Go 1.27, including aligning `golangci-lint`'s Go version configuration with the new toolchain.
+- **AI PR review enabled on Dependabot PRs** ([#289](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/289), [#290](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/290)): the automated review workflow now runs on Dependabot-authored PRs too, keying off PR author rather than triggering actor so it isn't skipped when Dependabot's own automerge triggers the run.
+
+## Maintenance
+
+- Bumped `golangci-lint` v2.12.2 → v2.13.1 → v2.13.2 → v2.14.0 across three routine Dependabot updates ([#284](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/284), [#291](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/291), [#297](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/297)).
+- Bumped `ruby` to v4.0.7 for the GitHub Pages documentation site build ([#296](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/296)).
+- Bumped `google.golang.org/grpc` and other transitive Go module dependencies across the `provider` and `sdk/go/lagoon` directories via routine Dependabot `go_modules` group updates ([#293](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/293), [#294](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/294)).
+- Bumped npm transitive dependencies in `sdk/nodejs` and `claude/ts-test` via routine Dependabot `npm_and_yarn` group updates ([#287](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/287), [#292](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/292)).
+- Added an atomic `release-publish` Make target that tags the release and the Go SDK module together and verifies both landed on origin before creating the GitHub release, closing the gap that let v0.5.5 skip the Go SDK tag ([#283](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/283)).
+- Scaffolded agent-skill config for the GitHub issue tracker (internal tooling, no runtime effect, [#286](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/286)).
+
+---
+
 # Release v0.5.5 (2026-08-10)
 
 Bug fix, security, and maintenance release. Closes a permanent, unresolvable `Project.branches`/`pullrequests` diff on every `refresh`/`preview` for projects with a `DeployTargetConfig` attached, plus two High-severity Go module advisories (a go-git symlink-following issue in worktree operations, and gRPC-Go xDS RBAC/HTTP2 vulnerabilities) and routine npm transitive dependency refreshes. No provider API or schema changes: existing programs require no updates.
