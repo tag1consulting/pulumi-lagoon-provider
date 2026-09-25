@@ -67,8 +67,8 @@ ensure_port_forwards() {
     log_info "Starting port-forwards..."
 
     # Kill existing port-forwards
-    pkill -f "port-forward.*$KEYCLOAK_SVC" 2>/dev/null || true
-    pkill -f "port-forward.*$API_SVC" 2>/dev/null || true
+    pkill -f "[p]ort-forward.*$KEYCLOAK_SVC" 2>/dev/null || true
+    pkill -f "[p]ort-forward.*$API_SVC" 2>/dev/null || true
     sleep 1
 
     # Start new port-forwards

@@ -29,8 +29,8 @@ if [ -z "$KEYCLOAK_SVC" ] || [ -z "$API_SVC" ]; then
 fi
 
 # Kill any existing port-forwards
-pkill -f "port-forward.*$KEYCLOAK_SVC" 2>/dev/null || true
-pkill -f "port-forward.*$API_SVC" 2>/dev/null || true
+pkill -f "[p]ort-forward.*$KEYCLOAK_SVC" 2>/dev/null || true
+pkill -f "[p]ort-forward.*$API_SVC" 2>/dev/null || true
 sleep 1
 
 # Start Keycloak port-forward
@@ -60,7 +60,7 @@ fi
 
 echo ""
 echo "Port-forwards are running in the background."
-echo "To stop them: pkill -f 'port-forward.*lagoon'"
+echo "To stop them: pkill -f '[p]ort-forward.*lagoon'"
 echo ""
 echo "Service URLs:"
 echo "  Keycloak: http://localhost:8080/auth"
