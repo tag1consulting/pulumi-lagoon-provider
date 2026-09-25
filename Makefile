@@ -419,7 +419,7 @@ e2e-teardown:
 	@kind delete cluster --name lagoon-prod   2>/dev/null || true
 	@kind delete cluster --name lagoon-nonprod 2>/dev/null || true
 	@echo "[e2e-teardown] Stopping port-forwards..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@pkill -f "[p]ort-forward.*lagoon-core" 2>/dev/null || true
 	@echo "[e2e-teardown] Done."
 
 # e2e: the full end-to-end release gate. Runs build -> setup -> deploy -> assert,

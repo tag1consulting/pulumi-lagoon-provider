@@ -87,7 +87,7 @@ start_port_forwards() {
     log_info "Starting port-forwards to $CONTEXT..."
 
     # Kill existing port-forwards
-    pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+    pkill -f "[p]ort-forward.*lagoon-core" 2>/dev/null || true
     sleep 1
 
     # Start new port-forwards

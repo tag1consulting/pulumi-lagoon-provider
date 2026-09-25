@@ -91,7 +91,7 @@ output:
 # Clean up
 clean:
 	@echo "Killing port-forwards..."
-	@pkill -f "port-forward.*lagoon-core" 2>/dev/null || true
+	@pkill -f "[p]ort-forward.*lagoon-core" 2>/dev/null || true
 	@echo "Done."
 
 # Ensure a Python virtual environment exists
