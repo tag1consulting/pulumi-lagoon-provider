@@ -58,6 +58,7 @@ jobs:
       - name: Run AI review
         uses: tag1consulting/ai-pr-review/container-action@main
         with:
+          approval-ceiling: ${{ vars.AI_REVIEW_APPROVAL_CEILING || 'request-changes' }}
           # vars.AI_REVIEW_IMAGE_TAG pins the container image (default 'latest';
           # this repo dogfoods 'dev' ahead of general availability).
           image-tag: ${{ vars.AI_REVIEW_IMAGE_TAG || 'latest' }}
