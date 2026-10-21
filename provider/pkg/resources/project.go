@@ -46,6 +46,16 @@ type ProjectState struct {
 	Created   string `pulumi:"created"`
 }
 
+// WireDependencies tells infer which inputs affect which outputs during a preview.
+// See DeployTarget.WireDependencies for the reason (issue #305). Only the name, which forces a
+// replace, can change the Lagoon project ID.
+func (r *Project) WireDependencies(f infer.FieldSelector, args *ProjectArgs, state *ProjectState) {
+	f.OutputField(&state.LagoonID).DependsOn(f.InputField(&args.Name).Computed())
+	// Wiring any dependency turns off infer's default flow for all outputs, so restate it.
+	f.OutputField(&state.PublicKey).DependsOn(f.InputField(args).Computed())
+	f.OutputField(&state.Created).DependsOn(f.InputField(args).Computed())
+}
+
 // Annotate sets the resource token and field descriptions.
 func (r *Project) Annotate(a infer.Annotator) {
 	a.SetToken("lagoon", "Project")

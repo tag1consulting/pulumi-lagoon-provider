@@ -37,6 +37,17 @@ type EnvironmentState struct {
 	Created  string `pulumi:"created"`
 }
 
+// WireDependencies tells infer which inputs affect which outputs during a preview.
+// See DeployTarget.WireDependencies for the reason (issue #305). Only the name and the project,
+// which both force a replace, can change the Lagoon environment ID.
+func (r *Environment) WireDependencies(f infer.FieldSelector, args *EnvironmentArgs, state *EnvironmentState) {
+	f.OutputField(&state.LagoonID).DependsOn(f.InputField(&args.Name).Computed(), f.InputField(&args.ProjectID).Computed())
+	// Wiring any dependency turns off infer's default flow for all outputs, so restate it.
+	f.OutputField(&state.Route).DependsOn(f.InputField(args).Computed())
+	f.OutputField(&state.Routes).DependsOn(f.InputField(args).Computed())
+	f.OutputField(&state.Created).DependsOn(f.InputField(args).Computed())
+}
+
 func (r *Environment) Annotate(a infer.Annotator) {
 	a.SetToken("lagoon", "Environment")
 	a.Describe(&r, "Manages a Lagoon environment (branch/PR deployment).")

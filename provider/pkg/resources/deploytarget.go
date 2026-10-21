@@ -37,6 +37,18 @@ func (r *DeployTarget) Annotate(a infer.Annotator) {
 	a.Describe(&r, "Manages a Lagoon Kubernetes deploy target (cluster).")
 }
 
+// WireDependencies tells infer which inputs affect which outputs during a preview.
+//
+// Without it, infer assumes that every input affects every output, so any change to a
+// DeployTarget input made lagoonId unknown. That unknown spread to the Project and then to the
+// Environment and DeployTargetConfig, whose Diff replaces on an ID change (issue #305).
+// Lagoon assigns lagoonId once, so only the name, which forces a replace, can change it.
+func (r *DeployTarget) WireDependencies(f infer.FieldSelector, args *DeployTargetArgs, state *DeployTargetState) {
+	f.OutputField(&state.LagoonID).DependsOn(f.InputField(&args.Name).Computed())
+	// Wiring any dependency turns off infer's default flow for all outputs, so restate it.
+	f.OutputField(&state.Created).DependsOn(f.InputField(args).Computed())
+}
+
 func (a *DeployTargetArgs) Annotate(an infer.Annotator) {
 	an.Describe(&a.Name, "The deploy target name.")
 	an.Describe(&a.ConsoleURL, "The Kubernetes API URL.")
