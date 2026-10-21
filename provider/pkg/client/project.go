@@ -101,6 +101,34 @@ func (c *Client) GetProjectByName(ctx context.Context, name string) (*Project, e
 	return &p, nil
 }
 
+// GetProjectEnvironmentNames returns the names of the active (not deleted) environments of a project.
+// Lagoon sets the deleted timestamp of an environment only after the cluster confirms its removal,
+// so an environment that is being removed is still listed here.
+func (c *Client) GetProjectEnvironmentNames(ctx context.Context, name string) ([]string, error) {
+	data, err := c.Execute(ctx, queryProjectEnvironmentNames, map[string]any{"name": name})
+	if err != nil {
+		return nil, err
+	}
+
+	raw, err := unmarshalField[*struct {
+		Environments []struct {
+			Name string `json:"name"`
+		} `json:"environments"`
+	}](data, "projectByName")
+	if err != nil {
+		return nil, err
+	}
+	if raw == nil {
+		return nil, &LagoonNotFoundError{ResourceType: "Project", Identifier: name}
+	}
+
+	names := make([]string, 0, len(raw.Environments))
+	for _, e := range raw.Environments {
+		names = append(names, e.Name)
+	}
+	return names, nil
+}
+
 // GetProjectByID retrieves a project by ID (queries all projects and filters).
 //
 // TODO(#201): The Lagoon GraphQL API does not expose a `projectById` query as of

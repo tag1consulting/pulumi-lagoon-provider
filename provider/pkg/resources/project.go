@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	p "github.com/pulumi/pulumi-go-provider"
@@ -20,6 +21,10 @@ var (
 	projectDeleteTimeout   = 15 * time.Minute
 	projectDeleteBaseDelay = 5 * time.Second
 	projectDeleteMaxDelay  = 30 * time.Second
+	// projectDeleteStallTimeout ends the wait early when none of the active environments has
+	// gone away for this long. Lagoon removed 6 environments about 50 seconds apart in the
+	// report behind #313, so this leaves a wide margin.
+	projectDeleteStallTimeout = 5 * time.Minute
 )
 
 // Project manages a Lagoon project resource.
@@ -175,11 +180,15 @@ func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectSta
 
 	// Lagoon removes environments asynchronously, so deleteProject can be refused
 	// while a previous environment delete is still running. Retry only that error.
-	// The refusal text only says that environments exist, so the wait also covers
-	// environments that nothing is removing. Those end in the timeout error below.
+	// Lagoon does not say whether a removal is running: an environment keeps its active state
+	// until the cluster confirms the removal. So the wait ends early only when the list of
+	// active environments stops getting shorter, and otherwise at the overall timeout.
 	start := time.Now()
 	deadline := start.Add(projectDeleteTimeout)
 	delay := projectDeleteBaseDelay
+	var progress environmentProgress
+	var remaining []string
+	warnedQuery := false
 	for attempt := 1; ; attempt++ {
 		err := c.DeleteProject(ctx, name)
 		if err == nil {
@@ -196,25 +205,93 @@ func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectSta
 			return infer.DeleteResponse{}, fmt.Errorf("failed to delete project: %w", err)
 		}
 
+		// Listing the environments is best effort. Without it the wait only has the overall timeout.
+		names, listErr := c.GetProjectEnvironmentNames(ctx, name)
+		switch {
+		case listErr == nil:
+			remaining = names
+			progress.observe(names, time.Now())
+		case !warnedQuery && !errors.Is(listErr, client.ErrNotFound):
+			warnedQuery = true
+			p.GetLogger(ctx).Warningf("Project %s: could not list the project's environments, so the wait cannot end early: %v", name, listErr)
+		}
+
+		elapsed := time.Since(start).Round(time.Second)
+		if progress.stalled(time.Now(), projectDeleteStallTimeout) {
+			return infer.DeleteResponse{}, fmt.Errorf(
+				"failed to delete project: project %q still has %d active environments%s, and the list has not gone down for %s (%d attempts in %s). "+
+					"Pulumi does not remove environments that it does not manage. "+
+					"Remove them in Lagoon, then run `pulumi up` again: %w",
+				name, len(remaining), describeEnvironments(remaining), projectDeleteStallTimeout, attempt, elapsed, err)
+		}
 		if !time.Now().Add(delay).Before(deadline) {
 			return infer.DeleteResponse{}, fmt.Errorf(
-				"failed to delete project: project %q still has active environments after %d attempts in %s. "+
+				"failed to delete project: project %q still has active environments%s after %d attempts in %s. "+
 					"Remove the remaining environments in Lagoon (for example, environments that Pulumi does not manage), "+
-					"then run `pulumi up` again: %w", name, attempt, time.Since(start).Round(time.Second), err)
+					"then run `pulumi up` again: %w", name, describeEnvironments(remaining), attempt, elapsed, err)
 		}
-		p.GetLogger(ctx).Infof("Project %s: project still has environments, retrying delete in %s (attempt %d)", name, delay, attempt)
+		p.GetLogger(ctx).Infof("Project %s: project still has environments%s, retrying delete in %s (attempt %d)", name, describeEnvironments(remaining), delay, attempt)
 
 		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
 			timer.Stop()
 			return infer.DeleteResponse{}, fmt.Errorf(
-				"delete of project %q stopped after %d attempts in %s while environments still existed (%w), last Lagoon error: %v",
-				name, attempt, time.Since(start).Round(time.Second), ctx.Err(), err)
+				"delete of project %q stopped after %d attempts in %s while environments still existed%s (%w), last Lagoon error: %v",
+				name, attempt, elapsed, describeEnvironments(remaining), ctx.Err(), err)
 		case <-timer.C:
 		}
 		delay = nextProjectDeleteDelay(delay)
 	}
+}
+
+// environmentProgress tracks whether the active environments of a project are going away.
+type environmentProgress struct {
+	seen  map[string]bool
+	since time.Time // last time an environment disappeared, or the first observation
+}
+
+// observe records the active environments. Progress is any environment seen earlier that is
+// gone now, or an empty list.
+func (e *environmentProgress) observe(names []string, now time.Time) {
+	current := make(map[string]bool, len(names))
+	for _, n := range names {
+		current[n] = true
+	}
+	if e.seen == nil {
+		e.since = now
+	} else {
+		for n := range e.seen {
+			if !current[n] {
+				e.since = now
+				break
+			}
+		}
+	}
+	if len(current) == 0 {
+		e.since = now
+	}
+	e.seen = current
+}
+
+// stalled reports whether no environment has gone away for the timeout.
+func (e *environmentProgress) stalled(now time.Time, timeout time.Duration) bool {
+	return e.seen != nil && now.Sub(e.since) >= timeout
+}
+
+// describeEnvironments formats up to 10 environment names for an error or log line.
+func describeEnvironments(names []string) string {
+	if len(names) == 0 {
+		return ""
+	}
+	const limit = 10
+	shown := names
+	more := ""
+	if len(names) > limit {
+		shown = names[:limit]
+		more = fmt.Sprintf(" and %d more", len(names)-limit)
+	}
+	return " (" + strings.Join(shown, ", ") + more + ")"
 }
 
 // nextProjectDeleteDelay doubles the delay, caps it at projectDeleteMaxDelay, then adds up to 25% jitter.

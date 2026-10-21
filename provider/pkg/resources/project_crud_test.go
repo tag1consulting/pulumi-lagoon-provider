@@ -272,10 +272,12 @@ func TestProjectDelete_APIError(t *testing.T) {
 // It changes package-level vars, so do not use it in tests that call t.Parallel.
 func fastProjectDeleteWait(t *testing.T, timeout time.Duration) {
 	t.Helper()
-	oldTimeout, oldBase, oldMax := projectDeleteTimeout, projectDeleteBaseDelay, projectDeleteMaxDelay
+	oldTimeout, oldBase, oldMax, oldStall := projectDeleteTimeout, projectDeleteBaseDelay, projectDeleteMaxDelay, projectDeleteStallTimeout
 	projectDeleteTimeout, projectDeleteBaseDelay, projectDeleteMaxDelay = timeout, time.Millisecond, 2*time.Millisecond
+	projectDeleteStallTimeout = timeout // no stall detection before the overall timeout unless a test lowers it
 	t.Cleanup(func() {
 		projectDeleteTimeout, projectDeleteBaseDelay, projectDeleteMaxDelay = oldTimeout, oldBase, oldMax
+		projectDeleteStallTimeout = oldStall
 	})
 }
 
@@ -369,6 +371,118 @@ func TestProjectDelete_ContextCancelledDuringWait(t *testing.T) {
 	}
 	if time.Since(start) > 5*time.Second {
 		t.Errorf("cancel should end the wait quickly, took %s", time.Since(start))
+	}
+}
+
+func TestProjectDelete_FailsEarlyWhenEnvironmentsDoNotGoAway(t *testing.T) {
+	fastProjectDeleteWait(t, 30*time.Second)
+	projectDeleteStallTimeout = 40 * time.Millisecond
+	mock := &mockLagoonClient{
+		deleteProjectFn: func(_ context.Context, _ string) error { return errEnvsRemaining },
+		getProjectEnvironmentNamesFn: func(_ context.Context, _ string) ([]string, error) {
+			return []string{"main", "pr-7"}, nil
+		},
+	}
+	start := time.Now()
+	_, err := (&Project{}).Delete(testCtx(mock), projectDeleteReq())
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	if time.Since(start) > 5*time.Second {
+		t.Errorf("delete should fail after the stall timeout, not the overall timeout, took %s", time.Since(start))
+	}
+	for _, want := range []string{"main", "pr-7", "has not gone down", "does not manage"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error should contain %q, got: %v", want, err)
+		}
+	}
+	if !client.IsEnvironmentsRemaining(err) {
+		t.Errorf("error should wrap the last API error, got: %v", err)
+	}
+}
+
+func TestProjectDelete_KeepsWaitingWhileEnvironmentsDisappear(t *testing.T) {
+	fastProjectDeleteWait(t, 30*time.Second)
+	projectDeleteStallTimeout = 40 * time.Millisecond
+	lists := [][]string{{"a", "b", "c"}, {"a", "b"}, {"a"}, {}}
+	queries, deletes := 0, 0
+	mock := &mockLagoonClient{
+		deleteProjectFn: func(_ context.Context, _ string) error {
+			deletes++
+			if deletes <= len(lists) {
+				return errEnvsRemaining
+			}
+			return nil
+		},
+		getProjectEnvironmentNamesFn: func(_ context.Context, _ string) ([]string, error) {
+			l := lists[queries]
+			queries++
+			time.Sleep(25 * time.Millisecond) // each step is slower than half of the stall timeout
+			return l, nil
+		},
+	}
+	if _, err := (&Project{}).Delete(testCtx(mock), projectDeleteReq()); err != nil {
+		t.Fatalf("delete should succeed while environments keep disappearing: %v", err)
+	}
+	if deletes != len(lists)+1 {
+		t.Errorf("expected %d delete calls, got %d", len(lists)+1, deletes)
+	}
+}
+
+func TestProjectDelete_EnvironmentQueryFailureIsNotFatal(t *testing.T) {
+	fastProjectDeleteWait(t, time.Second)
+	deletes := 0
+	mock := &mockLagoonClient{
+		deleteProjectFn: func(_ context.Context, _ string) error {
+			deletes++
+			if deletes <= 2 {
+				return errEnvsRemaining
+			}
+			return nil
+		},
+		getProjectEnvironmentNamesFn: func(_ context.Context, _ string) ([]string, error) {
+			return nil, &client.LagoonAPIError{Message: "boom"}
+		},
+	}
+	if _, err := (&Project{}).Delete(testCtx(mock), projectDeleteReq()); err != nil {
+		t.Fatalf("a failing environment query must not fail the delete: %v", err)
+	}
+	if deletes != 3 {
+		t.Errorf("expected 3 delete calls, got %d", deletes)
+	}
+}
+
+func TestProjectDelete_TimeoutErrorListsRemainingEnvironments(t *testing.T) {
+	fastProjectDeleteWait(t, 30*time.Millisecond)
+	mock := &mockLagoonClient{
+		deleteProjectFn: func(_ context.Context, _ string) error { return errEnvsRemaining },
+		getProjectEnvironmentNamesFn: func(_ context.Context, _ string) ([]string, error) {
+			return []string{"main"}, nil
+		},
+	}
+	_, err := (&Project{}).Delete(testCtx(mock), projectDeleteReq())
+	if err == nil || !strings.Contains(err.Error(), "main") {
+		t.Fatalf("timeout error should list the remaining environments, got: %v", err)
+	}
+}
+
+func TestProjectDelete_NoEnvironmentsListedDoesNotCountAsStall(t *testing.T) {
+	// An empty list after a refusal means the environments finished removing in between.
+	fastProjectDeleteWait(t, time.Second)
+	projectDeleteStallTimeout = 5 * time.Millisecond
+	deletes := 0
+	mock := &mockLagoonClient{
+		deleteProjectFn: func(_ context.Context, _ string) error {
+			deletes++
+			if deletes <= 6 {
+				time.Sleep(3 * time.Millisecond)
+				return errEnvsRemaining
+			}
+			return nil
+		},
+	}
+	if _, err := (&Project{}).Delete(testCtx(mock), projectDeleteReq()); err != nil {
+		t.Fatalf("an empty environment list must not trigger the stall error: %v", err)
 	}
 }
 
