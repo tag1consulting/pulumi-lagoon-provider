@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"reflect"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/blang/semver"
@@ -9,6 +12,7 @@ import (
 	"github.com/pulumi/pulumi-go-provider/integration"
 	presource "github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/property"
+	"github.com/tag1consulting/pulumi-lagoon/provider/pkg/resources"
 )
 
 // These tests drive the real infer layer in preview (dry run) mode. A unit test of the
@@ -156,6 +160,39 @@ func TestPreviewCreate_LagoonIDIsUnknown(t *testing.T) {
 			}
 			if v := resp.Properties.Get("lagoonId"); !v.IsComputed() {
 				t.Errorf("lagoonId must be unknown in a create preview, got %v", v)
+			}
+		})
+	}
+}
+
+// WireDependencies turns off infer's default computedness flow for every output of the
+// resource, so each output that is not an input must be wired by hand. This test fails when a
+// state type gains an output field. Wire the new field in WireDependencies, add a case to
+// previewCases, then add the field name here.
+func TestPreviewWiring_CoversEveryOutputField(t *testing.T) {
+	cases := []struct {
+		name  string
+		state any
+		want  []string
+	}{
+		{"DeployTarget", resources.DeployTargetState{}, []string{"created", "lagoonId"}},
+		{"Project", resources.ProjectState{}, []string{"created", "lagoonId", "publicKey"}},
+		{"Environment", resources.EnvironmentState{}, []string{"created", "lagoonId", "route", "routes"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var got []string
+			typ := reflect.TypeOf(tc.state)
+			for i := 0; i < typ.NumField(); i++ {
+				f := typ.Field(i)
+				if f.Anonymous {
+					continue // embedded inputs mirror the args and keep their value
+				}
+				got = append(got, strings.Split(f.Tag.Get("pulumi"), ",")[0])
+			}
+			sort.Strings(got)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("output fields of %s changed: got %v, want %v. Update WireDependencies and previewCases first.", tc.name, got, tc.want)
 			}
 		})
 	}
