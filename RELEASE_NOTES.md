@@ -1,3 +1,14 @@
+# Release v0.5.8 (2026-10-21)
+
+Bug fix release. Fixes a preview that planned to replace resources that had not changed, and makes a `Project` delete stop waiting sooner when its environments are not going away. No provider API or schema changes: existing Pulumi programs require no updates.
+
+## Bug Fixes
+
+- **`pulumi preview` planned a replace of unchanged resources after an unrelated in-place update** ([#305](https://github.com/tag1consulting/pulumi-lagoon-provider/issues/305), [#317](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/317)): a change to any updatable input of a `DeployTarget`, for example `buildImage`, made its `lagoonId` output unknown in the preview. The unknown value spread through `Project` to the `projectId` and `deployTargetId` inputs of `Environment` and `DeployTargetConfig`. Those inputs force a replace, so the preview showed a replace of resources that had not changed, and an untargeted `pulumi up` from that preview risked deleting an `Environment`. `DeployTarget`, `Project` and `Environment` now tell Pulumi which inputs affect `lagoonId`. It stays unknown when the resource is created, or when its name changes (for an `Environment`, also its project). It stays known on an unrelated update. This change affects previews only, so the apply path is unchanged. Limit: Pulumi's provider framework detects a changed optional input in a preview only when that input had a value before. This was already the case and is not changed here.
+- **`Project` delete waited the full 15 minutes when environments never went away** ([#315](https://github.com/tag1consulting/pulumi-lagoon-provider/issues/315), [#319](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/319)): v0.5.7 made `Project` delete retry for up to 15 minutes while Lagoon still listed environments. Environments that Pulumi does not manage are never removed, so a project with such environments waited the full 15 minutes before it failed. Lagoon does not report whether an environment removal is running, because an environment stays active until the cluster confirms the removal. So the delete now tracks progress. After each refusal it lists the project's active environments. If none of the environments seen earlier has gone away for 5 minutes, the delete fails. The error lists the remaining environments, and the retry log lines name them too. The 15 minute cap stays. This is a shorter wait, not an instant failure. One environment that needs more than 5 minutes to remove, while no other finishes, also ends the wait early, and a second `pulumi up` continues the delete. If the environment query fails, the delete logs a warning and keeps waiting under the 15 minute cap.
+
+---
+
 # Release v0.5.7 (2026-10-21)
 
 Bug fix and maintenance release. Fixes a `Project` delete that failed while Lagoon was still removing the project's environments. No provider API or schema changes: existing Pulumi programs require no updates.
