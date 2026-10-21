@@ -1,3 +1,20 @@
+# Release v0.5.7 (2026-10-21)
+
+Bug fix and maintenance release. Fixes a `Project` delete that failed while Lagoon was still removing the project's environments. No provider API or schema changes: existing Pulumi programs require no updates.
+
+## Bug Fixes
+
+- **`Project` delete failed while environments were still being removed** ([#313](https://github.com/tag1consulting/pulumi-lagoon-provider/issues/313), [#314](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/314)): Lagoon removes environments asynchronously, so `deleteProject` could be refused with "there are existing environments that need to be removed first". The update then failed and the project stayed in Pulumi state until a second `pulumi up`. `Project` delete now retries only that error, with backoff, for up to 15 minutes. A `customTimeouts.delete` shorter than that ends the wait earlier. A "not found" result during the wait counts as success. The provider still does not delete environments that are not in Pulumi state. If such environments remain, the delete fails after the wait, and the error tells you to remove them in Lagoon. Follow-up: [#315](https://github.com/tag1consulting/pulumi-lagoon-provider/issues/315) tracks failing fast when no environment is being removed.
+- **`pkill` self-match in the example port-forward helper scripts** ([#299](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/299)): fixed a `pkill` pattern that could match the helper script's own process in the port-forward teardown and cleanup helpers under `scripts/`.
+
+## Maintenance
+
+- Bumped `golangci-lint` to v2.15.0 ([#309](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/309)), `goreleaser/goreleaser-action` to v7.3.0 ([#304](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/304)), `dotnet-sdk` to v10.0.402 ([#306](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/306)), and `pypa/gh-action-pypi-publish` to v1.14.3 ([#312](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/312)). The last one is the action that publishes the Python package, so this release is the first to publish with it.
+- Bumped npm transitive dependencies in `sdk/nodejs` and related directories, including `@grpc/grpc-js` 1.14.4 → 1.14.5, via routine Dependabot `npm_and_yarn` updates ([#300](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/300), [#301](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/301), [#302](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/302), [#307](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/307)).
+- Updated the AI PR review workflow inputs for the v2.24.0 template, including `AI_REVIEW_APPROVAL_CEILING` (internal CI tooling, no runtime effect, [#310](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/310), [#311](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/311)).
+
+---
+
 # Release v0.5.6 (2026-09-24)
 
 Dependency and CI maintenance release. No provider API or schema changes: existing Pulumi programs require no updates. **Consumers of the .NET SDK should review before upgrading**: this release bumps the `dotnet-sdk` build/CI toolchain from v8 to v10, a major version jump (see below).
