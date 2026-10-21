@@ -1,3 +1,13 @@
+# Release v0.5.8 (2026-10-21)
+
+Bug fix release. Fixes a preview that planned to replace resources that had not changed. No provider API or schema changes: existing Pulumi programs require no updates.
+
+## Bug Fixes
+
+- **`pulumi preview` planned a replace of unchanged resources after an unrelated in-place update** ([#305](https://github.com/tag1consulting/pulumi-lagoon-provider/issues/305), [#317](https://github.com/tag1consulting/pulumi-lagoon-provider/pull/317)): a change to any updatable input of a `DeployTarget`, for example `buildImage`, made its `lagoonId` output unknown in the preview. The unknown value spread through `Project` to the `projectId` and `deployTargetId` inputs of `Environment` and `DeployTargetConfig`. Those inputs force a replace, so the preview showed a replace of resources that had not changed, and an untargeted `pulumi up` from that preview risked deleting an `Environment`. `DeployTarget`, `Project` and `Environment` now tell Pulumi which inputs affect `lagoonId`. It stays unknown when the resource is created, or when its name changes (for an `Environment`, also its project). It stays known on an unrelated update. This change affects previews only, so the apply path is unchanged. Limit: Pulumi's provider framework detects a changed optional input in a preview only when that input had a value before. This was already the case and is not changed here.
+
+---
+
 # Release v0.5.7 (2026-10-21)
 
 Bug fix and maintenance release. Fixes a `Project` delete that failed while Lagoon was still removing the project's environments. No provider API or schema changes: existing Pulumi programs require no updates.
