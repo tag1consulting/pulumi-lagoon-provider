@@ -215,6 +215,19 @@ func TestDeleteProject(t *testing.T) {
 	}
 }
 
+func TestDeleteProject_EnvironmentsRemaining(t *testing.T) {
+	server := mockGraphQLServer(t, func(_ string, _ map[string]any) (any, error) {
+		return nil, errors.New("Unable to delete project, there are existing environments that need to be removed first")
+	})
+	defer server.Close()
+
+	c := NewClient(server.URL, "token")
+	err := c.DeleteProject(context.Background(), "my-project")
+	if !IsEnvironmentsRemaining(err) {
+		t.Fatalf("expected IsEnvironmentsRemaining for a GraphQL refusal, got: %v", err)
+	}
+}
+
 func TestNormalizeProject_NilOpenshift(t *testing.T) {
 	raw := projectRaw{
 		ID:     1,

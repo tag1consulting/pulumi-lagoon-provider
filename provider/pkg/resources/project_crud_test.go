@@ -269,6 +269,7 @@ func TestProjectDelete_APIError(t *testing.T) {
 }
 
 // fastProjectDeleteWait shortens the project delete wait so tests finish quickly.
+// It changes package-level vars, so do not use it in tests that call t.Parallel.
 func fastProjectDeleteWait(t *testing.T, timeout time.Duration) {
 	t.Helper()
 	oldTimeout, oldBase, oldMax := projectDeleteTimeout, projectDeleteBaseDelay, projectDeleteMaxDelay
@@ -363,8 +364,39 @@ func TestProjectDelete_ContextCancelledDuringWait(t *testing.T) {
 	if err == nil || !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context.Canceled, got: %v", err)
 	}
+	if !strings.Contains(err.Error(), "myproject") || !strings.Contains(err.Error(), "existing environments") {
+		t.Errorf("cancel error should name the project and keep the last Lagoon error, got: %v", err)
+	}
 	if time.Since(start) > 5*time.Second {
 		t.Errorf("cancel should end the wait quickly, took %s", time.Since(start))
+	}
+}
+
+func TestNextProjectDeleteDelay(t *testing.T) {
+	old := projectDeleteMaxDelay
+	projectDeleteMaxDelay = 30 * time.Second
+	t.Cleanup(func() { projectDeleteMaxDelay = old })
+
+	tests := []struct {
+		name     string
+		in       time.Duration
+		min, max time.Duration
+	}{
+		{"doubles below the cap", 5 * time.Second, 10 * time.Second, 12500 * time.Millisecond},
+		{"capped at the max plus jitter", 20 * time.Second, 30 * time.Second, 37500 * time.Millisecond},
+		{"already at the cap", 30 * time.Second, 30 * time.Second, 37500 * time.Millisecond},
+		{"tiny delay does not panic", time.Nanosecond, 2 * time.Nanosecond, 2 * time.Nanosecond},
+		{"zero delay does not panic", 0, 0, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for i := 0; i < 200; i++ {
+				got := nextProjectDeleteDelay(tt.in)
+				if got < tt.min || got > tt.max {
+					t.Fatalf("nextProjectDeleteDelay(%s) = %s, want within [%s, %s]", tt.in, got, tt.min, tt.max)
+				}
+			}
+		})
 	}
 }
 

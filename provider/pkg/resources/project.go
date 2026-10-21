@@ -14,7 +14,8 @@ import (
 )
 
 // Project delete wait settings. These are variables so tests can shorten them.
-// infer.DeleteRequest carries no timeout, so customTimeouts.delete does not apply here.
+// infer.DeleteRequest does not expose the delete timeout. A customTimeouts.delete reaches
+// Delete only as a deadline on ctx, so the shorter of that deadline and projectDeleteTimeout wins.
 var (
 	projectDeleteTimeout   = 15 * time.Minute
 	projectDeleteBaseDelay = 5 * time.Second
@@ -164,11 +165,17 @@ func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectSta
 
 	// Lagoon removes environments asynchronously, so deleteProject can be refused
 	// while a previous environment delete is still running. Retry only that error.
-	deadline := time.Now().Add(projectDeleteTimeout)
+	// The refusal text only says that environments exist, so the wait also covers
+	// environments that nothing is removing. Those end in the timeout error below.
+	start := time.Now()
+	deadline := start.Add(projectDeleteTimeout)
 	delay := projectDeleteBaseDelay
-	for {
+	for attempt := 1; ; attempt++ {
 		err := c.DeleteProject(ctx, name)
 		if err == nil {
+			if attempt > 1 {
+				p.GetLogger(ctx).Infof("Project %s: deleted after %d attempts in %s", name, attempt, time.Since(start).Round(time.Second))
+			}
 			return infer.DeleteResponse{}, nil
 		}
 		// Treat "not found" as success — resource is already gone
@@ -181,24 +188,27 @@ func (r *Project) Delete(ctx context.Context, req infer.DeleteRequest[ProjectSta
 
 		if !time.Now().Add(delay).Before(deadline) {
 			return infer.DeleteResponse{}, fmt.Errorf(
-				"failed to delete project: project %q still has active environments after %s. "+
+				"failed to delete project: project %q still has active environments after %d attempts in %s. "+
 					"Remove the remaining environments in Lagoon (for example, environments that Pulumi does not manage), "+
-					"then run `pulumi up` again: %w", name, projectDeleteTimeout, err)
+					"then run `pulumi up` again: %w", name, attempt, time.Since(start).Round(time.Second), err)
 		}
-		p.GetLogger(ctx).Infof("Project %s: environments are still being removed, retrying delete in %s", name, delay)
+		p.GetLogger(ctx).Infof("Project %s: project still has environments, retrying delete in %s (attempt %d)", name, delay, attempt)
 
 		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
 			timer.Stop()
-			return infer.DeleteResponse{}, fmt.Errorf("failed to delete project: %w", ctx.Err())
+			return infer.DeleteResponse{}, fmt.Errorf(
+				"delete of project %q stopped after %d attempts in %s while environments still existed (%w), last Lagoon error: %v",
+				name, attempt, time.Since(start).Round(time.Second), ctx.Err(), err)
 		case <-timer.C:
 		}
 		delay = nextProjectDeleteDelay(delay)
 	}
 }
 
-// nextProjectDeleteDelay doubles the delay up to projectDeleteMaxDelay and adds up to 25% jitter.
+// nextProjectDeleteDelay doubles the delay, caps it at projectDeleteMaxDelay, then adds up to 25% jitter.
+// The jitter is added after the cap, so the result can exceed projectDeleteMaxDelay by up to 25%.
 func nextProjectDeleteDelay(d time.Duration) time.Duration {
 	d *= 2
 	if d > projectDeleteMaxDelay {

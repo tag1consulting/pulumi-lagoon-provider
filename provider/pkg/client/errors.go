@@ -85,7 +85,7 @@ var (
 	ErrRateLimit      = errors.New("lagoon rate limit")
 
 	// ErrEnvironmentsRemaining means deleteProject was refused because the
-	// project still has environments that Lagoon is removing asynchronously.
+	// project still has environments, possibly ones that Lagoon is removing asynchronously.
 	ErrEnvironmentsRemaining = errors.New("lagoon project has remaining environments")
 )
 
