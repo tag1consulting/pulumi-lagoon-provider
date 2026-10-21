@@ -2,9 +2,11 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	p "github.com/pulumi/pulumi-go-provider"
 	"github.com/pulumi/pulumi-go-provider/infer"
@@ -263,6 +265,123 @@ func TestProjectDelete_APIError(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+// fastProjectDeleteWait shortens the project delete wait so tests finish quickly.
+func fastProjectDeleteWait(t *testing.T, timeout time.Duration) {
+	t.Helper()
+	oldTimeout, oldBase, oldMax := projectDeleteTimeout, projectDeleteBaseDelay, projectDeleteMaxDelay
+	projectDeleteTimeout, projectDeleteBaseDelay, projectDeleteMaxDelay = timeout, time.Millisecond, 2*time.Millisecond
+	t.Cleanup(func() {
+		projectDeleteTimeout, projectDeleteBaseDelay, projectDeleteMaxDelay = oldTimeout, oldBase, oldMax
+	})
+}
+
+var errEnvsRemaining = &client.LagoonAPIError{Message: "Unable to delete project, there are existing environments that need to be removed first"}
+
+func projectDeleteReq() infer.DeleteRequest[ProjectState] {
+	return infer.DeleteRequest[ProjectState]{
+		ID:    "42",
+		State: ProjectState{ProjectArgs: ProjectArgs{Name: "myproject"}, LagoonID: 42},
+	}
+}
+
+func TestProjectDelete_RetriesWhileEnvironmentsRemain(t *testing.T) {
+	fastProjectDeleteWait(t, time.Second)
+	calls := 0
+	mock := &mockLagoonClient{
+		deleteProjectFn: func(_ context.Context, _ string) error {
+			calls++
+			if calls <= 2 {
+				return errEnvsRemaining
+			}
+			return nil
+		},
+	}
+	if _, err := (&Project{}).Delete(testCtx(mock), projectDeleteReq()); err != nil {
+		t.Fatalf("Delete should succeed after retries: %v", err)
+	}
+	if calls != 3 {
+		t.Errorf("expected 3 delete calls, got %d", calls)
+	}
+}
+
+func TestProjectDelete_NotFoundDuringRetryIsSuccess(t *testing.T) {
+	fastProjectDeleteWait(t, time.Second)
+	calls := 0
+	mock := &mockLagoonClient{
+		deleteProjectFn: func(_ context.Context, _ string) error {
+			calls++
+			if calls <= 2 {
+				return errEnvsRemaining
+			}
+			return &client.LagoonNotFoundError{ResourceType: "Project", Identifier: "myproject"}
+		},
+	}
+	if _, err := (&Project{}).Delete(testCtx(mock), projectDeleteReq()); err != nil {
+		t.Fatalf("NotFound during retry should succeed: %v", err)
+	}
+}
+
+func TestProjectDelete_TimesOutWhileEnvironmentsRemain(t *testing.T) {
+	fastProjectDeleteWait(t, 30*time.Millisecond)
+	calls := 0
+	mock := &mockLagoonClient{
+		deleteProjectFn: func(_ context.Context, _ string) error {
+			calls++
+			return errEnvsRemaining
+		},
+	}
+	_, err := (&Project{}).Delete(testCtx(mock), projectDeleteReq())
+	if err == nil {
+		t.Fatal("expected timeout error")
+	}
+	if !strings.Contains(err.Error(), "still has active environments") {
+		t.Errorf("error should explain active environments remain, got: %v", err)
+	}
+	if !client.IsEnvironmentsRemaining(err) {
+		t.Errorf("error should wrap the last API error, got: %v", err)
+	}
+	if calls < 2 {
+		t.Errorf("expected at least 2 delete calls, got %d", calls)
+	}
+}
+
+func TestProjectDelete_ContextCancelledDuringWait(t *testing.T) {
+	fastProjectDeleteWait(t, time.Hour)
+	projectDeleteBaseDelay, projectDeleteMaxDelay = time.Minute, time.Minute
+	ctx, cancel := context.WithCancel(context.Background())
+	mock := &mockLagoonClient{
+		deleteProjectFn: func(_ context.Context, _ string) error {
+			cancel()
+			return errEnvsRemaining
+		},
+	}
+	start := time.Now()
+	_, err := (&Project{}).Delete(withTestClient(ctx, mock), projectDeleteReq())
+	if err == nil || !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got: %v", err)
+	}
+	if time.Since(start) > 5*time.Second {
+		t.Errorf("cancel should end the wait quickly, took %s", time.Since(start))
+	}
+}
+
+func TestProjectDelete_OtherAPIErrorNotRetried(t *testing.T) {
+	fastProjectDeleteWait(t, time.Second)
+	calls := 0
+	mock := &mockLagoonClient{
+		deleteProjectFn: func(_ context.Context, _ string) error {
+			calls++
+			return &client.LagoonAPIError{Message: "forbidden"}
+		},
+	}
+	if _, err := (&Project{}).Delete(testCtx(mock), projectDeleteReq()); err == nil {
+		t.Fatal("expected error")
+	}
+	if calls != 1 {
+		t.Errorf("non-matching error must not be retried, got %d calls", calls)
 	}
 }
 
