@@ -47,6 +47,17 @@ query ProjectByName($name: String!) {
     }
 }`
 
+// queryProjectEnvironmentNames lists the active environments of a project.
+// The environments field hides deleted environments unless includeDeleted is set.
+const queryProjectEnvironmentNames = `
+query ProjectEnvironmentNames($name: String!) {
+    projectByName(name: $name) {
+        environments {
+            name
+        }
+    }
+}`
+
 const queryAllProjects = `
 query AllProjects {
     allProjects {

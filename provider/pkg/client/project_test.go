@@ -343,3 +343,53 @@ func TestUpdateProject_MalformedResponse(t *testing.T) {
 		t.Errorf("expected unmarshal error, got: %v", err)
 	}
 }
+
+func TestGetProjectEnvironmentNames(t *testing.T) {
+	server := mockGraphQLServer(t, func(query string, variables map[string]any) (any, error) {
+		if !strings.Contains(query, "projectByName") || !strings.Contains(query, "environments") {
+			t.Errorf("expected a projectByName query with environments, got %q", query)
+		}
+		if strings.Contains(query, "includeDeleted") {
+			t.Errorf("query must use the default, which hides deleted environments")
+		}
+		if variables["name"] != "my-project" {
+			t.Errorf("expected name variable 'my-project', got %v", variables["name"])
+		}
+		return map[string]any{"projectByName": map[string]any{
+			"environments": []map[string]any{{"name": "main"}, {"name": "pr-7"}},
+		}}, nil
+	})
+	defer server.Close()
+
+	names, err := NewClient(server.URL, "token").GetProjectEnvironmentNames(context.Background(), "my-project")
+	if err != nil {
+		t.Fatalf("GetProjectEnvironmentNames failed: %v", err)
+	}
+	if len(names) != 2 || names[0] != "main" || names[1] != "pr-7" {
+		t.Errorf("unexpected names: %v", names)
+	}
+}
+
+func TestGetProjectEnvironmentNames_ProjectNotFound(t *testing.T) {
+	server := mockGraphQLServer(t, func(_ string, _ map[string]any) (any, error) {
+		return map[string]any{"projectByName": nil}, nil
+	})
+	defer server.Close()
+
+	_, err := NewClient(server.URL, "token").GetProjectEnvironmentNames(context.Background(), "gone")
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got: %v", err)
+	}
+}
+
+func TestGetProjectEnvironmentNames_NoEnvironments(t *testing.T) {
+	server := mockGraphQLServer(t, func(_ string, _ map[string]any) (any, error) {
+		return map[string]any{"projectByName": map[string]any{"environments": nil}}, nil
+	})
+	defer server.Close()
+
+	names, err := NewClient(server.URL, "token").GetProjectEnvironmentNames(context.Background(), "empty")
+	if err != nil || len(names) != 0 {
+		t.Fatalf("expected no names and no error, got %v, %v", names, err)
+	}
+}

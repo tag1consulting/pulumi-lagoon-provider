@@ -13,6 +13,7 @@ type LagoonClient interface {
 	CreateProject(ctx context.Context, input map[string]any) (*client.Project, error)
 	GetProjectByName(ctx context.Context, name string) (*client.Project, error)
 	GetProjectByID(ctx context.Context, id int) (*client.Project, error)
+	GetProjectEnvironmentNames(ctx context.Context, name string) ([]string, error)
 	UpdateProject(ctx context.Context, id int, input map[string]any) (*client.Project, error)
 	DeleteProject(ctx context.Context, name string) error
 
