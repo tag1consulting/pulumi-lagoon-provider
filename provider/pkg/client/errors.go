@@ -83,6 +83,10 @@ var (
 	ErrValidation     = errors.New("lagoon validation error")
 	ErrDuplicateEntry = errors.New("lagoon duplicate entry")
 	ErrRateLimit      = errors.New("lagoon rate limit")
+
+	// ErrEnvironmentsRemaining means deleteProject was refused because the
+	// project still has environments, possibly ones that Lagoon is removing asynchronously.
+	ErrEnvironmentsRemaining = errors.New("lagoon project has remaining environments")
 )
 
 // isDuplicateMessage returns true if a message indicates a duplicate entry.
@@ -90,6 +94,18 @@ func isDuplicateMessage(msg string) bool {
 	lower := strings.ToLower(msg)
 	return strings.Contains(lower, "duplicate entry") ||
 		strings.Contains(lower, "already exists")
+}
+
+// isEnvironmentsRemainingMessage returns true if a message is the Lagoon API
+// refusal to delete a project that still has environments.
+func isEnvironmentsRemainingMessage(msg string) bool {
+	return strings.Contains(strings.ToLower(msg), "existing environments that need to be removed")
+}
+
+// IsEnvironmentsRemaining returns true if the error is the Lagoon API error for
+// deleting a project while its environments are still being removed.
+func IsEnvironmentsRemaining(err error) bool {
+	return errors.Is(err, ErrEnvironmentsRemaining)
 }
 
 // IsDuplicateEntry returns true if the error is a Lagoon API error indicating
@@ -121,6 +137,16 @@ func (e *LagoonAPIError) Is(target error) bool {
 		}
 		for _, ge := range e.Errors {
 			if isDuplicateMessage(ge.Message) {
+				return true
+			}
+		}
+	}
+	if target == ErrEnvironmentsRemaining {
+		if isEnvironmentsRemainingMessage(e.Message) {
+			return true
+		}
+		for _, ge := range e.Errors {
+			if isEnvironmentsRemainingMessage(ge.Message) {
 				return true
 			}
 		}

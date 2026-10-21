@@ -232,3 +232,31 @@ func TestLagoonAPIError_Is_ErrDuplicateEntry(t *testing.T) {
 		})
 	}
 }
+
+func TestIsEnvironmentsRemaining(t *testing.T) {
+	const upstream = "Unable to delete project, there are existing environments that need to be removed first"
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{"upstream message", &LagoonAPIError{Message: upstream}, true},
+		{"mixed case", &LagoonAPIError{Message: "UNABLE TO DELETE PROJECT, THERE ARE EXISTING ENVIRONMENTS THAT NEED TO BE REMOVED FIRST"}, true},
+		{"message only in Errors list", &LagoonAPIError{Message: "multiple errors", Errors: []GraphQLError{{Message: upstream}}}, true},
+		{"wrapped", fmt.Errorf("failed to delete project: %w", &LagoonAPIError{Message: upstream}), true},
+		{"other API error", &LagoonAPIError{Message: "permission denied"}, false},
+		{"non-API error", errors.New(upstream), false},
+		{"nil error", nil, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsEnvironmentsRemaining(tt.err); got != tt.expected {
+				t.Errorf("IsEnvironmentsRemaining() = %v, want %v", got, tt.expected)
+			}
+			if got := errors.Is(tt.err, ErrEnvironmentsRemaining); got != tt.expected {
+				t.Errorf("errors.Is(ErrEnvironmentsRemaining) = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
