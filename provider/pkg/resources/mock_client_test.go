@@ -10,11 +10,12 @@ import (
 // Set the function fields to customize behavior; nil fields return safe defaults.
 type mockLagoonClient struct {
 	// Project
-	createProjectFn     func(ctx context.Context, input map[string]any) (*client.Project, error)
-	getProjectByNameFn  func(ctx context.Context, name string) (*client.Project, error)
-	getProjectByIDFn    func(ctx context.Context, id int) (*client.Project, error)
-	updateProjectFn     func(ctx context.Context, id int, input map[string]any) (*client.Project, error)
-	deleteProjectFn     func(ctx context.Context, name string) error
+	createProjectFn              func(ctx context.Context, input map[string]any) (*client.Project, error)
+	getProjectByNameFn           func(ctx context.Context, name string) (*client.Project, error)
+	getProjectByIDFn             func(ctx context.Context, id int) (*client.Project, error)
+	updateProjectFn              func(ctx context.Context, id int, input map[string]any) (*client.Project, error)
+	deleteProjectFn              func(ctx context.Context, name string) error
+	getProjectEnvironmentNamesFn func(ctx context.Context, name string) ([]string, error)
 
 	// Environment
 	addOrUpdateEnvironmentFn func(ctx context.Context, input map[string]any) (*client.Environment, error)
@@ -27,72 +28,72 @@ type mockLagoonClient struct {
 	deleteVariableFn func(ctx context.Context, name string, projectID int, environmentID *int) error
 
 	// DeployTarget
-	createDeployTargetFn     func(ctx context.Context, input map[string]any) (*client.DeployTarget, error)
-	getDeployTargetByIDFn    func(ctx context.Context, id int) (*client.DeployTarget, error)
-	getDeployTargetByNameFn  func(ctx context.Context, name string) (*client.DeployTarget, error)
-	updateDeployTargetFn     func(ctx context.Context, id int, input map[string]any) (*client.DeployTarget, error)
-	deleteDeployTargetFn     func(ctx context.Context, name string) error
+	createDeployTargetFn    func(ctx context.Context, input map[string]any) (*client.DeployTarget, error)
+	getDeployTargetByIDFn   func(ctx context.Context, id int) (*client.DeployTarget, error)
+	getDeployTargetByNameFn func(ctx context.Context, name string) (*client.DeployTarget, error)
+	updateDeployTargetFn    func(ctx context.Context, id int, input map[string]any) (*client.DeployTarget, error)
+	deleteDeployTargetFn    func(ctx context.Context, name string) error
 
 	// DeployTargetConfig
-	createDeployTargetConfigFn          func(ctx context.Context, input map[string]any) (*client.DeployTargetConfig, error)
-	getDeployTargetConfigsByProjectFn   func(ctx context.Context, projectID int) ([]client.DeployTargetConfig, error)
-	getDeployTargetConfigByIDFn         func(ctx context.Context, configID, projectID int) (*client.DeployTargetConfig, error)
-	updateDeployTargetConfigFn          func(ctx context.Context, configID int, input map[string]any) (*client.DeployTargetConfig, error)
-	deleteDeployTargetConfigFn          func(ctx context.Context, configID, projectID int) error
+	createDeployTargetConfigFn        func(ctx context.Context, input map[string]any) (*client.DeployTargetConfig, error)
+	getDeployTargetConfigsByProjectFn func(ctx context.Context, projectID int) ([]client.DeployTargetConfig, error)
+	getDeployTargetConfigByIDFn       func(ctx context.Context, configID, projectID int) (*client.DeployTargetConfig, error)
+	updateDeployTargetConfigFn        func(ctx context.Context, configID int, input map[string]any) (*client.DeployTargetConfig, error)
+	deleteDeployTargetConfigFn        func(ctx context.Context, configID, projectID int) error
 
 	// Task
-	createTaskDefinitionFn func(ctx context.Context, input map[string]any) (*client.TaskDefinition, error)
+	createTaskDefinitionFn  func(ctx context.Context, input map[string]any) (*client.TaskDefinition, error)
 	getTaskDefinitionByIDFn func(ctx context.Context, taskID int) (*client.TaskDefinition, error)
-	deleteTaskDefinitionFn func(ctx context.Context, taskID int) error
+	deleteTaskDefinitionFn  func(ctx context.Context, taskID int) error
 
 	// Notification — Slack
-	createNotificationSlackFn     func(ctx context.Context, name, webhook, channel string) (*client.Notification, error)
-	getNotificationSlackByNameFn  func(ctx context.Context, name string) (*client.Notification, error)
-	updateNotificationSlackFn     func(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
-	deleteNotificationSlackFn     func(ctx context.Context, name string) error
+	createNotificationSlackFn    func(ctx context.Context, name, webhook, channel string) (*client.Notification, error)
+	getNotificationSlackByNameFn func(ctx context.Context, name string) (*client.Notification, error)
+	updateNotificationSlackFn    func(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
+	deleteNotificationSlackFn    func(ctx context.Context, name string) error
 
 	// Notification — RocketChat
-	createNotificationRocketChatFn     func(ctx context.Context, name, webhook, channel string) (*client.Notification, error)
-	getNotificationRocketChatByNameFn  func(ctx context.Context, name string) (*client.Notification, error)
-	updateNotificationRocketChatFn     func(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
-	deleteNotificationRocketChatFn     func(ctx context.Context, name string) error
+	createNotificationRocketChatFn    func(ctx context.Context, name, webhook, channel string) (*client.Notification, error)
+	getNotificationRocketChatByNameFn func(ctx context.Context, name string) (*client.Notification, error)
+	updateNotificationRocketChatFn    func(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
+	deleteNotificationRocketChatFn    func(ctx context.Context, name string) error
 
 	// Notification — Email
-	createNotificationEmailFn     func(ctx context.Context, name, emailAddress string) (*client.Notification, error)
-	getNotificationEmailByNameFn  func(ctx context.Context, name string) (*client.Notification, error)
-	updateNotificationEmailFn     func(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
-	deleteNotificationEmailFn     func(ctx context.Context, name string) error
+	createNotificationEmailFn    func(ctx context.Context, name, emailAddress string) (*client.Notification, error)
+	getNotificationEmailByNameFn func(ctx context.Context, name string) (*client.Notification, error)
+	updateNotificationEmailFn    func(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
+	deleteNotificationEmailFn    func(ctx context.Context, name string) error
 
 	// Notification — Microsoft Teams
-	createNotificationMicrosoftTeamsFn     func(ctx context.Context, name, webhook string) (*client.Notification, error)
-	getNotificationMicrosoftTeamsByNameFn  func(ctx context.Context, name string) (*client.Notification, error)
-	updateNotificationMicrosoftTeamsFn     func(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
-	deleteNotificationMicrosoftTeamsFn     func(ctx context.Context, name string) error
+	createNotificationMicrosoftTeamsFn    func(ctx context.Context, name, webhook string) (*client.Notification, error)
+	getNotificationMicrosoftTeamsByNameFn func(ctx context.Context, name string) (*client.Notification, error)
+	updateNotificationMicrosoftTeamsFn    func(ctx context.Context, name string, patch map[string]any) (*client.Notification, error)
+	deleteNotificationMicrosoftTeamsFn    func(ctx context.Context, name string) error
 
 	// Project notification associations
-	addNotificationToProjectFn           func(ctx context.Context, projectName, notificationType, notificationName string) error
-	removeNotificationFromProjectFn      func(ctx context.Context, projectName, notificationType, notificationName string) error
-	checkProjectNotificationExistsFn     func(ctx context.Context, projectName, notificationType, notificationName string) (*client.ProjectNotificationInfo, error)
+	addNotificationToProjectFn       func(ctx context.Context, projectName, notificationType, notificationName string) error
+	removeNotificationFromProjectFn  func(ctx context.Context, projectName, notificationType, notificationName string) error
+	checkProjectNotificationExistsFn func(ctx context.Context, projectName, notificationType, notificationName string) (*client.ProjectNotificationInfo, error)
 
 	// Group
-	createGroupFn     func(ctx context.Context, name string, parentGroupName *string) (*client.Group, error)
-	getGroupByNameFn  func(ctx context.Context, name string) (*client.Group, error)
-	updateGroupFn     func(ctx context.Context, name string, patch map[string]any) (*client.Group, error)
-	deleteGroupFn     func(ctx context.Context, name string) error
+	createGroupFn    func(ctx context.Context, name string, parentGroupName *string) (*client.Group, error)
+	getGroupByNameFn func(ctx context.Context, name string) (*client.Group, error)
+	updateGroupFn    func(ctx context.Context, name string, patch map[string]any) (*client.Group, error)
+	deleteGroupFn    func(ctx context.Context, name string) error
 
 	// Route
-	addRouteToProjectFn              func(ctx context.Context, input map[string]any) (*client.Route, error)
-	getRouteByDomainFn               func(ctx context.Context, projectName, domain string) (*client.Route, error)
-	updateRouteOnProjectFn           func(ctx context.Context, routeID int, patch map[string]any) (*client.Route, error)
-	deleteRouteFn                    func(ctx context.Context, routeID int) error
-	addRouteAlternativeDomainsFn     func(ctx context.Context, routeID int, domains []string) (*client.Route, error)
-	removeRouteAlternativeDomainFn   func(ctx context.Context, routeID int, domain string) (*client.Route, error)
-	addRouteAnnotationsFn            func(ctx context.Context, routeID int, annotations []map[string]string) (*client.Route, error)
-	removeRouteAnnotationFn          func(ctx context.Context, routeID int, key string) (*client.Route, error)
-	addPathRoutesToRouteFn           func(ctx context.Context, routeID int, pathRoutes []map[string]string) (*client.Route, error)
-	removePathRouteFromRouteFn       func(ctx context.Context, routeID int, toService, path string) (*client.Route, error)
-	addOrUpdateRouteOnEnvironmentFn  func(ctx context.Context, input map[string]any) (*client.Route, error)
-	removeRouteFromEnvironmentFn     func(ctx context.Context, domain, project, environment string) error
+	addRouteToProjectFn             func(ctx context.Context, input map[string]any) (*client.Route, error)
+	getRouteByDomainFn              func(ctx context.Context, projectName, domain string) (*client.Route, error)
+	updateRouteOnProjectFn          func(ctx context.Context, routeID int, patch map[string]any) (*client.Route, error)
+	deleteRouteFn                   func(ctx context.Context, routeID int) error
+	addRouteAlternativeDomainsFn    func(ctx context.Context, routeID int, domains []string) (*client.Route, error)
+	removeRouteAlternativeDomainFn  func(ctx context.Context, routeID int, domain string) (*client.Route, error)
+	addRouteAnnotationsFn           func(ctx context.Context, routeID int, annotations []map[string]string) (*client.Route, error)
+	removeRouteAnnotationFn         func(ctx context.Context, routeID int, key string) (*client.Route, error)
+	addPathRoutesToRouteFn          func(ctx context.Context, routeID int, pathRoutes []map[string]string) (*client.Route, error)
+	removePathRouteFromRouteFn      func(ctx context.Context, routeID int, toService, path string) (*client.Route, error)
+	addOrUpdateRouteOnEnvironmentFn func(ctx context.Context, input map[string]any) (*client.Route, error)
+	removeRouteFromEnvironmentFn    func(ctx context.Context, domain, project, environment string) error
 
 	// Autogenerated route config — project
 	updateAutoRouteConfigProjectFn func(ctx context.Context, projectName string, patch map[string]any) (*client.AutogeneratedRouteConfig, error)
@@ -149,6 +150,13 @@ func (m *mockLagoonClient) UpdateProject(ctx context.Context, id int, input map[
 		return m.updateProjectFn(ctx, id, input)
 	}
 	return &client.Project{ID: id, Name: "test"}, nil
+}
+
+func (m *mockLagoonClient) GetProjectEnvironmentNames(ctx context.Context, name string) ([]string, error) {
+	if m.getProjectEnvironmentNamesFn != nil {
+		return m.getProjectEnvironmentNamesFn(ctx, name)
+	}
+	return nil, nil
 }
 
 func (m *mockLagoonClient) DeleteProject(ctx context.Context, name string) error {
